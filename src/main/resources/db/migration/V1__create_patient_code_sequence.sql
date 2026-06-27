@@ -1,4 +1,0 @@
-CREATE SEQUENCE patient_code_seq
-START 1
-INCREMENT 1
-CACHE 20;

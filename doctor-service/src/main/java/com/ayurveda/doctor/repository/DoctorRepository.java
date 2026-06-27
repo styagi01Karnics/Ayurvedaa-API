@@ -1,0 +1,20 @@
+package com.ayurveda.doctor.repository;
+
+import com.ayurveda.doctor.entity.Doctor;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
+
+    Optional<Doctor> findByIdAndDeletedFalse(UUID id);
+
+    List<Doctor> findAllByDeletedFalse();
+
+    boolean existsByDoctorCodeAndDeletedFalse(String doctorCode);
+
+    boolean existsByEmailAndDeletedFalse(String email);
+
+}
