@@ -1,0 +1,2 @@
+com.ayurveda.common.config.CommonAutoConfiguration
+com.ayurveda.common.config.OpenApiAutoConfiguration

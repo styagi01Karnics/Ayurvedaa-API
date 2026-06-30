@@ -1,0 +1,24 @@
+{
+  "registrationDate": "2026-06-30",
+  "assignedDoctorId": "31c30d88-f667-4592-85f8-b7d5d32f96d3",
+  "consultationTypes": ["CONSULTATION"],
+  "patient": {
+    "fullName": "Amit Patel",
+    "gender": "Male",
+    "dateOfBirth": "1990-05-15",
+    "age": 36,
+    "preferredLanguage": "Hindi",
+    "mobileNumber": "9123456799",
+    "email": "amit2@example.com",
+    "state": "Gujarat",
+    "city": "Ahmedabad",
+    "permanentAddress": "123 MG Road, Ahmedabad",
+    "emergencyContactName": "Priya Patel",
+    "emergencyRelationship": "Spouse",
+    "emergencyPhoneNumber": "9123456781",
+    "idProofType": "Aadhaar",
+    "idProofNumber": "123456789012",
+    "occupation": "Engineer",
+    "insuranceDetails": "None"
+  }
+}

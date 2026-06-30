@@ -1,0 +1,15 @@
+ALTER TABLE mst_patient
+    ADD COLUMN IF NOT EXISTS age INTEGER,
+    ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS emergency_contact_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS emergency_phone_number VARCHAR(15),
+    ADD COLUMN IF NOT EXISTS id_proof_type VARCHAR(30),
+    ADD COLUMN IF NOT EXISTS id_proof_number VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS occupation VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS insurance_details VARCHAR(255);
+
+ALTER TABLE mst_patient
+    ALTER COLUMN mobile_number SET NOT NULL;
