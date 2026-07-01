@@ -16,19 +16,17 @@ pipeline {
     }
 
     stages {
+        
 
-        stage('Checkout') {
+       stage('Checkout') {
+    steps {
+        git branch: 'fixes-development',
+            credentialsId: 'github-creds-funride',
+            url: 'https://github.com/styagi01Karnics/Ayurvedaa-API.git'
+    }
+}
 
-            steps {
-
-                git branch: 'development',
-                    url: 'https://github.com/styagi01Karnics/Ayurvedaa-API.git',
-                    credentialsId: 'github-creds-funride'
-
-            }
-
-        }
-
+        
         stage('Clean Workspace') {
 
             steps {
