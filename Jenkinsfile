@@ -131,25 +131,47 @@ pipeline {
 }
 
         stage('Deploy') {
+    steps {
+        sh '''
+        # Stop and remove old containers
+        docker rm -f patient-service || true
+        docker rm -f doctor-service || true
+        docker rm -f appointment-service || true
+        docker rm -f therapist-service || true
+        docker rm -f file-upload-service || true
 
-            steps {
+        # Run patient-service
+        docker run -d \
+        --name patient-service \
+        -p 8101:8101 \
+        sunardock/patient-service:${BUILD_NUMBER}
 
-                sh '''
+        # Run doctor-service
+        docker run -d \
+        --name doctor-service \
+        -p 8102:8102 \
+        sunardock/doctor-service:${BUILD_NUMBER}
 
-                docker stop ${CONTAINER_NAME} || true
+        # Run appointment-service
+        docker run -d \
+        --name appointment-service \
+        -p 8103:8103 \
+        sunardock/appointment-service:${BUILD_NUMBER}
 
-                docker rm ${CONTAINER_NAME} || true
+        # Run therapist-service
+        docker run -d \
+        --name therapist-service \
+        -p 8104:8104 \
+        sunardock/therapist-service:${BUILD_NUMBER}
 
-                docker run -d \
-                --name ${CONTAINER_NAME} \
-                -p 8100:8080 \
-                ${IMAGE_NAME}:${BUILD_NUMBER}
-
-                '''
-
-            }
-
-        }
+        # Run file-upload-service
+        docker run -d \
+        --name file-upload-service \
+        -p 8105:8105 \
+        sunardock/file-upload-service:${BUILD_NUMBER}
+        '''
+    }
+}
 
     }
 
