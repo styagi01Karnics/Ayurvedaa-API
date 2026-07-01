@@ -113,20 +113,20 @@ pipeline {
     }
 }
 
-        stage('Docker Push') {
+       stage('Docker Push') {
     steps {
-
         withDockerRegistry(
             credentialsId: 'dockerhub',
             url: 'https://index.docker.io/v1/'
         ) {
-
-            sh """
-                docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-            """
-
+            sh '''
+            docker push sunardock/patient-service:${BUILD_NUMBER}
+            docker push sunardock/doctor-service:${BUILD_NUMBER}
+            docker push sunardock/appointment-service:${BUILD_NUMBER}
+            docker push sunardock/therapist-service:${BUILD_NUMBER}
+            docker push sunardock/file-upload-service:${BUILD_NUMBER}
+            '''
         }
-
     }
 }
 
