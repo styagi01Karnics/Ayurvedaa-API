@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.vscode
+
+target/
+
+node_modules/
+
+*.iml
+
+README.md
+
+Jenkinsfile
