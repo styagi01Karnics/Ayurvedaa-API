@@ -116,7 +116,7 @@ pipeline {
        stage('Docker Push') {
     steps {
         withDockerRegistry(
-            credentialsId: 'dockerhub',
+            credentialsId: 'dockerhub-creds',
             url: 'https://index.docker.io/v1/'
         ) {
             sh '''
