@@ -101,20 +101,17 @@ pipeline {
 
         }
 
-        stage('Docker Build') {
-
-            steps {
-
-                sh '''
-
-                docker build \
-                -t ${IMAGE_NAME}:${BUILD_NUMBER} .
-
-                '''
-
-            }
-
-        }
+      stage('Docker Build') {
+    steps {
+        sh '''
+        docker build -t sunardock/patient-service:${BUILD_NUMBER} ./patient-service
+        docker build -t sunardock/doctor-service:${BUILD_NUMBER} ./doctor-service
+        docker build -t sunardock/appointment-service:${BUILD_NUMBER} ./appointment-service
+        docker build -t sunardock/therapist-service:${BUILD_NUMBER} ./therapist-service
+        docker build -t sunardock/file-upload-service:${BUILD_NUMBER} ./file-upload-service
+        '''
+    }
+}
 
         stage('Docker Push') {
     steps {
