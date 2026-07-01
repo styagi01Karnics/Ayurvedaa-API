@@ -29,7 +29,7 @@ spring:
       max-request-size: 10MB
 
 server:
-  port: 8084
+  port: 8104
 
 springdoc:
   api-docs:
