@@ -3,13 +3,13 @@ pipeline {
     agent any
 
     tools {
-        jdk 'jdk21'
-        maven 'maven3'
+        jdk 'JDK21'
+        maven 'Maven'
     }
 
     environment {
 
-        IMAGE_NAME = "yourdockerhubusername/ayurvedaa"
+        IMAGE_NAME = "sunardock/ayurvedaa"
 
         CONTAINER_NAME = "ayurvedaa"
 
@@ -22,8 +22,8 @@ pipeline {
             steps {
 
                 git branch: 'development',
-                    url: 'https://github.com/yourusername/Ayurvedaa-API.git',
-                    credentialsId: 'github-token'
+                    url: 'https://github.com/styagi01Karnics/Ayurvedaa-API.git',
+                    credentialsId: 'github-creds-funride'
 
             }
 
@@ -78,8 +78,8 @@ pipeline {
                     sh '''
 
                     mvn sonar:sonar \
-                    -Dsonar.projectKey=Ayurvedaa \
-                    -Dsonar.projectName=Ayurvedaa
+                    -Dsonar.projectKey=Ayurvedaa-API \
+                    -Dsonar.projectName=Ayurvedaa-API
 
                     '''
 
