@@ -119,22 +119,21 @@ pipeline {
         }
 
         stage('Docker Push') {
+    steps {
 
-            steps {
+        withDockerRegistry(
+            credentialsId: 'dockerhub',
+            url: 'https://index.docker.io/v1/'
+        ) {
 
-                withDockerRegistry(credentialsId: 'dockerhub') {
-
-                    sh '''
-
-                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-
-                    '''
-
-                }
-
-            }
+            sh """
+                docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+            """
 
         }
+
+    }
+}
 
         stage('Deploy') {
 
