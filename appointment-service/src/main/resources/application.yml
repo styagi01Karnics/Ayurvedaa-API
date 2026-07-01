@@ -29,17 +29,17 @@ spring:
       max-request-size: 10MB
 
 server:
-  port: 8082
+  port: 8102
 
 services:
   patient:
-    url: http://localhost:8081
+    url: http://localhost:8101
   doctor:
-    url: http://localhost:8083
+    url: http://localhost:8103
   therapist:
-    url: http://localhost:8085
+    url: http://localhost:8105
   file-upload:
-    url: http://localhost:8084
+    url: http://localhost:8104
 
 springdoc:
   api-docs:
