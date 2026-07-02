@@ -46,8 +46,8 @@ pipeline {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
                     mvn sonar:sonar \
-                    -Dsonar.projectKey=Ayurvedaa-API \
-                    -Dsonar.projectName=Ayurvedaa-API
+                    -Dsonar.projectKey=Ayurvedaa-API-SonarQube-common \
+                    -Dsonar.projectName=Ayurvedaa-API-SonarQube-common
                     '''
                 }
             }
