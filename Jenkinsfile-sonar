@@ -1,0 +1,86 @@
+pipeline {
+
+    agent any
+
+    tools {
+        jdk 'JDK21'
+        maven 'Maven'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'dev-sonarqube-common',
+                    credentialsId: 'github-creds-funride',
+                    url: 'https://github.com/styagi01Karnics/Ayurvedaa-API.git'
+            }
+        }
+
+        stage('Clean') {
+            steps {
+                sh 'mvn clean'
+            }
+        }
+
+        stage('Compile') {
+            steps {
+                sh 'mvn compile'
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                    mvn sonar:sonar \
+                    -Dsonar.projectKey=Ayurvedaa-API \
+                    -Dsonar.projectName=Ayurvedaa-API
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+    }
+
+    post {
+
+        success {
+            echo "======================================"
+            echo "BUILD SUCCESSFUL"
+            echo "SONARQUBE QUALITY GATE PASSED"
+            echo "======================================"
+        }
+
+        failure {
+            echo "======================================"
+            echo "BUILD FAILED"
+            echo "CHECK BUILD OR SONARQUBE ERRORS"
+            echo "======================================"
+        }
+
+        always {
+            cleanWs()
+        }
+    }
+}
