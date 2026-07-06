@@ -4,6 +4,7 @@ import com.ayurveda.common.ApiResponse;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
 import com.ayurveda.doctor.service.DoctorService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Doctor", description = "Doctor master APIs")
 @RestController
 @RequestMapping("/api/v1/doctors")
 @RequiredArgsConstructor

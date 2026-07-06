@@ -8,7 +8,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,9 +42,8 @@ public class AppointmentDocument extends BaseEntity {
     @Column(nullable = false)
     private Long fileSize;
 
-    @Lob
     @Basic(fetch = FetchType.LAZY)
-    @Column(name = "file_data", nullable = false)
+    @Column(name = "file_data", nullable = false, columnDefinition = "BYTEA")
     private byte[] fileData;
 
 }

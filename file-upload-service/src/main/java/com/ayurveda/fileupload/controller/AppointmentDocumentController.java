@@ -5,6 +5,7 @@ import com.ayurveda.fileupload.dto.request.UploadAppointmentDocumentRequest;
 import com.ayurveda.fileupload.dto.response.AppointmentDocumentResponse;
 import com.ayurveda.fileupload.enums.DocumentType;
 import com.ayurveda.fileupload.service.AppointmentDocumentService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Documents", description = "Appointment document upload APIs")
 @RestController
 @RequestMapping("/api/v1/documents")
 @RequiredArgsConstructor

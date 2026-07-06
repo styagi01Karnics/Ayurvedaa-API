@@ -17,4 +17,6 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
 
     boolean existsByEmailAndDeletedFalse(String email);
 
+    boolean existsByMobileNumberAndDeletedFalse(String mobileNumber);
+
 }

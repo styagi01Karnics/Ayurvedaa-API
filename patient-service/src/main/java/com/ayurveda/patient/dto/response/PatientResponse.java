@@ -7,6 +7,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.ayurveda.patient.enums.Gender;
+import com.ayurveda.patient.enums.IdProofType;
+
 @Getter
 @Builder
 public class PatientResponse {
@@ -15,11 +18,23 @@ public class PatientResponse {
     private String patientCode;
     private String firstName;
     private String lastName;
+    private String fullName;
+    private Gender gender;
+    private LocalDate dateOfBirth;
+    private Integer age;
+    private String preferredLanguage;
     private String email;
     private String mobileNumber;
-    private LocalDate dateOfBirth;
-    private String gender;
+    private String state;
+    private String city;
     private String address;
+    private String emergencyContactName;
+    private String emergencyRelationship;
+    private String emergencyPhoneNumber;
+    private IdProofType idProofType;
+    private String idProofNumber;
+    private String occupation;
+    private String insuranceDetails;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

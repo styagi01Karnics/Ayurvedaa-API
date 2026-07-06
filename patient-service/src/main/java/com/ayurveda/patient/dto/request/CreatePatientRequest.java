@@ -1,7 +1,10 @@
 package com.ayurveda.patient.dto.request;
 
+import com.ayurveda.patient.enums.Gender;
+import com.ayurveda.patient.enums.IdProofType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -13,26 +16,91 @@ import java.time.LocalDate;
 @Setter
 public class CreatePatientRequest {
 
-    @NotBlank(message = "First name is required")
-    @Size(max = 100, message = "First name must not exceed 100 characters")
-    private String firstName;
+    @NotBlank(message = "Full name is required")
+    @Size(min = 3, max = 150, message = "Full name must be between 3 and 150 characters")
+    @Pattern(
+            regexp = "^[A-Za-z .'-]+$",
+            message = "Full name contains invalid characters"
+    )
+    private String fullName;
 
-    @NotBlank(message = "Last name is required")
-    @Size(max = 100, message = "Last name must not exceed 100 characters")
-    private String lastName;
+    @NotNull(message = "Gender is required")
+    private Gender gender;
 
-    @Email(message = "Email must be valid")
+    @NotNull(message = "Date of birth is required")
+    private LocalDate dateOfBirth;
+
+    @NotNull(message = "Age is required")
+    private Integer age;
+
+    @Size(max = 50, message = "Preferred language must not exceed 50 characters")
+    @Pattern(
+            regexp = "^[A-Za-z ]*$",
+            message = "Preferred language should contain only alphabets"
+    )
+    private String preferredLanguage;
+
+    @NotBlank(message = "Mobile number is required")
+    @Pattern(
+            regexp = "^[6-9]\\d{9}$",
+            message = "Enter a valid 10-digit mobile number"
+    )
+    private String mobileNumber;
+
+    @Email(message = "Enter a valid email address")
     @Size(max = 150, message = "Email must not exceed 150 characters")
     private String email;
 
-    @Pattern(regexp = "^[0-9]{10,15}$", message = "Mobile number must be 10 to 15 digits")
-    private String mobileNumber;
+    @Size(max = 100, message = "State must not exceed 100 characters")
+    @Pattern(
+            regexp = "^[A-Za-z .-]*$",
+            message = "State contains invalid characters"
+    )
+    private String state;
 
-    private LocalDate dateOfBirth;
+    @Size(max = 100, message = "City must not exceed 100 characters")
+    @Pattern(
+            regexp = "^[A-Za-z .-]*$",
+            message = "City contains invalid characters"
+    )
+    private String city;
 
-    @Size(max = 20, message = "Gender must not exceed 20 characters")
-    private String gender;
-
+    @NotBlank(message = "Permanent address is required")
+    @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 
+    @Size(max = 100, message = "Emergency contact name must not exceed 100 characters")
+    @Pattern(
+            regexp = "^[A-Za-z .'-]*$",
+            message = "Emergency contact name contains invalid characters"
+    )
+    private String emergencyContactName;
+
+    @Size(max = 50, message = "Emergency relationship must not exceed 50 characters")
+    @Pattern(
+            regexp = "^[A-Za-z ]*$",
+            message = "Emergency relationship should contain only alphabets"
+    )
+    private String emergencyRelationship;
+
+    @Pattern(
+            regexp = "^[6-9]\\d{9}$",
+            message = "Enter a valid emergency mobile number"
+    )
+    private String emergencyPhoneNumber;
+
+    private IdProofType idProofType;
+
+    @Size(max = 50, message = "ID proof number must not exceed 50 characters")
+    private String idProofNumber;
+
+    @Size(max = 100, message = "Occupation must not exceed 100 characters")
+    @Pattern(
+            regexp = "^[A-Za-z0-9 .,&()/-]*$",
+            message = "Occupation contains invalid characters"
+    )
+    private String occupation;
+
+    @Size(max = 255, message = "Insurance details must not exceed 255 characters")
+    private String insuranceDetails;
 }
