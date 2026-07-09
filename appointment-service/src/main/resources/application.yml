@@ -10,36 +10,25 @@ spring:
       connection-init-sql: SET search_path TO public
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         default_schema: public
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 0
-    table: flyway_schema_history_appointment
-    schemas: public
-    default-schema: public
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
 
 server:
-  port: 8102
+  port: 8103
 
 services:
   patient:
     url: http://localhost:8101
   doctor:
-    url: http://localhost:8103
+    url: http://localhost:8102
   therapist:
-    url: http://localhost:8105
-  file-upload:
     url: http://localhost:8104
+  file-upload:
+    url: http://localhost:8105
 
 springdoc:
   api-docs:

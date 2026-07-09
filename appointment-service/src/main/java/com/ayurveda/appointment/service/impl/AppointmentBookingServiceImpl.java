@@ -41,37 +41,62 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     private final DoctorServiceClient doctorServiceClient;
 
     @Override
+    @Transactional
     public ApiResponse<AppointmentBookingResponse> createAppointment(
             CreateAppointmentBookingRequest request) {
 
-        log.info("Starting appointment booking for patient: {}", request.getPatient().getFullName());
+        log.info("Starting appointment booking for patient: {}",
+                request.getPatient().getFullName());
 
-        PatientSummaryResponse patient = resolvePatient(request);
-        DoctorSummaryResponse doctor = fetchDoctor(request.getAssignedDoctorId());
+        ApiResponse<PatientSummaryResponse> patientResponse =
+                patientServiceClient.createPatient(
+                        CreatePatientClientRequest.from(request.getPatient()));
+
+        if (patientResponse == null
+                || !patientResponse.isSuccess()
+                || patientResponse.getData() == null) {
+
+            throw new ResourceNotFoundException("Unable to create patient.");
+        }
+
+        PatientSummaryResponse patient = patientResponse.getData();
+
+        DoctorSummaryResponse doctor =
+                fetchDoctor(request.getAssignedDoctorId());
 
         AppointmentBooking appointment =
                 appointmentBookingMapper.toEntity(request, patient.getId());
+
         appointment.setWorkflowStep(WorkflowStep.STEP_TWO);
         appointment.setBookingStatus(BookingStatus.DRAFT);
 
-        AppointmentBooking savedAppointment = appointmentBookingRepository.save(appointment);
+        AppointmentBooking savedAppointment =
+                appointmentBookingRepository.save(appointment);
 
         request.getConsultationTypes().forEach(type -> {
-            AppointmentConsultationType consultation = AppointmentConsultationType.builder()
-                    .bookingId(savedAppointment.getId())
-                    .consultationType(ConsultationType.valueOf(type))
-                    .build();
+
+            AppointmentConsultationType consultation =
+                    AppointmentConsultationType.builder()
+                            .bookingId(savedAppointment.getId())
+                            .consultationType(ConsultationType.valueOf(type))
+                            .build();
+
             appointmentConsultationTypeRepository.save(consultation);
         });
 
-        log.info("Patient saved and appointment created with id: {}", savedAppointment.getId());
+        log.info("Appointment created successfully with id: {}",
+                savedAppointment.getId());
 
         AppointmentBookingResponse response =
-                appointmentBookingMapper.toResponse(savedAppointment, patient, doctor);
+                appointmentBookingMapper.toResponse(
+                        savedAppointment,
+                        patient,
+                        doctor);
+
         response.setConsultationTypes(request.getConsultationTypes());
 
         return ApiResponse.success(
-                "Patient saved and appointment created successfully. Proceed to therapy details.",
+                "Patient created and appointment booked successfully.",
                 response);
     }
 
@@ -101,20 +126,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         return ApiResponse.success(response);
     }
 
-    private PatientSummaryResponse resolvePatient(CreateAppointmentBookingRequest request) {
-        if (request.getPatientId() != null) {
-            return fetchPatient(request.getPatientId());
-        }
 
-        ApiResponse<PatientSummaryResponse> patientResponse = patientServiceClient.createPatient(
-                CreatePatientClientRequest.from(request.getPatient()));
-
-        if (patientResponse == null || !patientResponse.isSuccess() || patientResponse.getData() == null) {
-            throw new ResourceNotFoundException("Unable to save patient details.");
-        }
-
-        return patientResponse.getData();
-    }
 
     private PatientSummaryResponse fetchPatient(UUID patientId) {
         ApiResponse<PatientSummaryResponse> patientResponse = patientServiceClient.getPatientById(patientId);

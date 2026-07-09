@@ -17,7 +17,7 @@ import lombok.*;
 public class AppointmentAyurvedicAssessment extends BaseEntity {
 
     @Column(nullable = false)
-    private UUID bookingId;
+    private UUID patientId;
 
     @Column(name = "dosha_id", nullable = false)
     private UUID doshaId;

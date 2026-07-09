@@ -39,17 +39,16 @@ public class AppointmentPhysicalExaminationServiceImpl
     public ApiResponse<AppointmentPhysicalExaminationResponse> savePhysicalExamination(
             CreateAppointmentPhysicalExaminationRequest request) {
 
-        log.info("Saving physical examination for booking: {}",
-                request.getBookingId());
+        log.info("Saving physical examination for patient: {}",
+                request.getPatientId());
 
-        appointmentBookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        Constants.APPOINTMENT_NOT_FOUND
-                                + request.getBookingId()));
+        if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
+            throw new ResourceNotFoundException(Constants.APPOINTMENT_NOT_FOUND + request.getPatientId());
+        }
 
         AppointmentPhysicalExamination physicalExamination =
                 appointmentPhysicalExaminationRepository
-                        .findByBookingId(request.getBookingId())
+                        .findByPatientId(request.getPatientId())
                         .orElse(null);
 
         String message;
@@ -84,17 +83,17 @@ public class AppointmentPhysicalExaminationServiceImpl
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<AppointmentPhysicalExaminationResponse>
-            getPhysicalExaminationByBookingId(UUID bookingId) {
+            getPhysicalExaminationByPatientId(UUID patientId) {
 
-        log.info("Fetching physical examination for booking: {}",
-                bookingId);
+        log.info("Fetching physical examination for patient: {}",
+                patientId);
 
         AppointmentPhysicalExamination physicalExamination =
                 appointmentPhysicalExaminationRepository
-                        .findByBookingId(bookingId)
+                        .findByPatientId(patientId)
                         .orElseThrow(() -> new ResourceNotFoundException(
-                                "Physical examination not found for booking: "
-                                        + bookingId));
+                                "Physical examination not found for patient: "
+                                        + patientId));
 
         AppointmentPhysicalExaminationResponse response =
                 appointmentPhysicalExaminationMapper

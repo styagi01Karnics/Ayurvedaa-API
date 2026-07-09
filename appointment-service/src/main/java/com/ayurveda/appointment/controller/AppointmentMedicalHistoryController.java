@@ -38,14 +38,14 @@ public class AppointmentMedicalHistoryController {
                 .body(response);
     }
 
-    @GetMapping("/{bookingId}")
+    @GetMapping("/{patientId}")
     public ResponseEntity<ApiResponse<AppointmentMedicalHistoryResponse>>
-            getMedicalHistoryByBookingId(
-            @PathVariable UUID bookingId) {
+            getMedicalHistoryByPatientId(
+            @PathVariable UUID patientId) {
 
         ApiResponse<AppointmentMedicalHistoryResponse> response =
                 appointmentMedicalHistoryService
-                        .getMedicalHistoryByBookingId(bookingId);
+                        .getMedicalHistoryByPatientId(patientId);
 
         return ResponseEntity.ok(response);
     }

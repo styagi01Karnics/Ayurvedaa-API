@@ -38,17 +38,16 @@ public class AppointmentMedicalHistoryServiceImpl
     public ApiResponse<AppointmentMedicalHistoryResponse> saveMedicalHistory(
             CreateAppointmentMedicalHistoryRequest request) {
 
-        log.info("Saving medical history for booking : {}",
-                request.getBookingId());
+        log.info("Saving medical history for patient : {}",
+                request.getPatientId());
 
-        appointmentBookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Appointment not found with id : "
-                                + request.getBookingId()));
+        if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
+            throw new ResourceNotFoundException("Appointment not found for patient id : " + request.getPatientId());
+        }
 
         AppointmentMedicalHistory medicalHistory =
                 appointmentMedicalHistoryRepository
-                        .findByBookingId(request.getBookingId())
+                        .findByPatientId(request.getPatientId())
                         .orElse(null);
 
         String message;
@@ -81,16 +80,16 @@ public class AppointmentMedicalHistoryServiceImpl
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<AppointmentMedicalHistoryResponse>
-            getMedicalHistoryByBookingId(UUID bookingId) {
+            getMedicalHistoryByPatientId(UUID patientId) {
 
-        log.info("Fetching medical history for booking : {}", bookingId);
+        log.info("Fetching medical history for patient : {}", patientId);
 
         AppointmentMedicalHistory medicalHistory =
                 appointmentMedicalHistoryRepository
-                        .findByBookingId(bookingId)
+                        .findByPatientId(patientId)
                         .orElseThrow(() -> new ResourceNotFoundException(
-                                "Medical history not found for booking : "
-                                        + bookingId));
+                                "Medical history not found for patient : "
+                                        + patientId));
 
         AppointmentMedicalHistoryResponse response =
                 appointmentMedicalHistoryMapper

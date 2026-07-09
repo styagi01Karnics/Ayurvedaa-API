@@ -18,7 +18,7 @@ public class AppointmentAyurvedicAssessmentMapper {
         }
 
         return AppointmentAyurvedicAssessment.builder()
-                .bookingId(request.getBookingId())
+                .patientId(request.getPatientId())
                 .doshaId(request.getDoshaId())
                 .bodyConstitution(request.getBodyConstitution())
                 .currentImbalances(request.getCurrentImbalances())
@@ -35,7 +35,7 @@ public class AppointmentAyurvedicAssessmentMapper {
 
         return AppointmentAyurvedicAssessmentResponse.builder()
                 .id(entity.getId())
-                .bookingId(entity.getBookingId())
+                .patientId(entity.getPatientId())
                 .doshaId(entity.getDoshaId())
                 .dosha(dosha)
                 .bodyConstitution(entity.getBodyConstitution())

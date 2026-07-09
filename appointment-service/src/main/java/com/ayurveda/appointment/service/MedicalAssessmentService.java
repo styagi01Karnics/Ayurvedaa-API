@@ -20,6 +20,6 @@ public interface MedicalAssessmentService {
             List<MultipartFile> prescriptions,
             List<MultipartFile> labReports);
 
-    ApiResponse<MedicalAssessmentResponse> getMedicalAssessmentByBookingId(UUID bookingId);
+    ApiResponse<MedicalAssessmentResponse> getMedicalAssessmentByPatientId(UUID patientId);
 
 }

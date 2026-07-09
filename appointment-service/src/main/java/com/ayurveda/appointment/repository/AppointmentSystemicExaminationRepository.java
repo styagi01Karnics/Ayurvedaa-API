@@ -12,8 +12,8 @@ import com.ayurveda.appointment.entity.AppointmentSystemicExamination;
 public interface AppointmentSystemicExaminationRepository
         extends JpaRepository<AppointmentSystemicExamination, UUID> {
 
-    Optional<AppointmentSystemicExamination> findByBookingId(UUID bookingId);
+    Optional<AppointmentSystemicExamination> findByPatientId(UUID patientId);
 
-    boolean existsByBookingId(UUID bookingId);
+    boolean existsByPatientId(UUID patientId);
 
 }

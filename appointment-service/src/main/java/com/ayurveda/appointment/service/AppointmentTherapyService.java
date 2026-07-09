@@ -11,7 +11,7 @@ public interface AppointmentTherapyService {
     ApiResponse<AppointmentTherapyResponse> createAppointmentTherapy(
             CreateAppointmentTherapyRequest request);
 
-    ApiResponse<AppointmentTherapyResponse> getAppointmentTherapyByBookingId(
-            UUID bookingId);
+    ApiResponse<AppointmentTherapyResponse> getAppointmentTherapyByPatientId(
+            UUID patientId);
 
 }

@@ -17,7 +17,7 @@ public class AppointmentPhysicalExaminationMapper {
         }
 
         return AppointmentPhysicalExamination.builder()
-                .bookingId(request.getBookingId())
+                .patientId(request.getPatientId())
                 .weight(request.getWeight())
                 .height(request.getHeight())
                 .ibw(request.getIbw())
@@ -45,7 +45,7 @@ public class AppointmentPhysicalExaminationMapper {
 
         return AppointmentPhysicalExaminationResponse.builder()
                 .id(entity.getId())
-                .bookingId(entity.getBookingId())
+                .patientId(entity.getPatientId())
                 .weight(entity.getWeight())
                 .height(entity.getHeight())
                 .ibw(entity.getIbw())

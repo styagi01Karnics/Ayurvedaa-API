@@ -11,7 +11,7 @@ public interface AppointmentLifestyleInformationService {
     ApiResponse<AppointmentLifestyleInformationResponse> saveLifestyleInformation(
             CreateAppointmentLifestyleInformationRequest request);
 
-    ApiResponse<AppointmentLifestyleInformationResponse> getLifestyleInformationByBookingId(
-            UUID bookingId);
+    ApiResponse<AppointmentLifestyleInformationResponse> getLifestyleInformationByPatientId(
+            UUID patientId);
 
 }

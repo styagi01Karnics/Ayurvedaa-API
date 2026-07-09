@@ -39,17 +39,16 @@ public class AppointmentSystemicExaminationServiceImpl
     public ApiResponse<AppointmentSystemicExaminationResponse> saveSystemicExamination(
             CreateAppointmentSystemicExaminationRequest request) {
 
-        log.info("Saving systemic examination for booking: {}",
-                request.getBookingId());
+        log.info("Saving systemic examination for patient: {}",
+                request.getPatientId());
 
-        appointmentBookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        Constants.APPOINTMENT_NOT_FOUND
-                                + request.getBookingId()));
+        if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
+            throw new ResourceNotFoundException(Constants.APPOINTMENT_NOT_FOUND + request.getPatientId());
+        }
 
         AppointmentSystemicExamination systemicExamination =
                 appointmentSystemicExaminationRepository
-                        .findByBookingId(request.getBookingId())
+                        .findByPatientId(request.getPatientId())
                         .orElse(null);
 
         String message;
@@ -84,17 +83,17 @@ public class AppointmentSystemicExaminationServiceImpl
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<AppointmentSystemicExaminationResponse>
-            getSystemicExaminationByBookingId(UUID bookingId) {
+            getSystemicExaminationByPatientId(UUID patientId) {
 
-        log.info("Fetching systemic examination for booking: {}",
-                bookingId);
+        log.info("Fetching systemic examination for patient: {}",
+                patientId);
 
         AppointmentSystemicExamination systemicExamination =
                 appointmentSystemicExaminationRepository
-                        .findByBookingId(bookingId)
+                        .findByPatientId(patientId)
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 Constants.SYSTEMIC_EXAMINATION_NOT_FOUND
-                                        + bookingId));
+                                        + patientId));
 
         AppointmentSystemicExaminationResponse response =
                 appointmentSystemicExaminationMapper

@@ -15,7 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class AppointmentMedicalAssessmentResponse {
 
-    private UUID bookingId;
+    private UUID patientId;
 
     private AyurvedicAssessmentResponse ayurvedicAssessment;
 

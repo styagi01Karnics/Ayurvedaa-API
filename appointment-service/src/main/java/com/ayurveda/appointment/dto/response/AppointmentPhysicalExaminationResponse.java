@@ -17,7 +17,7 @@ public class AppointmentPhysicalExaminationResponse {
 
     private UUID id;
 
-    private UUID bookingId;
+    private UUID patientId;
 
     private Double weight;
 

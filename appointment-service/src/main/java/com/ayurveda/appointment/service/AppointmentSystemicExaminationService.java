@@ -11,7 +11,7 @@ public interface AppointmentSystemicExaminationService {
     ApiResponse<AppointmentSystemicExaminationResponse> saveSystemicExamination(
             CreateAppointmentSystemicExaminationRequest request);
 
-    ApiResponse<AppointmentSystemicExaminationResponse> getSystemicExaminationByBookingId(
-            UUID bookingId);
+    ApiResponse<AppointmentSystemicExaminationResponse> getSystemicExaminationByPatientId(
+            UUID patientId);
 
 }

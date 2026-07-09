@@ -17,7 +17,7 @@ public class AppointmentLifestyleInformationMapper {
         }
 
         return AppointmentLifestyleInformation.builder()
-                .bookingId(request.getBookingId())
+                .patientId(request.getPatientId())
                 .dietType(request.getDietType())
                 .sleepPattern(request.getSleepPattern())
                 .exerciseHabits(request.getExerciseHabits())
@@ -34,7 +34,7 @@ public class AppointmentLifestyleInformationMapper {
 
         return AppointmentLifestyleInformationResponse.builder()
                 .id(entity.getId())
-                .bookingId(entity.getBookingId())
+                .patientId(entity.getPatientId())
                 .dietType(entity.getDietType())
                 .sleepPattern(entity.getSleepPattern())
                 .exerciseHabits(entity.getExerciseHabits())

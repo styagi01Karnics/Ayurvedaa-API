@@ -16,7 +16,7 @@ public class AppointmentTherapyMapper {
         }
 
         return AppointmentTherapy.builder()
-                .bookingId(request.getBookingId())
+                .patientId(request.getPatientId())
                 .treatmentCategoryId(request.getTreatmentCategoryId())
                 .assignedTherapistId(request.getAssignedTherapistId())
                 .scheduleDate(request.getScheduleDate())
@@ -35,7 +35,7 @@ public class AppointmentTherapyMapper {
 
         return AppointmentTherapyResponse.builder()
                 .therapyId(entity.getId())
-                .bookingId(entity.getBookingId())
+                .patientId(entity.getPatientId())
                 .treatmentCategoryId(entity.getTreatmentCategoryId())
                 .assignedTherapistId(entity.getAssignedTherapistId())
                 .assignedTherapist(therapist)

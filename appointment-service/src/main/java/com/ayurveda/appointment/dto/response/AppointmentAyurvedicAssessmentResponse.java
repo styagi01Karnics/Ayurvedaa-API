@@ -17,7 +17,7 @@ public class AppointmentAyurvedicAssessmentResponse {
 
     private UUID id;
 
-    private UUID bookingId;
+    private UUID patientId;
 
     private UUID doshaId;
 

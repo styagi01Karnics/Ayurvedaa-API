@@ -17,7 +17,7 @@ import lombok.*;
 public class AppointmentMedicalHistory extends BaseEntity {
 
     @Column(nullable = false)
-    private UUID bookingId;
+    private UUID patientId;
 
     @Column(columnDefinition = "TEXT")
     private String pastMedicalConditions;

@@ -16,8 +16,8 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateAppointmentSystemicExaminationRequest {
 
-    @NotNull(message = "Booking Id is required")
-    private UUID bookingId;
+    @NotNull(message = "Patient Id is required")
+    private UUID patientId;
 
     private String cardiovascular;
 

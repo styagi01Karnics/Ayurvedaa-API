@@ -17,7 +17,7 @@ import lombok.*;
 public class AppointmentLifestyleInformation extends BaseEntity {
 
     @Column(nullable = false)
-    private UUID bookingId;
+    private UUID patientId;
 
     @Column(length = 100)
     private String dietType;

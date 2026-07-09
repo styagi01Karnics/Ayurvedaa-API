@@ -11,7 +11,7 @@ public interface AppointmentAyurvedicAssessmentService {
     ApiResponse<AppointmentAyurvedicAssessmentResponse> saveAyurvedicAssessment(
             CreateAppointmentAyurvedicAssessmentRequest request);
 
-    ApiResponse<AppointmentAyurvedicAssessmentResponse> getAyurvedicAssessmentByBookingId(
-            UUID bookingId);
+    ApiResponse<AppointmentAyurvedicAssessmentResponse> getAyurvedicAssessmentByPatientId(
+            UUID patientId);
 
 }

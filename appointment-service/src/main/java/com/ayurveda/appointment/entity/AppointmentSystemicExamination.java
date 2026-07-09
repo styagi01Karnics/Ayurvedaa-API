@@ -17,7 +17,7 @@ import lombok.*;
 public class AppointmentSystemicExamination extends BaseEntity {
 
     @Column(nullable = false)
-    private UUID bookingId;
+    private UUID patientId;
 
     @Column(length = 1000)
     private String cardiovascular;

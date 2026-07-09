@@ -11,7 +11,7 @@ public interface AppointmentMedicalHistoryService {
     ApiResponse<AppointmentMedicalHistoryResponse> saveMedicalHistory(
             CreateAppointmentMedicalHistoryRequest request);
 
-    ApiResponse<AppointmentMedicalHistoryResponse> getMedicalHistoryByBookingId(
-            UUID bookingId);
+    ApiResponse<AppointmentMedicalHistoryResponse> getMedicalHistoryByPatientId(
+            UUID patientId);
 
 }

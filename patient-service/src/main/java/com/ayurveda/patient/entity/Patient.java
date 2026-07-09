@@ -1,8 +1,13 @@
 package com.ayurveda.patient.entity;
 
 import com.ayurveda.common.BaseEntity;
+import com.ayurveda.patient.enums.Gender;
+import com.ayurveda.patient.enums.IdProofType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,8 +35,9 @@ public class Patient extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String lastName;
 
-    @Column(length = 20)
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Gender gender;
 
     private LocalDate dateOfBirth;
 
@@ -64,9 +70,9 @@ public class Patient extends BaseEntity {
     @Column(length = 15)
     private String emergencyPhoneNumber;
 
-    @Column(length = 30)
-    private String idProofType;
-
+    @Enumerated(EnumType.STRING)
+    private IdProofType idProofType;
+    
     @Column(length = 50)
     private String idProofNumber;
 

@@ -12,8 +12,8 @@ import com.ayurveda.appointment.entity.AppointmentMedicalHistory;
 public interface AppointmentMedicalHistoryRepository
         extends JpaRepository<AppointmentMedicalHistory, UUID> {
 
-    Optional<AppointmentMedicalHistory> findByBookingId(UUID bookingId);
+    Optional<AppointmentMedicalHistory> findByPatientId(UUID patientId);
 
-    boolean existsByBookingId(UUID bookingId);
+    boolean existsByPatientId(UUID patientId);
 
 }

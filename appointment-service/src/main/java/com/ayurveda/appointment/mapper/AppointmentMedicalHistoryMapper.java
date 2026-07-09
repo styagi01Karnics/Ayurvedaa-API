@@ -17,7 +17,7 @@ public class AppointmentMedicalHistoryMapper {
         }
 
         return AppointmentMedicalHistory.builder()
-                .bookingId(request.getBookingId())
+                .patientId(request.getPatientId())
                 .pastMedicalConditions(request.getPastMedicalConditions())
                 .pastSurgeries(request.getPastSurgeries())
                 .currentMedications(request.getCurrentMedications())
@@ -35,7 +35,7 @@ public class AppointmentMedicalHistoryMapper {
 
         return AppointmentMedicalHistoryResponse.builder()
                 .id(entity.getId())
-                .bookingId(entity.getBookingId())
+                .patientId(entity.getPatientId())
                 .pastMedicalConditions(entity.getPastMedicalConditions())
                 .pastSurgeries(entity.getPastSurgeries())
                 .currentMedications(entity.getCurrentMedications())

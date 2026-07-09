@@ -60,13 +60,13 @@ public class MedicalAssessmentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "Get medical assessment by booking ID")
-    @GetMapping("/{bookingId}")
-    public ResponseEntity<ApiResponse<MedicalAssessmentResponse>> getMedicalAssessmentByBookingId(
-            @PathVariable UUID bookingId) {
+    @Operation(summary = "Get medical assessment by patient ID")
+    @GetMapping("/{patientId}")
+    public ResponseEntity<ApiResponse<MedicalAssessmentResponse>> getMedicalAssessmentByPatientId(
+            @PathVariable UUID patientId) {
 
         ApiResponse<MedicalAssessmentResponse> response =
-                medicalAssessmentService.getMedicalAssessmentByBookingId(bookingId);
+                medicalAssessmentService.getMedicalAssessmentByPatientId(patientId);
 
         return ResponseEntity.ok(response);
     }

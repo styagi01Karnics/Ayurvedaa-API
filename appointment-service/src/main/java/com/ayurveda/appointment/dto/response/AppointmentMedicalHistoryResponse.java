@@ -17,7 +17,7 @@ public class AppointmentMedicalHistoryResponse {
 
     private UUID id;
 
-    private UUID bookingId;
+    private UUID patientId;
 
     private String pastMedicalConditions;
 

@@ -1,19 +1,23 @@
 package com.ayurveda.appointment.dto.request;
 
-import java.util.UUID;
-
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class CreatePatientClientRequest {
 
     private String fullName;
     private String gender;
-    private java.time.LocalDate dateOfBirth;
+    private LocalDate dateOfBirth;
     private Integer age;
     private String preferredLanguage;
     private String mobileNumber;
@@ -30,25 +34,25 @@ public class CreatePatientClientRequest {
     private String insuranceDetails;
 
     public static CreatePatientClientRequest from(CreatePatientDetailsRequest request) {
-        CreatePatientClientRequest clientRequest = new CreatePatientClientRequest();
-        clientRequest.setFullName(request.getFullName());
-        clientRequest.setGender(request.getGender());
-        clientRequest.setDateOfBirth(request.getDateOfBirth());
-        clientRequest.setAge(request.getAge());
-        clientRequest.setPreferredLanguage(request.getPreferredLanguage());
-        clientRequest.setMobileNumber(request.getMobileNumber());
-        clientRequest.setEmail(request.getEmail());
-        clientRequest.setState(request.getState());
-        clientRequest.setCity(request.getCity());
-        clientRequest.setAddress(request.getPermanentAddress());
-        clientRequest.setEmergencyContactName(request.getEmergencyContactName());
-        clientRequest.setEmergencyRelationship(request.getEmergencyRelationship());
-        clientRequest.setEmergencyPhoneNumber(request.getEmergencyPhoneNumber());
-        clientRequest.setIdProofType(request.getIdProofType());
-        clientRequest.setIdProofNumber(request.getIdProofNumber());
-        clientRequest.setOccupation(request.getOccupation());
-        clientRequest.setInsuranceDetails(request.getInsuranceDetails());
-        return clientRequest;
-    }
 
+        return CreatePatientClientRequest.builder()
+                .fullName(request.getFullName())
+                .gender(request.getGender())
+                .dateOfBirth(request.getDateOfBirth())
+                .age(request.getAge())
+                .preferredLanguage(request.getPreferredLanguage())
+                .mobileNumber(request.getMobileNumber())
+                .email(request.getEmail())
+                .state(request.getState())
+                .city(request.getCity())
+                .address(request.getAddress())
+                .emergencyContactName(request.getEmergencyContactName())
+                .emergencyRelationship(request.getEmergencyRelationship())
+                .emergencyPhoneNumber(request.getEmergencyPhoneNumber())
+                .idProofType(request.getIdProofType())
+                .idProofNumber(request.getIdProofNumber())
+                .occupation(request.getOccupation())
+                .insuranceDetails(request.getInsuranceDetails())
+                .build();
+    }
 }

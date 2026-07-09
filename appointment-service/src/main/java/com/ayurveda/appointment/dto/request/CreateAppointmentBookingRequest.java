@@ -20,8 +20,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateAppointmentBookingRequest {
 
-    private UUID patientId;
-
     @Valid
     @NotNull(message = "Patient details are required")
     private CreatePatientDetailsRequest patient;

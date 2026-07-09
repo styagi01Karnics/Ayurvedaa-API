@@ -17,7 +17,7 @@ import lombok.*;
 public class CreateAppointmentTherapyRequest {
 
     @NotNull
-    private UUID bookingId;
+    private UUID patientId;
 
     @NotNull
     private UUID treatmentCategoryId;

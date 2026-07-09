@@ -42,7 +42,7 @@ public final class Constants {
     public static final String APPOINTMENT_THERAPY_CREATED = "Appointment therapy created successfully.";
     public static final String APPOINTMENT_THERAPY_UPDATED = "Appointment therapy updated successfully.";
     public static final String APPOINTMENT_THERAPY_FETCHED = "Appointment therapy fetched successfully.";
-    public static final String APPOINTMENT_THERAPY_NOT_FOUND = "Therapy details not found for booking: ";
+    public static final String APPOINTMENT_THERAPY_NOT_FOUND = "Therapy details not found for patient: ";
 
     // ==========================
     // Medical History
@@ -50,7 +50,7 @@ public final class Constants {
     public static final String MEDICAL_HISTORY_CREATED = "Medical history created successfully.";
     public static final String MEDICAL_HISTORY_UPDATED = "Medical history updated successfully.";
     public static final String MEDICAL_HISTORY_FETCHED = "Medical history fetched successfully.";
-    public static final String MEDICAL_HISTORY_NOT_FOUND = "Medical history not found for booking: ";
+    public static final String MEDICAL_HISTORY_NOT_FOUND = "Medical history not found for patient: ";
 
     // ==========================
     // Lifestyle Information
@@ -58,7 +58,7 @@ public final class Constants {
     public static final String LIFESTYLE_INFORMATION_CREATED = "Lifestyle information created successfully.";
     public static final String LIFESTYLE_INFORMATION_UPDATED = "Lifestyle information updated successfully.";
     public static final String LIFESTYLE_INFORMATION_FETCHED = "Lifestyle information fetched successfully.";
-    public static final String LIFESTYLE_INFORMATION_NOT_FOUND = "Lifestyle information not found for booking: ";
+    public static final String LIFESTYLE_INFORMATION_NOT_FOUND = "Lifestyle information not found for patient: ";
 
     // ==========================
     // Validation
@@ -80,7 +80,7 @@ public final class Constants {
 	         "Systemic examination fetched successfully.";
 	
 	 public static final String SYSTEMIC_EXAMINATION_NOT_FOUND =
-	         "Systemic examination not found for booking: ";
+	         "Systemic examination not found for patient: ";
 	 
 	//==========================
 	//Ayurvedic Assessment
@@ -96,7 +96,7 @@ public final class Constants {
 	      "Ayurvedic assessment fetched successfully.";
 	
 	public static final String AYURVEDIC_ASSESSMENT_NOT_FOUND =
-	      "Ayurvedic assessment not found for booking: ";
+	      "Ayurvedic assessment not found for patient: ";
 	
 	// ==========================
 	// Treatment Plan
@@ -112,7 +112,7 @@ public final class Constants {
 	        "Treatment plan fetched successfully.";
 
 	public static final String TREATMENT_PLAN_NOT_FOUND =
-	        "Treatment plan not found for booking: ";
+	        "Treatment plan not found for patient: ";
 	
 	// ==========================
 	// Appointment Documents

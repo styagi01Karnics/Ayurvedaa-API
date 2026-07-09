@@ -39,17 +39,16 @@ public class AppointmentTreatmentPlanServiceImpl
     public ApiResponse<AppointmentTreatmentPlanResponse> saveTreatmentPlan(
             CreateAppointmentTreatmentPlanRequest request) {
 
-        log.info("Saving treatment plan for booking: {}",
-                request.getBookingId());
+        log.info("Saving treatment plan for patient: {}",
+                request.getPatientId());
 
-        appointmentBookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        Constants.APPOINTMENT_NOT_FOUND
-                                + request.getBookingId()));
+        if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
+            throw new ResourceNotFoundException(Constants.APPOINTMENT_NOT_FOUND + request.getPatientId());
+        }
 
         AppointmentTreatmentPlan treatmentPlan =
                 appointmentTreatmentPlanRepository
-                        .findByBookingId(request.getBookingId())
+                        .findByPatientId(request.getPatientId())
                         .orElse(null);
 
         String message;
@@ -83,17 +82,17 @@ public class AppointmentTreatmentPlanServiceImpl
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<AppointmentTreatmentPlanResponse>
-            getTreatmentPlanByBookingId(UUID bookingId) {
+            getTreatmentPlanByPatientId(UUID patientId) {
 
-        log.info("Fetching treatment plan for booking: {}",
-                bookingId);
+        log.info("Fetching treatment plan for patient: {}",
+                patientId);
 
         AppointmentTreatmentPlan treatmentPlan =
                 appointmentTreatmentPlanRepository
-                        .findByBookingId(bookingId)
+                        .findByPatientId(patientId)
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 Constants.TREATMENT_PLAN_NOT_FOUND
-                                        + bookingId));
+                                        + patientId));
 
         AppointmentTreatmentPlanResponse response =
                 appointmentTreatmentPlanMapper

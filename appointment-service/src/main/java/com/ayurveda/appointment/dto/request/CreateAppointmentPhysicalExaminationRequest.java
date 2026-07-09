@@ -16,8 +16,8 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateAppointmentPhysicalExaminationRequest {
 
-    @NotNull(message = "Booking Id is required")
-    private UUID bookingId;
+    @NotNull(message = "Patient Id is required")
+    private UUID patientId;
 
     @NotNull(message = "Weight is required")
     private Double weight;

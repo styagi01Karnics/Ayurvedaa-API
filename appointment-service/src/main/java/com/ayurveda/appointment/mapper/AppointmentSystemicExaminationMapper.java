@@ -17,7 +17,7 @@ public class AppointmentSystemicExaminationMapper {
         }
 
         return AppointmentSystemicExamination.builder()
-                .bookingId(request.getBookingId())
+                .patientId(request.getPatientId())
                 .cardiovascular(request.getCardiovascular())
                 .respiratory(request.getRespiratory())
                 .nervous(request.getNervous())
@@ -35,7 +35,7 @@ public class AppointmentSystemicExaminationMapper {
 
         return AppointmentSystemicExaminationResponse.builder()
                 .id(entity.getId())
-                .bookingId(entity.getBookingId())
+                .patientId(entity.getPatientId())
                 .cardiovascular(entity.getCardiovascular())
                 .respiratory(entity.getRespiratory())
                 .nervous(entity.getNervous())

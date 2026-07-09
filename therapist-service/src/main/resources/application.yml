@@ -10,22 +10,15 @@ spring:
       connection-init-sql: SET search_path TO public
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         default_schema: public
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 0
-    table: flyway_schema_history_therapist
-    schemas: public
-    default-schema: public
 
 server:
-  port: 8105
+  port: 8104
 
 springdoc:
   api-docs:

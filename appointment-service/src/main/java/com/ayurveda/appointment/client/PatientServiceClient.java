@@ -15,7 +15,7 @@ import com.ayurveda.common.ApiResponse;
 @FeignClient(name = "patient-service", url = "${services.patient.url}")
 public interface PatientServiceClient {
 
-    @PostMapping("/api/v1/patients")
+    @PostMapping("/api/v1/patients/create-patient")
     ApiResponse<PatientSummaryResponse> createPatient(@RequestBody CreatePatientClientRequest request);
 
     @GetMapping("/api/v1/patients/{patientId}")

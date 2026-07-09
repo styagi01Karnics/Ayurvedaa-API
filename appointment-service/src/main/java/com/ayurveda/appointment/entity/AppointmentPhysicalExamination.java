@@ -17,7 +17,7 @@ import lombok.*;
 public class AppointmentPhysicalExamination extends BaseEntity {
 
     @Column(nullable = false)
-    private UUID bookingId;
+    private UUID patientId;
 
     @Column(nullable = false)
     private Double weight;

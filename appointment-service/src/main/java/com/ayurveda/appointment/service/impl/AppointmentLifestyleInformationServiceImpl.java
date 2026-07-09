@@ -38,17 +38,16 @@ public class AppointmentLifestyleInformationServiceImpl
     public ApiResponse<AppointmentLifestyleInformationResponse> saveLifestyleInformation(
             CreateAppointmentLifestyleInformationRequest request) {
 
-        log.info("Saving lifestyle information for booking : {}",
-                request.getBookingId());
+        log.info("Saving lifestyle information for patient : {}",
+                request.getPatientId());
 
-        appointmentBookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Appointment not found with id : "
-                                + request.getBookingId()));
+        if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
+            throw new ResourceNotFoundException("Appointment not found for patient id : " + request.getPatientId());
+        }
 
         AppointmentLifestyleInformation lifestyleInformation =
                 appointmentLifestyleInformationRepository
-                        .findByBookingId(request.getBookingId())
+                        .findByPatientId(request.getPatientId())
                         .orElse(null);
 
         String message;
@@ -83,17 +82,17 @@ public class AppointmentLifestyleInformationServiceImpl
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<AppointmentLifestyleInformationResponse>
-            getLifestyleInformationByBookingId(UUID bookingId) {
+            getLifestyleInformationByPatientId(UUID patientId) {
 
-        log.info("Fetching lifestyle information for booking : {}",
-                bookingId);
+        log.info("Fetching lifestyle information for patient : {}",
+                patientId);
 
         AppointmentLifestyleInformation lifestyleInformation =
                 appointmentLifestyleInformationRepository
-                        .findByBookingId(bookingId)
+                        .findByPatientId(patientId)
                         .orElseThrow(() -> new ResourceNotFoundException(
-                                "Lifestyle information not found for booking : "
-                                        + bookingId));
+                                "Lifestyle information not found for patient : "
+                                        + patientId));
 
         AppointmentLifestyleInformationResponse response =
                 appointmentLifestyleInformationMapper

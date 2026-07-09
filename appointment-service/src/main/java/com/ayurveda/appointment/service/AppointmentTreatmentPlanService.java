@@ -11,7 +11,7 @@ public interface AppointmentTreatmentPlanService {
     ApiResponse<AppointmentTreatmentPlanResponse> saveTreatmentPlan(
             CreateAppointmentTreatmentPlanRequest request);
 
-    ApiResponse<AppointmentTreatmentPlanResponse> getTreatmentPlanByBookingId(
-            UUID bookingId);
+    ApiResponse<AppointmentTreatmentPlanResponse> getTreatmentPlanByPatientId(
+            UUID patientId);
 
 }

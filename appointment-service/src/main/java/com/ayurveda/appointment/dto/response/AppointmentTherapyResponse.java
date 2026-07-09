@@ -22,7 +22,7 @@ public class AppointmentTherapyResponse {
 
     private UUID therapyId;
 
-    private UUID bookingId;
+    private UUID patientId;
 
     private UUID treatmentCategoryId;
 

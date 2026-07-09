@@ -11,7 +11,7 @@ public interface AppointmentPhysicalExaminationService {
     ApiResponse<AppointmentPhysicalExaminationResponse> savePhysicalExamination(
             CreateAppointmentPhysicalExaminationRequest request);
 
-    ApiResponse<AppointmentPhysicalExaminationResponse> getPhysicalExaminationByBookingId(
-            UUID bookingId);
+    ApiResponse<AppointmentPhysicalExaminationResponse> getPhysicalExaminationByPatientId(
+            UUID patientId);
 
 }

@@ -37,16 +37,16 @@ public class AppointmentAyurvedicAssessmentServiceImpl
     public ApiResponse<AppointmentAyurvedicAssessmentResponse> saveAyurvedicAssessment(
             CreateAppointmentAyurvedicAssessmentRequest request) {
 
-        log.info("Saving ayurvedic assessment for booking: {}", request.getBookingId());
+        log.info("Saving ayurvedic assessment for patient: {}", request.getPatientId());
 
-        appointmentBookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        Constants.APPOINTMENT_NOT_FOUND + request.getBookingId()));
+        if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
+            throw new ResourceNotFoundException(Constants.APPOINTMENT_NOT_FOUND + request.getPatientId());
+        }
 
         DoshaResponse dosha = getDosha(request.getDoshaId());
 
         AppointmentAyurvedicAssessment assessment = appointmentAyurvedicAssessmentRepository
-                .findByBookingId(request.getBookingId())
+                .findByPatientId(request.getPatientId())
                 .orElse(null);
 
         String message;
@@ -68,15 +68,15 @@ public class AppointmentAyurvedicAssessmentServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<AppointmentAyurvedicAssessmentResponse> getAyurvedicAssessmentByBookingId(
-            UUID bookingId) {
+    public ApiResponse<AppointmentAyurvedicAssessmentResponse> getAyurvedicAssessmentByPatientId(
+            UUID patientId) {
 
-        log.info("Fetching ayurvedic assessment for booking: {}", bookingId);
+        log.info("Fetching ayurvedic assessment for patient: {}", patientId);
 
         AppointmentAyurvedicAssessment assessment = appointmentAyurvedicAssessmentRepository
-                .findByBookingId(bookingId)
+                .findByPatientId(patientId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        Constants.AYURVEDIC_ASSESSMENT_NOT_FOUND + bookingId));
+                        Constants.AYURVEDIC_ASSESSMENT_NOT_FOUND + patientId));
 
         DoshaResponse dosha = getDosha(assessment.getDoshaId());
 

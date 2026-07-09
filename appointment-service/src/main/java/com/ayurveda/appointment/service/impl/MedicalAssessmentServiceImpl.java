@@ -55,9 +55,9 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
             List<MultipartFile> prescriptions,
             List<MultipartFile> labReports) {
 
-        log.info("Saving complete medical assessment for booking {}", request.getBookingId());
+        log.info("Saving complete medical assessment for patient {}", request.getPatientId());
 
-        applyBookingId(request);
+        applyPatientId(request);
 
         var ayurvedic = ayurvedicAssessmentService
                 .saveAyurvedicAssessment(request.getAyurvedicAssessment())
@@ -84,15 +84,15 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
                 .getData();
 
         List<AppointmentDocumentResponse> documents = new ArrayList<>();
-        uploadDocuments(request.getBookingId(), pastMedicalReports,
+        uploadDocuments(request.getPatientId(), pastMedicalReports,
                 DocumentType.PAST_MEDICAL_REPORT, documents);
-        uploadDocuments(request.getBookingId(), prescriptions,
+        uploadDocuments(request.getPatientId(), prescriptions,
                 DocumentType.PRESCRIPTION, documents);
-        uploadDocuments(request.getBookingId(), labReports,
+        uploadDocuments(request.getPatientId(), labReports,
                 DocumentType.LAB_REPORT, documents);
 
         MedicalAssessmentResponse response = MedicalAssessmentResponse.builder()
-                .bookingId(request.getBookingId())
+                .patientId(request.getPatientId())
                 .ayurvedicAssessment(ayurvedic)
                 .physicalExamination(physical)
                 .medicalHistory(medicalHistory)
@@ -107,40 +107,40 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<MedicalAssessmentResponse> getMedicalAssessmentByBookingId(UUID bookingId) {
+    public ApiResponse<MedicalAssessmentResponse> getMedicalAssessmentByPatientId(UUID patientId) {
 
         MedicalAssessmentResponse response = MedicalAssessmentResponse.builder()
-                .bookingId(bookingId)
+                .patientId(patientId)
                 .ayurvedicAssessment(
-                        ayurvedicAssessmentService.getAyurvedicAssessmentByBookingId(bookingId).getData())
+                        ayurvedicAssessmentService.getAyurvedicAssessmentByPatientId(patientId).getData())
                 .physicalExamination(
-                        physicalExaminationService.getPhysicalExaminationByBookingId(bookingId).getData())
+                        physicalExaminationService.getPhysicalExaminationByPatientId(patientId).getData())
                 .medicalHistory(
-                        medicalHistoryService.getMedicalHistoryByBookingId(bookingId).getData())
+                        medicalHistoryService.getMedicalHistoryByPatientId(patientId).getData())
                 .lifestyleInformation(
-                        lifestyleInformationService.getLifestyleInformationByBookingId(bookingId).getData())
+                        lifestyleInformationService.getLifestyleInformationByPatientId(patientId).getData())
                 .systemicExamination(
-                        systemicExaminationService.getSystemicExaminationByBookingId(bookingId).getData())
+                        systemicExaminationService.getSystemicExaminationByPatientId(patientId).getData())
                 .treatmentPlan(
-                        treatmentPlanService.getTreatmentPlanByBookingId(bookingId).getData())
+                        treatmentPlanService.getTreatmentPlanByPatientId(patientId).getData())
                 .documents(Collections.emptyList())
                 .build();
 
         return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_FETCHED, response);
     }
 
-    private void applyBookingId(CreateMedicalAssessmentRequest request) {
-        UUID bookingId = request.getBookingId();
-        request.getAyurvedicAssessment().setBookingId(bookingId);
-        request.getPhysicalExamination().setBookingId(bookingId);
-        request.getMedicalHistory().setBookingId(bookingId);
-        request.getLifestyleInformation().setBookingId(bookingId);
-        request.getSystemicExamination().setBookingId(bookingId);
-        request.getTreatmentPlan().setBookingId(bookingId);
+    private void applyPatientId(CreateMedicalAssessmentRequest request) {
+        UUID patientId = request.getPatientId();
+        request.getAyurvedicAssessment().setPatientId(patientId);
+        request.getPhysicalExamination().setPatientId(patientId);
+        request.getMedicalHistory().setPatientId(patientId);
+        request.getLifestyleInformation().setPatientId(patientId);
+        request.getSystemicExamination().setPatientId(patientId);
+        request.getTreatmentPlan().setPatientId(patientId);
     }
 
     private void uploadDocuments(
-            UUID bookingId,
+            UUID patientId,
             List<MultipartFile> files,
             DocumentType documentType,
             List<AppointmentDocumentResponse> responses) {
@@ -153,7 +153,7 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
             if (file == null || file.isEmpty()) {
                 continue;
             }
-            responses.add(documentUploadClient.uploadDocument(bookingId, documentType, file));
+            responses.add(documentUploadClient.uploadDocument(patientId, documentType, file));
         }
     }
 

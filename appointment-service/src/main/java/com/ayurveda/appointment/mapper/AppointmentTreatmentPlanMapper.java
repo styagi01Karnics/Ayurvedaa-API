@@ -17,7 +17,7 @@ public class AppointmentTreatmentPlanMapper {
         }
 
         return AppointmentTreatmentPlan.builder()
-                .bookingId(request.getBookingId())
+                .patientId(request.getPatientId())
                 .investigationAndPlanSuggested(
                         request.getInvestigationAndPlanSuggested())
                 .planTaken(request.getPlanTaken())
@@ -33,7 +33,7 @@ public class AppointmentTreatmentPlanMapper {
 
         return AppointmentTreatmentPlanResponse.builder()
                 .id(entity.getId())
-                .bookingId(entity.getBookingId())
+                .patientId(entity.getPatientId())
                 .investigationAndPlanSuggested(
                         entity.getInvestigationAndPlanSuggested())
                 .planTaken(entity.getPlanTaken())

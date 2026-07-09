@@ -43,11 +43,11 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
     public ApiResponse<AppointmentTherapyResponse> createAppointmentTherapy(
             CreateAppointmentTherapyRequest request) {
 
-        log.info("Creating therapy details for booking: {}", request.getBookingId());
+        log.info("Creating therapy details for patient: {}", request.getPatientId());
 
-        appointmentBookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Appointment not found with id: " + request.getBookingId()));
+        if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
+            throw new ResourceNotFoundException("Appointment not found for patient id: " + request.getPatientId());
+        }
 
         treatmentCategoryRepository.findById(request.getTreatmentCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -82,13 +82,13 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<AppointmentTherapyResponse> getAppointmentTherapyByBookingId(UUID bookingId) {
+    public ApiResponse<AppointmentTherapyResponse> getAppointmentTherapyByPatientId(UUID patientId) {
 
-        log.info("Fetching therapy details for booking: {}", bookingId);
+        log.info("Fetching therapy details for patient: {}", patientId);
 
-        AppointmentTherapy appointmentTherapy = appointmentTherapyRepository.findByBookingId(bookingId)
+        AppointmentTherapy appointmentTherapy = appointmentTherapyRepository.findByPatientId(patientId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Therapy details not found for booking: " + bookingId));
+                        "Therapy details not found for patient: " + patientId));
 
         TherapistSummaryResponse therapist = fetchTherapist(appointmentTherapy.getAssignedTherapistId());
 

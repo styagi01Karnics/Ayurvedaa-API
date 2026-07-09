@@ -17,7 +17,7 @@ public class AppointmentSystemicExaminationResponse {
 
     private UUID id;
 
-    private UUID bookingId;
+    private UUID patientId;
 
     private String cardiovascular;
 

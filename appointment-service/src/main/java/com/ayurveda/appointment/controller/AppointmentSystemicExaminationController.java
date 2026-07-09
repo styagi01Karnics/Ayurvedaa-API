@@ -37,14 +37,14 @@ public class AppointmentSystemicExaminationController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{bookingId}")
+    @GetMapping("/{patientId}")
     public ResponseEntity<ApiResponse<AppointmentSystemicExaminationResponse>>
-            getSystemicExaminationByBookingId(
-            @PathVariable UUID bookingId) {
+            getSystemicExaminationByPatientId(
+            @PathVariable UUID patientId) {
 
         ApiResponse<AppointmentSystemicExaminationResponse> response =
                 appointmentSystemicExaminationService
-                        .getSystemicExaminationByBookingId(bookingId);
+                        .getSystemicExaminationByPatientId(patientId);
 
         return ResponseEntity.ok(response);
     }

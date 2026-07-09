@@ -15,8 +15,8 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateMedicalAssessmentRequest {
 
-    @NotNull(message = "Booking Id is required")
-    private java.util.UUID bookingId;
+    @NotNull(message = "Patient Id is required")
+    private java.util.UUID patientId;
 
     @NotNull(message = "Ayurvedic assessment is required")
     @Valid
