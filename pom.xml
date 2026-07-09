@@ -22,6 +22,8 @@
         <module>common-service</module>
         <module>patient-service</module>
         <module>doctor-service</module>
+        <module>therapist-service</module>
+        <module>appointment-service</module>
         <module>file-upload-service</module>
     </modules>
 
@@ -45,6 +47,11 @@
                 <groupId>com.ayurveda</groupId>
                 <artifactId>common-service</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
