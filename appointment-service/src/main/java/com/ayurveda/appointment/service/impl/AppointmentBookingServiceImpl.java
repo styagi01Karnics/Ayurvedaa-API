@@ -125,8 +125,45 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
         return ApiResponse.success(response);
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByPatientId(UUID patientId) {
 
+        log.info("Fetching appointments for patient id: {}", patientId);
 
+        List<AppointmentBooking> appointments =
+                appointmentBookingRepository.findByPatientId(patientId);
+
+        if (appointments.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No appointments found for patient id: " + patientId);
+        }
+
+        PatientSummaryResponse patient = fetchPatient(patientId);
+
+        List<AppointmentBookingResponse> responses = appointments.stream().map(appointment -> {
+
+            DoctorSummaryResponse doctor =
+                    fetchDoctor(appointment.getAssignedDoctorId());
+
+            AppointmentBookingResponse response =
+                    appointmentBookingMapper.toResponse(appointment, patient, doctor);
+
+            List<String> consultationTypes =
+                    appointmentConsultationTypeRepository.findByBookingId(appointment.getId())
+                            .stream()
+                            .map(consultation -> consultation.getConsultationType().name())
+                            .toList();
+
+            response.setConsultationTypes(consultationTypes);
+
+            return response;
+
+        }).toList();
+
+        return ApiResponse.success(responses);
+    }
 
     private PatientSummaryResponse fetchPatient(UUID patientId) {
         ApiResponse<PatientSummaryResponse> patientResponse = patientServiceClient.getPatientById(patientId);

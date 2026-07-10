@@ -18,7 +18,7 @@ public interface PatientServiceClient {
     @PostMapping("/api/v1/patients/create-patient")
     ApiResponse<PatientSummaryResponse> createPatient(@RequestBody CreatePatientClientRequest request);
 
-    @GetMapping("/api/v1/patients/{patientId}")
+    @GetMapping("/api/v1/patients/get-patient/{patientId}")
     ApiResponse<PatientSummaryResponse> getPatientById(@PathVariable("patientId") UUID patientId);
 
 }

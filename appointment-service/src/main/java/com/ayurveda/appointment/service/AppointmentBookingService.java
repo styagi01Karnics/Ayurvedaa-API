@@ -1,5 +1,6 @@
 package com.ayurveda.appointment.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import com.ayurveda.common.ApiResponse;
@@ -13,5 +14,7 @@ public interface AppointmentBookingService {
 
     ApiResponse<AppointmentBookingResponse> getAppointmentById(
             UUID bookingId);
+    
+    ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByPatientId(UUID patientId);
 
 }
