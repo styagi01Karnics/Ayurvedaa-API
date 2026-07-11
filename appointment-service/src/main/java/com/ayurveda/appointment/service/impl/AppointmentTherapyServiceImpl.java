@@ -6,12 +6,18 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ayurveda.appointment.client.PatientServiceClient;
 import com.ayurveda.appointment.client.TherapistServiceClient;
 import com.ayurveda.appointment.dto.request.CreateAppointmentTherapyRequest;
 import com.ayurveda.appointment.dto.response.AppointmentTherapyResponse;
+import com.ayurveda.appointment.dto.response.PatientSummaryResponse;
 import com.ayurveda.appointment.dto.response.TherapistSummaryResponse;
+import com.ayurveda.appointment.dto.response.TherapyResponse;
+import com.ayurveda.appointment.dto.response.TreatmentCategoryResponse;
 import com.ayurveda.appointment.entity.AppointmentTherapy;
 import com.ayurveda.appointment.entity.AppointmentTherapyRecommendation;
+import com.ayurveda.appointment.entity.TherapyMaster;
+import com.ayurveda.appointment.entity.TreatmentCategoryMaster;
 import com.ayurveda.appointment.mapper.AppointmentTherapyMapper;
 import com.ayurveda.appointment.repository.AppointmentBookingRepository;
 import com.ayurveda.appointment.repository.AppointmentTherapyRecommendationRepository;
@@ -38,6 +44,7 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
     private final TherapyRepository therapyRepository;
     private final TherapistServiceClient therapistServiceClient;
     private final AppointmentTherapyMapper appointmentTherapyMapper;
+    private final PatientServiceClient patientServiceClient;
 
     @Override
     public ApiResponse<AppointmentTherapyResponse> createAppointmentTherapy(
@@ -73,7 +80,27 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
         }
 
         AppointmentTherapyResponse response = appointmentTherapyMapper.toResponse(savedTherapy, therapist);
-        response.setTherapyIds(request.getTherapyIds());
+        List<TherapyResponse> therapies = request.getTherapyIds()
+                .stream()
+                .map(id -> therapyRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Therapy not found: " + id)))
+                .map(this::mapTherapy)
+                .toList();
+
+        response.setTherapies(therapies);
+
+        PatientSummaryResponse patient = patientServiceClient
+                .getPatientById(request.getPatientId())
+                .getData();
+
+        response.setPatient(patient);
+        
+        TreatmentCategoryMaster category = treatmentCategoryRepository
+                .findById(savedTherapy.getTreatmentCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Treatment category not found"));
+
+        response.setTreatmentCategory(mapTreatmentCategory(category));
 
         log.info("Appointment therapy created successfully with id: {}", savedTherapy.getId());
 
@@ -82,36 +109,89 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<AppointmentTherapyResponse> getAppointmentTherapyByPatientId(UUID patientId) {
+    public ApiResponse<List<AppointmentTherapyResponse>> getAppointmentTherapyByPatientId(UUID patientId) {
 
         log.info("Fetching therapy details for patient: {}", patientId);
 
-        AppointmentTherapy appointmentTherapy = appointmentTherapyRepository.findByPatientId(patientId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Therapy details not found for patient: " + patientId));
+        List<AppointmentTherapy> appointmentTherapies =
+                appointmentTherapyRepository.findAllByPatientId(patientId);
 
-        TherapistSummaryResponse therapist = fetchTherapist(appointmentTherapy.getAssignedTherapistId());
+        if (appointmentTherapies.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "Therapy details not found for patient: " + patientId);
+        }
 
-        AppointmentTherapyResponse response = appointmentTherapyMapper.toResponse(appointmentTherapy, therapist);
+        PatientSummaryResponse patient = patientServiceClient
+                .getPatientById(patientId)
+                .getData();
 
-        List<UUID> therapyIds = appointmentTherapyRecommendationRepository
-                .findByAppointmentTherapyId(appointmentTherapy.getId())
-                .stream()
-                .map(AppointmentTherapyRecommendation::getTherapyMasterId)
+        List<AppointmentTherapyResponse> responses = appointmentTherapies.stream()
+                .map(therapy -> {
+
+                    TherapistSummaryResponse therapist =
+                            fetchTherapist(therapy.getAssignedTherapistId());
+
+                    AppointmentTherapyResponse response =
+                            appointmentTherapyMapper.toResponse(therapy, therapist);
+
+                    response.setPatient(patient);
+
+                    List<TherapyResponse> therapies =
+                            appointmentTherapyRecommendationRepository
+                                    .findByAppointmentTherapyId(therapy.getId())
+                                    .stream()
+                                    .map(AppointmentTherapyRecommendation::getTherapyMasterId)
+                                    .map(id -> therapyRepository.findById(id)
+                                            .orElseThrow(() -> new ResourceNotFoundException(
+                                                    "Therapy not found: " + id)))
+                                    .map(this::mapTherapy)
+                                    .toList();
+
+                    response.setTherapies(therapies);
+
+                    TreatmentCategoryMaster category =
+                            treatmentCategoryRepository
+                                    .findById(therapy.getTreatmentCategoryId())
+                                    .orElseThrow(() -> new ResourceNotFoundException(
+                                            "Treatment category not found"));
+
+                    response.setTreatmentCategory(mapTreatmentCategory(category));
+
+                    return response;
+                })
                 .toList();
 
-        response.setTherapyIds(therapyIds);
-
-        return ApiResponse.success(response);
+        return ApiResponse.success(responses);
     }
+    
+    private TherapyResponse mapTherapy(TherapyMaster therapy) {
 
+        return TherapyResponse.builder()
+                .id(therapy.getId())
+                .therapyCode(therapy.getTherapyCode())
+                .therapyName(therapy.getTherapyName())
+                .description(therapy.getDescription())
+                .categoryId(therapy.getCategoryId())
+                .active(therapy.getActive())
+                .build();
+    }
+    
     private TherapistSummaryResponse fetchTherapist(UUID therapistId) {
-        ApiResponse<TherapistSummaryResponse> therapistResponse =
-                therapistServiceClient.getTherapistById(therapistId);
-        if (therapistResponse == null || !therapistResponse.isSuccess() || therapistResponse.getData() == null) {
-            throw new ResourceNotFoundException("Therapist not found with id: " + therapistId);
-        }
-        return therapistResponse.getData();
+
+        return therapistServiceClient
+                .getTherapistById(therapistId)
+                .getData();
+    }
+    
+    private TreatmentCategoryResponse mapTreatmentCategory(TreatmentCategoryMaster category) {
+
+        return TreatmentCategoryResponse.builder()
+                .id(category.getId())
+                .categoryCode(category.getCategoryCode())
+                .categoryName(category.getCategoryName())
+                .description(category.getDescription())
+                .active(category.getActive())
+                .build();
     }
 
 }

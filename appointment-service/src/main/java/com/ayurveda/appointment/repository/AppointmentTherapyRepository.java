@@ -1,5 +1,6 @@
 package com.ayurveda.appointment.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +13,5 @@ import com.ayurveda.appointment.entity.AppointmentTherapy;
 public interface AppointmentTherapyRepository
         extends JpaRepository<AppointmentTherapy, UUID> {
 
-    Optional<AppointmentTherapy> findByPatientId(UUID patientId);
-
+	List<AppointmentTherapy> findAllByPatientId(UUID patientId);
 }

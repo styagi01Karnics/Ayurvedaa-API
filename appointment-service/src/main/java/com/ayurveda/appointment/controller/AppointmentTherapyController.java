@@ -1,5 +1,6 @@
 package com.ayurveda.appointment.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -39,13 +40,11 @@ public class AppointmentTherapyController {
     }
 
     @GetMapping("/{patientId}")
-    public ResponseEntity<ApiResponse<AppointmentTherapyResponse>>
-            getAppointmentTherapyByPatientId(
+    public ResponseEntity<ApiResponse<List<AppointmentTherapyResponse>>> getAppointmentTherapyByPatientId(
             @PathVariable UUID patientId) {
 
-        ApiResponse<AppointmentTherapyResponse> response =
-                appointmentTherapyService
-                        .getAppointmentTherapyByPatientId(patientId);
+        ApiResponse<List<AppointmentTherapyResponse>> response =
+                appointmentTherapyService.getAppointmentTherapyByPatientId(patientId);
 
         return ResponseEntity.ok(response);
     }

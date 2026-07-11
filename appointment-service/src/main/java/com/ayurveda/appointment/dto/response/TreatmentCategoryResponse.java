@@ -12,6 +12,8 @@ import lombok.*;
 public class TreatmentCategoryResponse {
 
     private UUID id;
+    
+    private String categoryCode;
 
     private String categoryName;
 

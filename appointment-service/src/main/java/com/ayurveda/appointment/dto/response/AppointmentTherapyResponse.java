@@ -22,11 +22,9 @@ public class AppointmentTherapyResponse {
 
     private UUID therapyId;
 
-    private UUID patientId;
+    private PatientSummaryResponse patient;
 
-    private UUID treatmentCategoryId;
-
-    private UUID assignedTherapistId;
+    private TreatmentCategoryResponse treatmentCategory;
 
     private TherapistSummaryResponse assignedTherapist;
 
@@ -47,6 +45,6 @@ public class AppointmentTherapyResponse {
     /**
      * Recommended Therapies
      */
-    private List<UUID> therapyIds;
+    private List<TherapyResponse> therapies;
 
 }

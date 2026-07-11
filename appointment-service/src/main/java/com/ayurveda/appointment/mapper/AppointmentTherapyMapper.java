@@ -35,9 +35,6 @@ public class AppointmentTherapyMapper {
 
         return AppointmentTherapyResponse.builder()
                 .therapyId(entity.getId())
-                .patientId(entity.getPatientId())
-                .treatmentCategoryId(entity.getTreatmentCategoryId())
-                .assignedTherapistId(entity.getAssignedTherapistId())
                 .assignedTherapist(therapist)
                 .scheduleDate(entity.getScheduleDate())
                 .scheduleTime(entity.getScheduleTime())
