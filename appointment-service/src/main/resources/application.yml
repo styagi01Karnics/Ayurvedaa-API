@@ -22,13 +22,13 @@ server:
 
 services:
   patient:
-    url: http://localhost:8101
+    url: http://103.174.103.250:8101
   doctor:
-    url: http://localhost:8102
+    url: http://103.174.103.250:8102
   therapist:
-    url: http://localhost:8104
+    url: http://103.174.103.250:8104
   file-upload:
-    url: http://localhost:8105
+    url: http://103.174.103.250:8105
 
 springdoc:
   api-docs:
