@@ -109,6 +109,7 @@ pipeline {
         docker build -t sunardock/appointment-service:${BUILD_NUMBER} ./appointment-service
         docker build -t sunardock/therapist-service:${BUILD_NUMBER} ./therapist-service
         docker build -t sunardock/file-upload-service:${BUILD_NUMBER} ./file-upload-service
+        docker build -t sunardock/attendance-service:${BUILD_NUMBER} ./attendance-service
         '''
     }
 }
@@ -125,6 +126,7 @@ pipeline {
             docker push sunardock/appointment-service:${BUILD_NUMBER}
             docker push sunardock/therapist-service:${BUILD_NUMBER}
             docker push sunardock/file-upload-service:${BUILD_NUMBER}
+            docker push sunardock/attendance-service:${BUILD_NUMBER}
             '''
         }
     }
@@ -139,6 +141,7 @@ pipeline {
         docker rm -f appointment-service || true
         docker rm -f therapist-service || true
         docker rm -f file-upload-service || true
+        docker rm -f attendance-service || true
 
         # Run patient-service
         docker run -d \
@@ -169,6 +172,12 @@ pipeline {
         --name file-upload-service \
         -p 8105:8105 \
         sunardock/file-upload-service:${BUILD_NUMBER}
+
+        # Run attendance-service
+        docker run -d \
+        --name attendance-service \
+        -p 8106:8106 \
+        sunardock/attendance-service:${BUILD_NUMBER}
         '''
     }
 }

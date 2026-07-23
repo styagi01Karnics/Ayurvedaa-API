@@ -32,6 +32,31 @@ public final class AppConstants {
             "Patient with this mobile number already exists.";
 
     // ===========================
+    // Attendance
+    // ===========================
+
+    public static final String ATTENDANCE_MARKED_SUCCESSFULLY = "Attendance marked successfully.";
+    public static final String ATTENDANCE_CHECKED_OUT_SUCCESSFULLY = "Attendance check-out recorded successfully.";
+    public static final String ATTENDANCE_STATUS_UPDATED_SUCCESSFULLY = "Attendance status updated successfully.";
+    public static final String ATTENDANCE_FETCHED_SUCCESSFULLY = "Attendance fetched successfully.";
+    public static final String ATTENDANCES_FETCHED_SUCCESSFULLY = "Attendance records fetched successfully.";
+    public static final String ATTENDANCE_DELETED_SUCCESSFULLY = "Attendance deleted successfully.";
+
+    public static final String ATTENDANCE_NOT_FOUND = "Attendance record not found.";
+    public static final String ATTENDANCE_ALREADY_MARKED =
+            "Attendance already marked for this staff on the given date.";
+    public static final String ATTENDANCE_ALREADY_CHECKED_OUT =
+            "Attendance for this record has already been checked out.";
+    public static final String INVALID_CHECK_OUT_TIME =
+            "Check-out time cannot be before check-in time.";
+    public static final String ATTENDANCE_DATE_IN_FUTURE =
+            "Attendance date cannot be in the future.";
+    public static final String EMP_ID_REQUIRED =
+            "Employee ID must not be blank.";
+    public static final String ATTENDANCE_ID_REQUIRED =
+            "Attendance ID must not be null.";
+
+    // ===========================
     // Validation
     // ===========================
 

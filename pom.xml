@@ -25,6 +25,7 @@
         <module>therapist-service</module>
         <module>appointment-service</module>
         <module>file-upload-service</module>
+        <module>attendance-service</module>
     </modules>
 
     <properties>
