@@ -114,6 +114,21 @@ pipeline {
     }
 }
 
+
+        stage('Docker Push') {
+    steps {
+        withDockerRegistry([credentialsId: 'dockerhub-creds', url: '']) {
+            sh '''
+            docker push sunardock/ayurvedaa-api-patient-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-doctor-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-appointment-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER}
+            '''
+        }
+    }
+}
       stage('Deploy') {
     steps {
         sh '''
