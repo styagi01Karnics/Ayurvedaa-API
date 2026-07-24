@@ -2,6 +2,8 @@ package com.ayurveda.common.exception;
 
 import com.ayurveda.common.ApiResponse;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
@@ -17,8 +19,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -96,8 +100,34 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Object>> handleUnreadableBody(HttpMessageNotReadableException ex) {
         log.error("Malformed request body: {}", ex.getMessage());
+
+        Throwable cause = ex.getCause();
+        if (cause instanceof InvalidFormatException invalidFormatException
+                && invalidFormatException.getTargetType() != null
+                && invalidFormatException.getTargetType().isEnum()) {
+
+            String message = buildInvalidEnumMessage(invalidFormatException);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), message));
+        }
+
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), "Malformed or unreadable request body."));
+    }
+
+    private String buildInvalidEnumMessage(InvalidFormatException ex) {
+        String fieldName = ex.getPath().isEmpty()
+                ? "field"
+                : ex.getPath().get(ex.getPath().size() - 1).getFieldName();
+
+        String acceptedValues = Arrays.stream(ex.getTargetType().getEnumConstants())
+                .map(Object::toString)
+                .collect(Collectors.joining(", "));
+
+        return String.format(
+                "Invalid value '%s' for field '%s'. Accepted values: %s.",
+                ex.getValue(), fieldName, acceptedValues
+        );
     }
 
     @ExceptionHandler(Exception.class)

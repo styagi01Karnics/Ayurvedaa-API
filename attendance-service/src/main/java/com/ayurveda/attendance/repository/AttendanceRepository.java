@@ -20,6 +20,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
 
     boolean existsBySerialNumberAndDeletedFalse(String serialNumber);
 
+    boolean existsBySerialNumber(String serialNumber);
+
+    long countBySerialNumberStartingWith(String prefix);
+
     boolean existsByEmpIdAndAttendanceDateAndDeletedFalse(String empId, LocalDate attendanceDate);
 
 }
