@@ -104,12 +104,12 @@ pipeline {
       stage('Docker Build') {
     steps {
         sh '''
-        docker build -t sunardock/patient-service:${BUILD_NUMBER} ./patient-service
-        docker build -t sunardock/doctor-service:${BUILD_NUMBER} ./doctor-service
-        docker build -t sunardock/appointment-service:${BUILD_NUMBER} ./appointment-service
-        docker build -t sunardock/therapist-service:${BUILD_NUMBER} ./therapist-service
-        docker build -t sunardock/file-upload-service:${BUILD_NUMBER} ./file-upload-service
-        docker build -t sunardock/attendance-service:${BUILD_NUMBER} ./attendance-service
+        docker build -t sunardock/ayurvedaa-api-patient-service:${BUILD_NUMBER} ./patient-service
+        docker build -t sunardock/ayurvedaa-api-doctor-service:${BUILD_NUMBER} ./doctor-service
+        docker build -t sunardock/ayurvedaa-api-appointment-service:${BUILD_NUMBER} ./appointment-service
+        docker build -t sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER} ./therapist-service
+        docker build -t sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER} ./file-upload-service
+        docker build -t sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER} ./attendance-service
         '''
     }
 }
@@ -121,12 +121,12 @@ pipeline {
             url: 'https://index.docker.io/v1/'
         ) {
             sh '''
-            docker push sunardock/patient-service:${BUILD_NUMBER}
-            docker push sunardock/doctor-service:${BUILD_NUMBER}
-            docker push sunardock/appointment-service:${BUILD_NUMBER}
-            docker push sunardock/therapist-service:${BUILD_NUMBER}
-            docker push sunardock/file-upload-service:${BUILD_NUMBER}
-            docker push sunardock/attendance-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-patient-service:${BUILD_NUMBER}}
+            docker push sunardock/ayurvedaa-api-doctor-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-appointment-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER}
             '''
         }
     }
@@ -147,41 +147,40 @@ pipeline {
         docker run -d \
         --name patient-service \
         -p 8101:8101 \
-        sunardock/patient-service:${BUILD_NUMBER}
+        sunardock/ayurvedaa-api-patient-service:${BUILD_NUMBER}
 
         # Run doctor-service
         docker run -d \
         --name doctor-service \
         -p 8102:8102 \
-        sunardock/doctor-service:${BUILD_NUMBER}
+        sunardock/ayurvedaa-api-doctor-service:${BUILD_NUMBER}
 
         # Run appointment-service
         docker run -d \
         --name appointment-service \
         -p 8103:8103 \
-        sunardock/appointment-service:${BUILD_NUMBER}
+        sunardock/ayurvedaa-api-appointment-service:${BUILD_NUMBER}
 
         # Run therapist-service
         docker run -d \
         --name therapist-service \
         -p 8104:8104 \
-        sunardock/therapist-service:${BUILD_NUMBER}
+        sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER}
 
         # Run file-upload-service
         docker run -d \
         --name file-upload-service \
         -p 8105:8105 \
-        sunardock/file-upload-service:${BUILD_NUMBER}
+        sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER}
 
         # Run attendance-service
         docker run -d \
         --name attendance-service \
         -p 8106:8106 \
-        sunardock/attendance-service:${BUILD_NUMBER}
+        sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER}
         '''
     }
 }
-
     }
 
 }
