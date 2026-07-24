@@ -114,68 +114,50 @@ pipeline {
     }
 }
 
-       stage('Docker Push') {
-    steps {
-        withDockerRegistry(
-            credentialsId: 'dockerhub-creds',
-            url: 'https://index.docker.io/v1/'
-        ) {
-            sh '''
-            docker push sunardock/ayurvedaa-api-patient-service:${BUILD_NUMBER}}
-            docker push sunardock/ayurvedaa-api-doctor-service:${BUILD_NUMBER}
-            docker push sunardock/ayurvedaa-api-appointment-service:${BUILD_NUMBER}
-            docker push sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER}
-            docker push sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER}
-            docker push sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER}
-            '''
-        }
-    }
-}
-
-        stage('Deploy') {
+      stage('Deploy') {
     steps {
         sh '''
         # Stop and remove old containers
-        docker rm -f patient-service || true
-        docker rm -f doctor-service || true
-        docker rm -f appointment-service || true
-        docker rm -f therapist-service || true
-        docker rm -f file-upload-service || true
-        docker rm -f attendance-service || true
+        docker rm -f ayurvedaa-api-patient-service || true
+        docker rm -f ayurvedaa-api-doctor-service || true
+        docker rm -f ayurvedaa-api-appointment-service || true
+        docker rm -f ayurvedaa-api-therapist-service || true
+        docker rm -f ayurvedaa-api-file-upload-service || true
+        docker rm -f ayurvedaa-api-attendance-service || true
 
         # Run patient-service
         docker run -d \
-        --name patient-service \
+        --name ayurvedaa-api-patient-service \
         -p 8101:8101 \
         sunardock/ayurvedaa-api-patient-service:${BUILD_NUMBER}
 
         # Run doctor-service
         docker run -d \
-        --name doctor-service \
+        --name ayurvedaa-api-doctor-service \
         -p 8102:8102 \
         sunardock/ayurvedaa-api-doctor-service:${BUILD_NUMBER}
 
         # Run appointment-service
         docker run -d \
-        --name appointment-service \
+        --name ayurvedaa-api-appointment-service \
         -p 8103:8103 \
         sunardock/ayurvedaa-api-appointment-service:${BUILD_NUMBER}
 
         # Run therapist-service
         docker run -d \
-        --name therapist-service \
+        --name ayurvedaa-api-therapist-service \
         -p 8104:8104 \
         sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER}
 
         # Run file-upload-service
         docker run -d \
-        --name file-upload-service \
+        --name ayurvedaa-api-file-upload-service \
         -p 8105:8105 \
         sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER}
 
         # Run attendance-service
         docker run -d \
-        --name attendance-service \
+        --name ayurvedaa-api-attendance-service \
         -p 8106:8106 \
         sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER}
         '''
