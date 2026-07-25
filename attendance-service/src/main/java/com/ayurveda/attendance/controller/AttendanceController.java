@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ayurveda.attendance.service.AttendanceService;
 import com.ayurveda.attendance.service.DeviceAttendanceLogService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,13 +21,13 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequiredArgsConstructor
 @Validated
-@RequestMapping("/api/v1/attendances")
+@RequestMapping("/iclock")
 @Tag(name = "Attendance Management", description = "Attendance Management APIs")
 public class AttendanceController {
 
 	private final DeviceAttendanceLogService deviceAttendanceLogService;
 
-	@PostMapping(value = "/cdata.aspx", consumes = MediaType.ALL_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
+	@PostMapping(value = "/cdata", consumes = MediaType.ALL_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> receiveAttendanceLog(
 			@RequestParam(value = "SN", required = false) String serialNumber,
 			@RequestParam(value = "table", required = false) String table,
@@ -70,7 +69,7 @@ public class AttendanceController {
 		return new ResponseEntity<>("OK", HttpStatus.OK);
 	}
 
-	@GetMapping(value = "/cdata.aspx", produces = MediaType.TEXT_PLAIN_VALUE)
+	@GetMapping(value = "/data", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> handshake() {
 
 		return new ResponseEntity<>("OK", HttpStatus.OK);
