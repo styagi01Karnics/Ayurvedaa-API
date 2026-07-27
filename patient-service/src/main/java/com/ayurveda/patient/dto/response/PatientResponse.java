@@ -15,6 +15,9 @@ import com.ayurveda.patient.enums.IdProofType;
 public class PatientResponse {
 
     private UUID id;
+    /** e.g. #PT458652 */
+    private String patientDisplayId;
+    /** e.g. GAN2025-0129 */
     private String patientCode;
     private String firstName;
     private String lastName;

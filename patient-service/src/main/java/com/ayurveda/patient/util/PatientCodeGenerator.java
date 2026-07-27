@@ -1,19 +1,60 @@
 package com.ayurveda.patient.util;
 
+import java.time.Year;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.concurrent.atomic.AtomicLong;
+import com.ayurveda.patient.entity.Patient;
+import com.ayurveda.patient.repository.PatientRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Component
+@RequiredArgsConstructor
 public class PatientCodeGenerator {
 
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private final AtomicLong sequence = new AtomicLong(1);
+    private static final String DISPLAY_PREFIX = "PT";
+    private static final int DISPLAY_START = 458652;
+    private static final int YEARLY_SEQ_START = 1;
 
-    public String generate() {
-        return "PAT-" + LocalDate.now().format(DATE_FORMAT) + "-" + String.format("%04d", sequence.getAndIncrement());
+    private final PatientRepository patientRepository;
+
+    @Value("${patient.tenant-code:GAN}")
+    private String tenantCode;
+
+    public PatientIdentifiers generate() {
+        return new PatientIdentifiers(nextDisplayId(), nextPatientCode());
+    }
+
+    private String nextDisplayId() {
+        Optional<Patient> latest = patientRepository
+                .findTopByPatientDisplayIdStartingWithOrderByPatientDisplayIdDesc(DISPLAY_PREFIX);
+
+        int next = DISPLAY_START;
+        if (latest.isPresent() && latest.get().getPatientDisplayId() != null) {
+            String last = latest.get().getPatientDisplayId().replace(DISPLAY_PREFIX, "");
+            next = Integer.parseInt(last) + 1;
+        }
+        return DISPLAY_PREFIX + next;
+    }
+
+    private String nextPatientCode() {
+        String prefix = tenantCode.trim().toUpperCase() + Year.now().getValue() + "-";
+        Optional<Patient> latest = patientRepository
+                .findTopByPatientCodeStartingWithOrderByPatientCodeDesc(prefix);
+
+        int next = YEARLY_SEQ_START;
+        if (latest.isPresent() && latest.get().getPatientCode() != null) {
+            String last = latest.get().getPatientCode();
+            String serial = last.substring(last.lastIndexOf('-') + 1);
+            next = Integer.parseInt(serial) + 1;
+        }
+        return prefix + String.format("%04d", next);
+    }
+
+    public record PatientIdentifiers(String patientDisplayId, String patientCode) {
     }
 
 }

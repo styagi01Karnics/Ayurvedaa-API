@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateAppointmentTherapyRequest;
 import com.ayurveda.appointment.dto.response.AppointmentTherapyResponse;
+import com.ayurveda.appointment.dto.response.TherapistTodayScheduleResponse;
 
 public interface AppointmentTherapyService {
 
@@ -13,5 +14,7 @@ public interface AppointmentTherapyService {
             CreateAppointmentTherapyRequest request);
 
     ApiResponse<List<AppointmentTherapyResponse>> getAppointmentTherapyByPatientId(UUID patientId);
+
+    ApiResponse<TherapistTodayScheduleResponse> getTherapistTodaySchedule(UUID therapistId);
 
 }

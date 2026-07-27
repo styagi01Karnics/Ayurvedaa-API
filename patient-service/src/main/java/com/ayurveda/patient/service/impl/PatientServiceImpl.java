@@ -47,9 +47,11 @@ public class PatientServiceImpl implements PatientService {
         validateDuplicatePatient(request);
 
         String[] names = FullNameSplitter.split(request.getFullName());
+        PatientCodeGenerator.PatientIdentifiers identifiers = patientCodeGenerator.generate();
 
         Patient patient = Patient.builder()
-                .patientCode(patientCodeGenerator.generate())
+                .patientDisplayId(identifiers.patientDisplayId())
+                .patientCode(identifiers.patientCode())
                 .firstName(names[0])
                 .lastName(names[1])
                 .gender(request.getGender())
@@ -73,8 +75,9 @@ public class PatientServiceImpl implements PatientService {
 
         Patient savedPatient = patientRepository.save(patient);
         
-        log.info("Patient created successfully. Patient ID: {}, Patient Code: {}",
+        log.info("Patient created successfully. Patient ID: {}, Display ID: {}, Patient Code: {}",
                 savedPatient.getId(),
+                savedPatient.getPatientDisplayId(),
                 savedPatient.getPatientCode());
 
         return ResponseUtil.success(
@@ -250,7 +253,23 @@ public class PatientServiceImpl implements PatientService {
                 patients
         );
     }
-    
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<Long> getTotalPatientCount() {
+
+        log.info("Fetching total active patient count.");
+
+        long count = patientRepository.countByDeletedFalse();
+
+        log.info("Total active patients: {}", count);
+
+        return ResponseUtil.success(
+                "Total patient count fetched successfully.",
+                count
+        );
+    }
+
     @Override
     @Transactional
     public ApiResponse<Void> deletePatient(UUID patientId) {

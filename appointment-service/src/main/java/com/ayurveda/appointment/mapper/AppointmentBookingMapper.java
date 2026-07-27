@@ -40,7 +40,6 @@ public class AppointmentBookingMapper {
                 .registrationDate(entity.getRegistrationDate())
                 .assignedDoctorId(entity.getAssignedDoctorId())
                 .assignedDoctor(doctor)
-                .workflowStep(entity.getWorkflowStep())
                 .bookingStatus(entity.getBookingStatus())
                 .build();
     }

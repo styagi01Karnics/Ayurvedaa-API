@@ -14,6 +14,8 @@ public interface PatientService {
     ApiResponse<PatientResponse> getPatientById(UUID patientId);
 
     ApiResponse<List<PatientResponse>> getAllPatients();
-    
+
+    ApiResponse<Long> getTotalPatientCount();
+
     ApiResponse<Void> deletePatient(UUID patientId);
 }

@@ -28,6 +28,11 @@
         <module>appointment-service</module>
         <module>file-upload-service</module>
         <module>attendance-service</module>
+        <module>auth-service</module>
+        <module>activity-log-service</module>
+        <module>medicine-service</module>
+        <module>billing-service</module>
+        <module>notification-service</module>
     </modules>
 
     <properties>

@@ -1,10 +1,20 @@
 package com.ayurveda.appointment.entity;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
+import com.ayurveda.appointment.enums.TherapyMasterStatus;
 import com.ayurveda.common.BaseEntity;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -27,7 +37,21 @@ public class TherapyMaster extends BaseEntity {
     @Column(length = 500)
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TherapyMasterStatus status;
+
+    @Column(nullable = false)
+    private Integer durationMinutes;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal price;
+
+    @Column(nullable = false)
+    private UUID assignedTherapistId;
+
     @Builder.Default
+    @Column(nullable = false)
     private Boolean active = true;
 
 }

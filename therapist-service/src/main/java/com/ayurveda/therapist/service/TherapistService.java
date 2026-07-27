@@ -15,4 +15,6 @@ public interface TherapistService {
 
     ApiResponse<List<TherapistResponse>> getAllTherapists();
 
+    ApiResponse<Void> deleteTherapist(UUID therapistId);
+
 }

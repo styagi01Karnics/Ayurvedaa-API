@@ -14,4 +14,6 @@ public interface AppointmentConsultationTypeRepository
 
     List<AppointmentConsultationType> findByBookingId(UUID bookingId);
 
+    void deleteByBookingId(UUID bookingId);
+
 }

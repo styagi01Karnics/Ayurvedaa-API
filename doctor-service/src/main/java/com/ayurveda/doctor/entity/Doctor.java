@@ -1,8 +1,13 @@
 package com.ayurveda.doctor.entity;
 
+import java.math.BigDecimal;
+
 import com.ayurveda.common.BaseEntity;
+import com.ayurveda.doctor.enums.DoctorStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,6 +32,19 @@ public class Doctor extends BaseEntity {
 
     @Column(length = 150)
     private String specialization;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private DoctorStatus status;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal consultationFees;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal followUpFees;
+
+    @Column(length = 255)
+    private String availability;
 
     @Column(length = 15)
     private String mobileNumber;

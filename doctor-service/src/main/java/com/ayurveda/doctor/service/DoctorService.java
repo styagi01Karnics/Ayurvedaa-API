@@ -15,4 +15,6 @@ public interface DoctorService {
 
     ApiResponse<List<DoctorResponse>> getAllDoctors();
 
+    ApiResponse<Void> deleteDoctor(UUID doctorId);
+
 }

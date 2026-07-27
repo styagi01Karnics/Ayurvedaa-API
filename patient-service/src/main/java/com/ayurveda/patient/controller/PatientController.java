@@ -64,7 +64,16 @@ public class PatientController {
 
         return ResponseEntity.ok(patientService.getAllPatients());
     }
-    
+
+    @Operation(summary = "Get Total Patient Count")
+    @GetMapping("/get-patient-count")
+    public ResponseEntity<ApiResponse<Long>> getTotalPatientCount() {
+
+        log.info("Received request to fetch total patient count.");
+
+        return ResponseEntity.ok(patientService.getTotalPatientCount());
+    }
+
     @Operation(
             summary = "Delete Patient",
             description = "Soft delete patient by patient ID."
@@ -79,6 +88,6 @@ public class PatientController {
                 patientService.deletePatient(patientId)
         );
     }
-    
+
 }
 

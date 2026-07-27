@@ -15,8 +15,16 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
 
     boolean existsByPatientCodeAndDeletedFalse(String patientCode);
 
+    boolean existsByPatientDisplayIdAndDeletedFalse(String patientDisplayId);
+
+    Optional<Patient> findTopByPatientDisplayIdStartingWithOrderByPatientDisplayIdDesc(String prefix);
+
+    Optional<Patient> findTopByPatientCodeStartingWithOrderByPatientCodeDesc(String prefix);
+
     boolean existsByEmailAndDeletedFalse(String email);
 
     boolean existsByMobileNumberAndDeletedFalse(String mobileNumber);
+
+    long countByDeletedFalse();
 
 }
