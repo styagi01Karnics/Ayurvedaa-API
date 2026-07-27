@@ -1,8 +1,8 @@
 package com.ayurveda.patient.entity;
 
 import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.enums.IdProofType;
 import com.ayurveda.patient.enums.Gender;
-import com.ayurveda.patient.enums.IdProofType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

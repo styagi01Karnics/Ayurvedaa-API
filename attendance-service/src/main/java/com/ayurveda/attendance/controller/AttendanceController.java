@@ -33,34 +33,28 @@ public class AttendanceController {
 			@RequestParam(value = "table", required = false) String table,
 			@RequestBody(required = false) String rawBody) {
 
-		System.out.println("Received Punch from Machine SN: " + serialNumber);
+		log.info("Received punch from machine SN: {}, table: {}", serialNumber, table);
 
 		if (rawBody != null && !rawBody.trim().isEmpty()) {
-			// Raw text ko line by line split karein
 			String[] lines = rawBody.split("\\r?\\n");
 
 			for (String line : lines) {
 				line = line.trim();
 				if (line.isEmpty() || line.startsWith("SN=")) {
-					continue; // Header lines ko skip karein
+					continue;
 				}
 
-				// eSSL ADMS data tab-separated ya multiple spaces se split hota hai
 				String[] tokens = line.split("\\s+");
 
-				// Standard format: [EmployeeID, Date, Time, PunchType, VerifyMethod]
 				if (tokens.length >= 3) {
 					String employeeId = tokens[0];
 					String punchDate = tokens[1];
 					String punchTime = tokens[2];
-					String timestamp = punchDate + " " + punchTime;
 
-					System.out.println("Emp ID: " + employeeId + " | Time: " + timestamp);
+					log.debug("Emp ID: {} | Time: {} {}", employeeId, punchDate, punchTime);
 
 					deviceAttendanceLogService.savePunchLog(serialNumber, table, employeeId, punchDate, punchTime,
 							line);
-					// TODO: Dashboard real-time update ke liye Spring WebSocket / SSE trigger
-					// karein
 				}
 			}
 		}

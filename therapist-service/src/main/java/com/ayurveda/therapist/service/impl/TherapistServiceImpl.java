@@ -1,6 +1,7 @@
 package com.ayurveda.therapist.service.impl;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.therapist.dto.request.CreateTherapistRequest;
 import com.ayurveda.therapist.dto.response.TherapistResponse;
@@ -47,16 +48,16 @@ public class TherapistServiceImpl implements TherapistService {
 
         Therapist savedTherapist = therapistRepository.save(therapist);
         return ApiResponse.success(
-                "Therapist created successfully.", TherapistMapper.toResponse(savedTherapist));
+                AppConstants.THERAPIST_CREATED_SUCCESSFULLY, TherapistMapper.toResponse(savedTherapist));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<TherapistResponse> getTherapistById(UUID therapistId) {
         Therapist therapist = therapistRepository.findByIdAndDeletedFalse(therapistId)
-                .orElseThrow(() -> new ResourceNotFoundException("Therapist not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND));
         return ApiResponse.success(
-                "Therapist fetched successfully.", TherapistMapper.toResponse(therapist));
+                AppConstants.THERAPIST_FETCHED_SUCCESSFULLY, TherapistMapper.toResponse(therapist));
     }
 
     @Override
@@ -66,21 +67,21 @@ public class TherapistServiceImpl implements TherapistService {
         List<TherapistResponse> therapists = therapistRepository.findAllByDeletedFalse().stream()
                 .map(therapist -> TherapistMapper.toResponse(therapist, serial.getAndIncrement()))
                 .toList();
-        return ApiResponse.success("Therapists fetched successfully.", therapists);
+        return ApiResponse.success(AppConstants.THERAPISTS_FETCHED_SUCCESSFULLY, therapists);
     }
 
     @Override
     @Transactional
     public ApiResponse<Void> deleteTherapist(UUID therapistId) {
         Therapist therapist = therapistRepository.findByIdAndDeletedFalse(therapistId)
-                .orElseThrow(() -> new ResourceNotFoundException("Therapist not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND));
 
         therapist.setDeleted(true);
         therapist.setActive(false);
         therapist.setStatus(TherapistStatus.INACTIVE);
         therapistRepository.save(therapist);
 
-        return ApiResponse.success("Therapist deleted successfully.", null);
+        return ApiResponse.success(AppConstants.THERAPIST_DELETED_SUCCESSFULLY, null);
     }
 
 }

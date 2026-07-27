@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.medicine.constant.MedicineMessages;
 import com.ayurveda.medicine.dto.request.CreateMedicineRequest;
 import com.ayurveda.medicine.dto.request.StockAdjustRequest;
 import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
@@ -50,7 +51,7 @@ public class MedicineServiceImpl implements MedicineService {
         Medicine medicine = medicineMapper.toEntity(request, defaultLowStockThreshold);
         Medicine saved = medicineRepository.save(medicine);
 
-        return ApiResponse.success("Medicine added successfully.", medicineMapper.toResponse(saved));
+        return ApiResponse.success(MedicineMessages.MEDICINE_ADDED_SUCCESSFULLY, medicineMapper.toResponse(saved));
     }
 
     @Override
@@ -59,7 +60,8 @@ public class MedicineServiceImpl implements MedicineService {
         medicineMapper.updateEntity(medicine, request, defaultLowStockThreshold);
         Medicine saved = medicineRepository.save(medicine);
 
-        return ApiResponse.success("Medicine updated successfully.", medicineMapper.toResponse(saved));
+        return ApiResponse.success(
+                MedicineMessages.MEDICINE_UPDATED_SUCCESSFULLY, medicineMapper.toResponse(saved));
     }
 
     @Override
@@ -81,7 +83,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .map(medicineMapper::toResponse)
                 .toList();
 
-        return ApiResponse.success("Medicines fetched successfully.", medicines);
+        return ApiResponse.success(MedicineMessages.MEDICINES_FETCHED_SUCCESSFULLY, medicines);
     }
 
     @Override
@@ -89,7 +91,7 @@ public class MedicineServiceImpl implements MedicineService {
         Medicine medicine = findActive(medicineId);
         medicine.setDeleted(true);
         medicineRepository.save(medicine);
-        return ApiResponse.success("Medicine deleted successfully.", null);
+        return ApiResponse.success(MedicineMessages.MEDICINE_DELETED_SUCCESSFULLY, null);
     }
 
     @Override
@@ -126,7 +128,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .byCategory(byCategory)
                 .build();
 
-        return ApiResponse.success("Stock summary fetched successfully.", summary);
+        return ApiResponse.success(MedicineMessages.STOCK_SUMMARY_FETCHED_SUCCESSFULLY, summary);
     }
 
     @Override
@@ -138,7 +140,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .medicineCount(medicineRepository.countByCategory(category))
                 .build();
 
-        return ApiResponse.success("Category stock count fetched successfully.", response);
+        return ApiResponse.success(MedicineMessages.CATEGORY_STOCK_COUNT_FETCHED, response);
     }
 
     @Override
@@ -150,7 +152,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .map(medicineMapper::toResponse)
                 .toList();
 
-        return ApiResponse.success("Low stock medicines fetched successfully.", medicines);
+        return ApiResponse.success(MedicineMessages.LOW_STOCK_MEDICINES_FETCHED, medicines);
     }
 
     @Override
@@ -178,7 +180,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .lowStockItems(lowStockItems)
                 .build();
 
-        return ApiResponse.success("Dashboard medicine stock availability fetched successfully.", response);
+        return ApiResponse.success(MedicineMessages.DASHBOARD_MEDICINE_STOCK_AVAILABILITY_FETCHED, response);
     }
 
     @Override
@@ -188,7 +190,7 @@ public class MedicineServiceImpl implements MedicineService {
 
         if (medicine.getQuantity() < qty) {
             throw new BadRequestException(
-                    "Insufficient stock for '" + medicine.getMedicineName()
+                    MedicineMessages.INSUFFICIENT_STOCK_PREFIX + medicine.getMedicineName()
                             + "'. Available: " + medicine.getQuantity() + ", requested: " + qty);
         }
 
@@ -197,7 +199,7 @@ public class MedicineServiceImpl implements MedicineService {
                 medicine.getQuantity(), medicine.getLowStockThreshold()));
         Medicine saved = medicineRepository.save(medicine);
 
-        return ApiResponse.success("Stock deducted successfully.", medicineMapper.toResponse(saved));
+        return ApiResponse.success(MedicineMessages.STOCK_DEDUCTED_SUCCESSFULLY, medicineMapper.toResponse(saved));
     }
 
     @Override
@@ -208,12 +210,12 @@ public class MedicineServiceImpl implements MedicineService {
                 medicine.getQuantity(), medicine.getLowStockThreshold()));
         Medicine saved = medicineRepository.save(medicine);
 
-        return ApiResponse.success("Stock restored successfully.", medicineMapper.toResponse(saved));
+        return ApiResponse.success(MedicineMessages.STOCK_RESTORED_SUCCESSFULLY, medicineMapper.toResponse(saved));
     }
 
     private Medicine findActive(UUID medicineId) {
         return medicineRepository.findByIdAndDeletedFalse(medicineId)
-                .orElseThrow(() -> new ResourceNotFoundException("Medicine not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(MedicineMessages.MEDICINE_NOT_FOUND));
     }
 
 }

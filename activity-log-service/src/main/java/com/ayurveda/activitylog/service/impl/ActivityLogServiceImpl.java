@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.ayurveda.activitylog.constant.ActivityLogMessages;
 import com.ayurveda.activitylog.dto.request.CreateActivityLogRequest;
 import com.ayurveda.activitylog.dto.response.ActivityLogResponse;
 import com.ayurveda.activitylog.entity.ActivityLog;
@@ -41,14 +42,15 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         }
 
         ActivityLog saved = activityLogRepository.save(entity);
-        return ApiResponse.success("Activity log created successfully.", activityLogMapper.toResponse(saved));
+        return ApiResponse.success(
+                ActivityLogMessages.ACTIVITY_LOG_CREATED_SUCCESSFULLY, activityLogMapper.toResponse(saved));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<ActivityLogResponse> getActivityLogById(UUID id) {
         ActivityLog entity = activityLogRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Activity log not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(ActivityLogMessages.ACTIVITY_LOG_NOT_FOUND));
         return ApiResponse.success(activityLogMapper.toResponse(entity));
     }
 
@@ -66,7 +68,7 @@ public class ActivityLogServiceImpl implements ActivityLogService {
                 .map(activityLogMapper::toResponse)
                 .toList();
 
-        return ApiResponse.success("Activity logs fetched successfully.", logs);
+        return ApiResponse.success(ActivityLogMessages.ACTIVITY_LOGS_FETCHED_SUCCESSFULLY, logs);
     }
 
 }

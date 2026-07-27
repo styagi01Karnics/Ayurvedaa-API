@@ -1,6 +1,7 @@
 package com.ayurveda.doctor.service.impl;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -42,15 +43,15 @@ public class DoctorServiceImpl implements DoctorService {
                 .build();
 
         Doctor savedDoctor = doctorRepository.save(doctor);
-        return ApiResponse.success("Doctor created successfully.", DoctorMapper.toResponse(savedDoctor));
+        return ApiResponse.success(AppConstants.DOCTOR_CREATED_SUCCESSFULLY, DoctorMapper.toResponse(savedDoctor));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<DoctorResponse> getDoctorById(UUID doctorId) {
         Doctor doctor = doctorRepository.findByIdAndDeletedFalse(doctorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found."));
-        return ApiResponse.success("Doctor fetched successfully.", DoctorMapper.toResponse(doctor));
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND));
+        return ApiResponse.success(AppConstants.DOCTOR_FETCHED_SUCCESSFULLY, DoctorMapper.toResponse(doctor));
     }
 
     @Override
@@ -60,21 +61,21 @@ public class DoctorServiceImpl implements DoctorService {
         List<DoctorResponse> doctors = doctorRepository.findAllByDeletedFalse().stream()
                 .map(doctor -> DoctorMapper.toResponse(doctor, serial.getAndIncrement()))
                 .toList();
-        return ApiResponse.success("Doctors fetched successfully.", doctors);
+        return ApiResponse.success(AppConstants.DOCTORS_FETCHED_SUCCESSFULLY, doctors);
     }
 
     @Override
     @Transactional
     public ApiResponse<Void> deleteDoctor(UUID doctorId) {
         Doctor doctor = doctorRepository.findByIdAndDeletedFalse(doctorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND));
 
         doctor.setDeleted(true);
         doctor.setActive(false);
         doctor.setStatus(DoctorStatus.INACTIVE);
         doctorRepository.save(doctor);
 
-        return ApiResponse.success("Doctor deleted successfully.", null);
+        return ApiResponse.success(AppConstants.DOCTOR_DELETED_SUCCESSFULLY, null);
     }
 
 }

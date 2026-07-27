@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.notification.constant.NotificationMessages;
 import com.ayurveda.notification.dto.request.CreateNotificationRequest;
 import com.ayurveda.notification.dto.response.NotificationResponse;
 import com.ayurveda.notification.dto.response.UnreadCountResponse;
@@ -35,7 +36,8 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("Creating {} notification for user {}", request.getType(), request.getRecipientUserId());
 
         Notification saved = notificationRepository.save(notificationMapper.toEntity(request));
-        return ApiResponse.success("Notification created successfully.", notificationMapper.toResponse(saved));
+        return ApiResponse.success(
+                NotificationMessages.NOTIFICATION_CREATED_SUCCESSFULLY, notificationMapper.toResponse(saved));
     }
 
     @Override
@@ -50,7 +52,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .map(notificationMapper::toResponse)
                 .toList();
 
-        return ApiResponse.success("Notifications fetched successfully.", notifications);
+        return ApiResponse.success(NotificationMessages.NOTIFICATIONS_FETCHED_SUCCESSFULLY, notifications);
     }
 
     @Override
@@ -67,14 +69,15 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setReadAt(LocalDateTime.now());
             notification = notificationRepository.save(notification);
         }
-        return ApiResponse.success("Notification marked as read.", notificationMapper.toResponse(notification));
+        return ApiResponse.success(
+                NotificationMessages.NOTIFICATION_MARKED_AS_READ, notificationMapper.toResponse(notification));
     }
 
     @Override
     public ApiResponse<Void> markAllAsRead(UUID userId) {
         int updated = notificationRepository.markAllReadForUser(userId);
         log.info("Marked {} notifications as read for user {}", updated, userId);
-        return ApiResponse.success("All notifications marked as read.", null);
+        return ApiResponse.success(NotificationMessages.ALL_NOTIFICATIONS_MARKED_AS_READ, null);
     }
 
     @Override
@@ -82,7 +85,7 @@ public class NotificationServiceImpl implements NotificationService {
     public ApiResponse<UnreadCountResponse> getUnreadCount(UUID userId) {
         long count = notificationRepository.countByRecipientUserIdAndReadFalseAndDeletedFalse(userId);
         return ApiResponse.success(
-                "Unread count fetched successfully.",
+                NotificationMessages.UNREAD_COUNT_FETCHED_SUCCESSFULLY,
                 UnreadCountResponse.builder().unreadCount(count).build());
     }
 
@@ -91,13 +94,13 @@ public class NotificationServiceImpl implements NotificationService {
         Notification notification = findActive(notificationId);
         notification.setDeleted(true);
         notificationRepository.save(notification);
-        return ApiResponse.success("Notification deleted successfully.", null);
+        return ApiResponse.success(NotificationMessages.NOTIFICATION_DELETED_SUCCESSFULLY, null);
     }
 
     private Notification findActive(UUID notificationId) {
         return notificationRepository.findByIdAndDeletedFalse(notificationId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Notification not found with id: " + notificationId));
+                        NotificationMessages.NOTIFICATION_NOT_FOUND_WITH_ID + notificationId));
     }
 
 }

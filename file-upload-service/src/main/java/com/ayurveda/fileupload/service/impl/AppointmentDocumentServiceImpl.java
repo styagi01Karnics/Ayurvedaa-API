@@ -52,7 +52,7 @@ public class AppointmentDocumentServiceImpl implements AppointmentDocumentServic
 
             return ApiResponse.success(AppMessages.DOCUMENT_UPLOADED, response);
         } catch (IOException ex) {
-            throw new BadRequestException("Unable to upload document.");
+            throw new BadRequestException(AppMessages.UNABLE_TO_UPLOAD_DOCUMENT);
         }
     }
 

@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ayurveda.appointment.client.PatientServiceClient;
 import com.ayurveda.appointment.client.TherapistServiceClient;
+import com.ayurveda.appointment.common.Constants;
+import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.appointment.dto.request.CreateAppointmentTherapyRequest;
 import com.ayurveda.appointment.dto.response.AppointmentTherapyResponse;
 import com.ayurveda.appointment.dto.response.PatientSummaryResponse;
@@ -56,19 +58,20 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
         log.info("Creating therapy details for patient: {}", request.getPatientId());
 
         if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
-            throw new ResourceNotFoundException("Appointment not found for patient id: " + request.getPatientId());
+            throw new ResourceNotFoundException(
+                    Constants.APPOINTMENT_NOT_FOUND_FOR_PATIENT + request.getPatientId());
         }
 
         treatmentCategoryRepository.findById(request.getTreatmentCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Treatment category not found with id: " + request.getTreatmentCategoryId()));
+                        AppMessages.TREATMENT_CATEGORY_NOT_FOUND_WITH_ID + request.getTreatmentCategoryId()));
 
         TherapistSummaryResponse therapist = fetchTherapist(request.getAssignedTherapistId());
 
         for (UUID therapyId : request.getTherapyIds()) {
             therapyRepository.findById(therapyId)
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Therapy not found with id: " + therapyId));
+                            AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
         }
 
         AppointmentTherapy appointmentTherapy = appointmentTherapyMapper.toEntity(request);
@@ -86,7 +89,8 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
         List<TherapyResponse> therapies = request.getTherapyIds()
                 .stream()
                 .map(id -> therapyRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Therapy not found: " + id)))
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                AppMessages.THERAPY_NOT_FOUND_WITH_ID + id)))
                 .map(this::mapTherapy)
                 .toList();
 
@@ -101,13 +105,13 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
         TreatmentCategoryMaster category = treatmentCategoryRepository
                 .findById(savedTherapy.getTreatmentCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Treatment category not found"));
+                        Constants.TREATMENT_CATEGORY_NOT_FOUND));
 
         response.setTreatmentCategory(mapTreatmentCategory(category));
 
         log.info("Appointment therapy created successfully with id: {}", savedTherapy.getId());
 
-        return ApiResponse.success("Appointment therapy created successfully", response);
+        return ApiResponse.success(Constants.APPOINTMENT_THERAPY_CREATED, response);
     }
 
     @Override
@@ -221,7 +225,7 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                 .slots(slots)
                 .build();
 
-        return ApiResponse.success("Therapist today's schedule fetched successfully.", response);
+        return ApiResponse.success(Constants.THERAPIST_TODAY_SCHEDULE_FETCHED, response);
     }
 
     private TherapyResponse mapTherapy(TherapyMaster therapy) {

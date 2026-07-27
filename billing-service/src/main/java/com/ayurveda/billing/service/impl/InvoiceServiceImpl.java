@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.ayurveda.billing.client.MedicineServiceClient;
+import com.ayurveda.billing.constant.BillingMessages;
 import com.ayurveda.billing.dto.client.MedicineClientResponse;
 import com.ayurveda.billing.dto.client.StockAdjustClientRequest;
 import com.ayurveda.billing.dto.request.CreateInvoiceRequest;
@@ -105,7 +106,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw ex;
         }
 
-        return ApiResponse.success("Invoice generated successfully.", invoiceMapper.toResponse(saved));
+        return ApiResponse.success(BillingMessages.INVOICE_GENERATED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
     }
 
     @Override
@@ -138,7 +139,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .map(invoiceMapper::toListResponse)
                 .toList();
 
-        return ApiResponse.success("Invoices fetched successfully.", invoices);
+        return ApiResponse.success(BillingMessages.INVOICES_FETCHED_SUCCESSFULLY, invoices);
     }
 
     @Override
@@ -146,15 +147,14 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice invoice = findActive(invoiceId);
 
         if (invoice.getStatus() == InvoiceStatus.COMPLETED) {
-            throw new BadRequestException("Invoice is already fully paid.");
+            throw new BadRequestException(BillingMessages.INVOICE_ALREADY_FULLY_PAID);
         }
 
         BigDecimal paymentAmount = InvoiceCalculationUtil.money(request.getAmountPaid());
         BigDecimal left = InvoiceCalculationUtil.leftAmount(invoice.getTotalAmount(), invoice.getPaidAmount());
 
         if (paymentAmount.compareTo(left) > 0) {
-            throw new BadRequestException(
-                    "Payment amount cannot exceed left amount of " + left);
+            throw new BadRequestException(BillingMessages.PAYMENT_EXCEEDS_LEFT_AMOUNT + left);
         }
 
         applyPayment(invoice, paymentAmount, request.getPaymentMethod(), request.getRemarks());
@@ -162,7 +162,8 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         saved.getItems().size();
         saved.getPayments().size();
-        return ApiResponse.success("Part payment recorded successfully.", invoiceMapper.toResponse(saved));
+        return ApiResponse.success(
+                BillingMessages.PART_PAYMENT_RECORDED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
     }
 
     @Override
@@ -172,7 +173,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         restoreMedicineStock(invoice.getItems());
         invoice.setDeleted(true);
         invoiceRepository.save(invoice);
-        return ApiResponse.success("Invoice deleted successfully.", null);
+        return ApiResponse.success(BillingMessages.INVOICE_DELETED_SUCCESSFULLY, null);
     }
 
     private void addLineItems(Invoice invoice, CreateInvoiceRequest request) {
@@ -232,8 +233,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         int available = medicine.getStockQuantity() != null ? medicine.getStockQuantity() : 0;
         if (request.getQuantity() > available) {
             throw new BadRequestException(
-                    "Insufficient stock for '" + medicine.getMedicineName()
-                            + "'. Available: " + available + ", requested: " + request.getQuantity());
+                    BillingMessages.INSUFFICIENT_STOCK_PREFIX + medicine.getMedicineName()
+                            + BillingMessages.INSUFFICIENT_STOCK_AVAILABLE_SUFFIX + available
+                            + BillingMessages.INSUFFICIENT_STOCK_REQUESTED_SUFFIX + request.getQuantity());
         }
 
         BigDecimal unitPrice = request.getUnitPrice() != null
@@ -242,7 +244,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         if (unitPrice == null) {
             throw new BadRequestException(
-                    "Selling price not found for medicine: " + medicine.getMedicineName());
+                    BillingMessages.SELLING_PRICE_NOT_FOUND + medicine.getMedicineName());
         }
 
         return buildItem(
@@ -281,8 +283,9 @@ public class InvoiceServiceImpl implements InvoiceService {
             if (requested > available) {
                 String name = namesByMedicine.getOrDefault(entry.getKey(), medicine.getMedicineName());
                 throw new BadRequestException(
-                        "Insufficient stock for '" + name
-                                + "'. Available: " + available + ", requested: " + requested);
+                        BillingMessages.INSUFFICIENT_STOCK_PREFIX + name
+                                + BillingMessages.INSUFFICIENT_STOCK_AVAILABLE_SUFFIX + available
+                                + BillingMessages.INSUFFICIENT_STOCK_REQUESTED_SUFFIX + requested);
             }
         }
     }
@@ -291,14 +294,14 @@ public class InvoiceServiceImpl implements InvoiceService {
         try {
             ApiResponse<MedicineClientResponse> response = medicineServiceClient.getMedicineById(medicineId);
             if (response == null || response.getData() == null) {
-                throw new BadRequestException("Medicine not found for id: " + medicineId);
+                throw new BadRequestException(BillingMessages.MEDICINE_NOT_FOUND_FOR_ID + medicineId);
             }
             return response.getData();
         } catch (FeignException.NotFound ex) {
-            throw new BadRequestException("Medicine not found for id: " + medicineId);
+            throw new BadRequestException(BillingMessages.MEDICINE_NOT_FOUND_FOR_ID + medicineId);
         } catch (FeignException ex) {
             log.error("Failed to fetch medicine {}", medicineId, ex);
-            throw new BadRequestException("Unable to load medicine details for dropdown selection.");
+            throw new BadRequestException(BillingMessages.UNABLE_TO_LOAD_MEDICINE_DETAILS);
         }
     }
 
@@ -381,7 +384,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .subtract(InvoiceCalculationUtil.money(invoice.getDiscount()));
 
         if (total.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Discount cannot be greater than bill total.");
+            throw new BadRequestException(BillingMessages.DISCOUNT_GREATER_THAN_BILL_TOTAL);
         }
 
         invoice.setTotalAmount(InvoiceCalculationUtil.money(total));
@@ -390,7 +393,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private void applyPayment(Invoice invoice, BigDecimal amountPaid, String paymentMethod, String remarks) {
         BigDecimal payment = InvoiceCalculationUtil.money(amountPaid);
         if (payment.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BadRequestException("Payment amount must be greater than 0.");
+            throw new BadRequestException(BillingMessages.PAYMENT_AMOUNT_MUST_BE_POSITIVE);
         }
 
         BigDecimal currentPaid = InvoiceCalculationUtil.money(invoice.getPaidAmount());
@@ -398,7 +401,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         BigDecimal left = InvoiceCalculationUtil.leftAmount(invoice.getTotalAmount(), currentPaid);
 
         if (payment.compareTo(left) > 0) {
-            throw new BadRequestException("Payment amount cannot exceed left amount of " + left);
+            throw new BadRequestException(BillingMessages.PAYMENT_EXCEEDS_LEFT_AMOUNT + left);
         }
 
         InvoicePayment paymentRecord = InvoicePayment.builder()
@@ -417,7 +420,8 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private Invoice findActive(UUID invoiceId) {
         return invoiceRepository.findByIdAndDeletedFalse(invoiceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with id: " + invoiceId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        BillingMessages.INVOICE_NOT_FOUND_WITH_ID + invoiceId));
     }
 
     private void deductMedicineStock(List<InvoiceItem> items) {
@@ -446,7 +450,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             } catch (Exception ex) {
                 log.error("Failed to restore stock for medicine {} on invoice delete", item.getMedicineId(), ex);
                 throw new BadRequestException(
-                        "Failed to restore stock for medicine '" + item.getItemName() + "'.");
+                        BillingMessages.FAILED_TO_RESTORE_STOCK + item.getItemName() + "'.");
             }
         }
     }
@@ -469,10 +473,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         } catch (FeignException.BadRequest ex) {
             throw new BadRequestException(extractFeignMessage(ex, medicineName));
         } catch (FeignException.NotFound ex) {
-            throw new BadRequestException("Medicine not found in inventory: " + medicineName);
+            throw new BadRequestException(BillingMessages.MEDICINE_NOT_FOUND_IN_INVENTORY + medicineName);
         } catch (FeignException ex) {
             log.error("Medicine stock deduct failed for {}", medicineId, ex);
-            throw new BadRequestException("Unable to update medicine stock for '" + medicineName + "'.");
+            throw new BadRequestException(
+                    BillingMessages.UNABLE_TO_UPDATE_MEDICINE_STOCK + medicineName + "'.");
         }
     }
 
@@ -493,7 +498,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 return body.substring(firstQuote + 1, secondQuote);
             }
         }
-        return "Insufficient stock for medicine '" + medicineName + "'.";
+        return BillingMessages.INSUFFICIENT_STOCK_FOR_MEDICINE_FALLBACK + medicineName + "'.";
     }
 
     private String normalizeDisplayId(String patientDisplayId) {

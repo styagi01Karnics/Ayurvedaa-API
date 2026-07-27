@@ -22,8 +22,10 @@ import com.ayurveda.appointment.mapper.TherapyMapper;
 import com.ayurveda.appointment.repository.TherapyRepository;
 import com.ayurveda.appointment.repository.TreatmentCategoryRepository;
 import com.ayurveda.appointment.service.TherapyService;
+import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.appointment.util.TherapyCodeGenerator;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
@@ -49,14 +51,14 @@ public class TherapyServiceImpl implements TherapyService {
 
         TreatmentCategoryMaster category = treatmentCategoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Treatment category not found with id : " + request.getCategoryId()));
+                        AppMessages.TREATMENT_CATEGORY_NOT_FOUND_WITH_ID + request.getCategoryId()));
 
         TherapistSummaryResponse therapist = fetchTherapist(request.getAssignedTherapistId());
 
         String therapyName = request.getName().trim();
         if (therapyRepository.existsByTherapyNameAndDeletedFalse(therapyName)) {
             throw new DuplicateResourceException(
-                    "Therapy already exists with name : " + therapyName);
+                    AppMessages.THERAPY_ALREADY_EXISTS_WITH_NAME + therapyName);
         }
 
         TherapyMasterStatus status =
@@ -70,7 +72,7 @@ public class TherapyServiceImpl implements TherapyService {
         log.info("Therapy created successfully with id : {}", savedTherapy.getId());
 
         return ApiResponse.success(
-                "Therapy created successfully",
+                AppMessages.THERAPY_CREATED,
                 therapyMapper.toResponse(
                         savedTherapy,
                         null,
@@ -85,7 +87,7 @@ public class TherapyServiceImpl implements TherapyService {
 
         TherapyMaster therapy = therapyRepository.findByIdAndDeletedFalse(therapyId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Therapy not found with id : " + therapyId));
+                        AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
 
         return ApiResponse.success(toEnrichedResponse(therapy, null));
     }
@@ -110,7 +112,7 @@ public class TherapyServiceImpl implements TherapyService {
 
         treatmentCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Treatment category not found with id : " + categoryId));
+                        AppMessages.TREATMENT_CATEGORY_NOT_FOUND_WITH_ID + categoryId));
 
         AtomicInteger serial = new AtomicInteger(1);
         List<TherapyResponse> response =
@@ -127,7 +129,7 @@ public class TherapyServiceImpl implements TherapyService {
             List<UUID> therapyIds) {
 
         if (therapyIds == null || therapyIds.isEmpty()) {
-            throw new BadRequestException("At least one therapy id is required.");
+            throw new BadRequestException(AppMessages.AT_LEAST_ONE_THERAPY_ID_REQUIRED);
         }
 
         List<UUID> distinctTherapyIds = therapyIds.stream().distinct().toList();
@@ -137,7 +139,7 @@ public class TherapyServiceImpl implements TherapyService {
                 therapyRepository.findByIdInAndDeletedFalse(distinctTherapyIds);
 
         if (therapies.isEmpty()) {
-            throw new ResourceNotFoundException("No therapies found for the given ids.");
+            throw new ResourceNotFoundException(AppMessages.NO_THERAPIES_FOUND_FOR_IDS);
         }
 
         Map<UUID, AssignedTherapistResponse> therapistsById = new LinkedHashMap<>();
@@ -167,7 +169,7 @@ public class TherapyServiceImpl implements TherapyService {
         }
 
         return ApiResponse.success(
-                "Assigned therapists fetched successfully.",
+                AppMessages.ASSIGNED_THERAPISTS_FETCHED,
                 new ArrayList<>(therapistsById.values()));
     }
 
@@ -175,14 +177,14 @@ public class TherapyServiceImpl implements TherapyService {
     public ApiResponse<Void> deleteTherapy(UUID therapyId) {
         TherapyMaster therapy = therapyRepository.findByIdAndDeletedFalse(therapyId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Therapy not found with id : " + therapyId));
+                        AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
 
         therapy.setDeleted(true);
         therapy.setActive(false);
         therapy.setStatus(TherapyMasterStatus.INACTIVE);
         therapyRepository.save(therapy);
 
-        return ApiResponse.success("Therapy deleted successfully.", null);
+        return ApiResponse.success(AppMessages.THERAPY_DELETED, null);
     }
 
     private TherapyResponse toEnrichedResponse(TherapyMaster therapy, Integer serialNo) {
@@ -209,7 +211,7 @@ public class TherapyServiceImpl implements TherapyService {
                 therapistServiceClient.getTherapistById(therapistId);
 
         if (response == null || !response.isSuccess() || response.getData() == null) {
-            throw new ResourceNotFoundException("Therapist not found with id : " + therapistId);
+            throw new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND_WITH_ID + therapistId);
         }
         return response.getData();
     }

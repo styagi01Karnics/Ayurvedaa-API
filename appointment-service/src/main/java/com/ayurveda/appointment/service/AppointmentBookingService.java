@@ -11,8 +11,10 @@ import com.ayurveda.appointment.dto.response.AppointmentBookingResponse;
 import com.ayurveda.appointment.dto.response.AppointmentStatsResponse;
 import com.ayurveda.appointment.dto.response.DashboardTodaysScheduleResponse;
 import com.ayurveda.appointment.dto.response.DoctorTodayScheduleResponse;
+import com.ayurveda.appointment.dto.response.PatientAppointmentListItemResponse;
 import com.ayurveda.appointment.enums.BookingStatus;
 import com.ayurveda.appointment.enums.ConsultationType;
+import com.ayurveda.appointment.enums.PatientListTab;
 
 public interface AppointmentBookingService {
 
@@ -21,6 +23,14 @@ public interface AppointmentBookingService {
 
     ApiResponse<AppointmentBookingResponse> getAppointmentById(
             UUID bookingId);
+
+    ApiResponse<List<PatientAppointmentListItemResponse>> getPatientList(
+            PatientListTab statusTab,
+            String search,
+            BookingStatus bookingStatus,
+            ConsultationType consultationType,
+            UUID doshaId,
+            UUID doctorId);
 
     ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByPatientId(UUID patientId);
 

@@ -32,6 +32,7 @@ import com.ayurveda.auth.entity.Tenant;
 import com.ayurveda.auth.enums.TenantStatus;
 import com.ayurveda.auth.enums.UserRole;
 import com.ayurveda.auth.enums.UserStatus;
+import com.ayurveda.auth.constant.AuthMessages;
 import com.ayurveda.auth.mapper.AuthMapper;
 import com.ayurveda.auth.repository.AuthUserRepository;
 import com.ayurveda.auth.repository.PasswordResetTokenRepository;
@@ -41,8 +42,12 @@ import com.ayurveda.auth.security.JwtService;
 import com.ayurveda.auth.security.TenantContext;
 import com.ayurveda.auth.service.AuthService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.BadRequestException;
+import com.ayurveda.common.exception.DuplicateResourceException;
+import com.ayurveda.common.exception.ForbiddenException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.exception.UnauthorizedException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,11 +72,12 @@ public class AuthServiceImpl implements AuthService {
         String tenantCode = request.getTenantCode().trim().toUpperCase();
 
         if (tenantRepository.existsByTenantCodeIgnoreCaseAndDeletedFalse(tenantCode)) {
-            throw new BadRequestException("Tenant code already exists: " + tenantCode);
+            throw new DuplicateResourceException(AuthMessages.TENANT_CODE_ALREADY_EXISTS + tenantCode);
         }
 
         if (authUserRepository.existsByUsernameIgnoreCaseAndDeletedFalse(request.getAdminUsername().trim())) {
-            throw new BadRequestException("Username already exists: " + request.getAdminUsername());
+            throw new DuplicateResourceException(
+                    AuthMessages.USERNAME_ALREADY_EXISTS + request.getAdminUsername());
         }
 
         Tenant tenant = Tenant.builder()
@@ -99,7 +105,8 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Registered tenant {} with admin {}", tenantCode, admin.getEmail());
 
-        return ApiResponse.success("Tenant registered successfully.", authMapper.toTenantResponse(savedTenant));
+        return ApiResponse.success(
+                AuthMessages.TENANT_REGISTERED_SUCCESSFULLY, authMapper.toTenantResponse(savedTenant));
     }
 
     @Override
@@ -108,20 +115,20 @@ public class AuthServiceImpl implements AuthService {
         String loginId = request.getUsernameOrEmail().trim();
 
         AuthUser user = resolveUserByUsernameOrEmail(loginId)
-                .orElseThrow(() -> new BadRequestException("Invalid username/email or password."));
+                .orElseThrow(() -> new UnauthorizedException(AuthMessages.INVALID_CREDENTIALS));
 
         Tenant tenant = user.getTenant();
 
         if (Boolean.TRUE.equals(tenant.getDeleted()) || tenant.getStatus() != TenantStatus.ACTIVE) {
-            throw new BadRequestException("Tenant is not active.");
+            throw new ForbiddenException(AuthMessages.TENANT_NOT_ACTIVE);
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new BadRequestException("User account is not active: " + user.getStatus());
+            throw new ForbiddenException(AuthMessages.USER_ACCOUNT_NOT_ACTIVE_WITH_STATUS + user.getStatus());
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new BadRequestException("Invalid username/email or password.");
+            throw new UnauthorizedException(AuthMessages.INVALID_CREDENTIALS);
         }
 
         String token = jwtService.generateToken(user);
@@ -136,32 +143,33 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("User {} logged in for tenant {}", user.getUsername(), tenant.getTenantCode());
 
-        return ApiResponse.success("Login successful.", response);
+        return ApiResponse.success(AuthMessages.LOGIN_SUCCESSFUL, response);
     }
 
     @Override
     public ApiResponse<AuthTokenResponse> signUp(SignUpRequest request) {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            throw new BadRequestException("Password and confirm password do not match.");
+            throw new BadRequestException(AuthMessages.PASSWORD_CONFIRM_MISMATCH);
         }
 
         String tenantCode = request.getTenantCode().trim().toUpperCase();
         Tenant tenant = tenantRepository.findByTenantCodeIgnoreCaseAndDeletedFalse(tenantCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantCode));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        AuthMessages.TENANT_NOT_FOUND_WITH_CODE + tenantCode));
 
         if (tenant.getStatus() != TenantStatus.ACTIVE) {
-            throw new BadRequestException("Tenant is not active.");
+            throw new ForbiddenException(AuthMessages.TENANT_NOT_ACTIVE);
         }
 
         String username = request.getUsername().trim().toLowerCase();
         String email = request.getEmail().trim().toLowerCase();
 
         if (authUserRepository.existsByUsernameIgnoreCaseAndDeletedFalse(username)) {
-            throw new BadRequestException("Username already exists: " + username);
+            throw new DuplicateResourceException(AuthMessages.USERNAME_ALREADY_EXISTS + username);
         }
 
         if (authUserRepository.existsByTenantIdAndEmailIgnoreCaseAndDeletedFalse(tenant.getId(), email)) {
-            throw new BadRequestException("Email already registered for this tenant.");
+            throw new DuplicateResourceException(AuthMessages.EMAIL_ALREADY_REGISTERED_FOR_TENANT);
         }
 
         AuthUser user = AuthUser.builder()
@@ -187,7 +195,7 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("User signed up: {} under tenant {}", username, tenantCode);
 
-        return ApiResponse.success("Sign up successful.", response);
+        return ApiResponse.success(AuthMessages.SIGN_UP_SUCCESSFUL, response);
     }
 
     @Override
@@ -198,9 +206,9 @@ public class AuthServiceImpl implements AuthService {
         if (userOpt.isEmpty()) {
             // Do not reveal whether the account exists
             return ApiResponse.success(
-                    "If an account exists, a password reset token has been generated.",
+                    AuthMessages.PASSWORD_RESET_TOKEN_IF_ACCOUNT_EXISTS,
                     ForgotPasswordResponse.builder()
-                            .message("If an account exists, a password reset token has been generated.")
+                            .message(AuthMessages.PASSWORD_RESET_TOKEN_IF_ACCOUNT_EXISTS)
                             .build());
         }
 
@@ -222,9 +230,9 @@ public class AuthServiceImpl implements AuthService {
         log.info("Password reset token generated for user {}", user.getUsername());
 
         return ApiResponse.success(
-                "Password reset token generated. In production this will be sent by email.",
+                AuthMessages.PASSWORD_RESET_TOKEN_GENERATED,
                 ForgotPasswordResponse.builder()
-                        .message("Password reset token generated. In production this will be sent by email.")
+                        .message(AuthMessages.PASSWORD_RESET_TOKEN_GENERATED)
                         .resetToken(rawToken)
                         .expiresAt(expiresAt)
                         .build());
@@ -233,20 +241,20 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ApiResponse<Void> resetPassword(ResetPasswordRequest request) {
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            throw new BadRequestException("New password and confirm password do not match.");
+            throw new BadRequestException(AuthMessages.NEW_PASSWORD_CONFIRM_MISMATCH);
         }
 
         PasswordResetToken resetToken = passwordResetTokenRepository
                 .findByTokenHashAndUsedFalseAndDeletedFalse(hashToken(request.getToken()))
-                .orElseThrow(() -> new BadRequestException("Invalid or expired reset token."));
+                .orElseThrow(() -> new BadRequestException(AuthMessages.INVALID_OR_EXPIRED_RESET_TOKEN));
 
         if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Invalid or expired reset token.");
+            throw new BadRequestException(AuthMessages.INVALID_OR_EXPIRED_RESET_TOKEN);
         }
 
         AuthUser user = resetToken.getUser();
         if (Boolean.TRUE.equals(user.getDeleted()) || user.getStatus() != UserStatus.ACTIVE) {
-            throw new BadRequestException("User account is not active.");
+            throw new ForbiddenException(AuthMessages.USER_ACCOUNT_NOT_ACTIVE);
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -258,7 +266,7 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Password reset completed for user {}", user.getUsername());
 
-        return ApiResponse.success("Password reset successful.", null);
+        return ApiResponse.success(AuthMessages.PASSWORD_RESET_SUCCESSFUL, null);
     }
 
     @Override
@@ -267,25 +275,25 @@ public class AuthServiceImpl implements AuthService {
         requireTenantAdmin(principal);
 
         Tenant tenant = tenantRepository.findById(principal.getTenantId())
-                .orElseThrow(() -> new ResourceNotFoundException("Tenant not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.TENANT_NOT_FOUND));
 
         if (Boolean.TRUE.equals(tenant.getDeleted()) || tenant.getStatus() != TenantStatus.ACTIVE) {
-            throw new BadRequestException("Tenant is not available for user registration.");
+            throw new ForbiddenException(AuthMessages.TENANT_NOT_AVAILABLE_FOR_REGISTRATION);
         }
 
         String email = request.getEmail().trim().toLowerCase();
         String username = request.getUsername().trim().toLowerCase();
 
         if (authUserRepository.existsByUsernameIgnoreCaseAndDeletedFalse(username)) {
-            throw new BadRequestException("Username already exists: " + username);
+            throw new DuplicateResourceException(AuthMessages.USERNAME_ALREADY_EXISTS + username);
         }
 
         if (authUserRepository.existsByTenantIdAndEmailIgnoreCaseAndDeletedFalse(tenant.getId(), email)) {
-            throw new BadRequestException("User already exists for this tenant with email: " + email);
+            throw new DuplicateResourceException(AuthMessages.USER_EXISTS_FOR_TENANT_EMAIL + email);
         }
 
         if (request.getRole() == UserRole.SUPER_ADMIN) {
-            throw new BadRequestException("Cannot create SUPER_ADMIN via tenant registration.");
+            throw new BadRequestException(AuthMessages.CANNOT_CREATE_SUPER_ADMIN_VIA_TENANT_REGISTRATION);
         }
 
         AuthUser user = AuthUser.builder()
@@ -300,7 +308,7 @@ public class AuthServiceImpl implements AuthService {
 
         AuthUser saved = authUserRepository.save(user);
 
-        return ApiResponse.success("User registered successfully.", authMapper.toUserResponse(saved));
+        return ApiResponse.success(AuthMessages.USER_REGISTERED_SUCCESSFULLY, authMapper.toUserResponse(saved));
     }
 
     @Override
@@ -308,7 +316,7 @@ public class AuthServiceImpl implements AuthService {
     public ApiResponse<UserResponse> getCurrentUser() {
         AuthPrincipal principal = currentPrincipal();
         AuthUser user = authUserRepository.findByIdAndDeletedFalse(principal.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND));
         return ApiResponse.success(authMapper.toUserResponse(user));
     }
 
@@ -332,10 +340,10 @@ public class AuthServiceImpl implements AuthService {
     public ApiResponse<TenantResponse> getCurrentTenant() {
         AuthPrincipal principal = currentPrincipal();
         Tenant tenant = tenantRepository.findById(principal.getTenantId())
-                .orElseThrow(() -> new ResourceNotFoundException("Tenant not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.TENANT_NOT_FOUND));
 
         if (Boolean.TRUE.equals(tenant.getDeleted())) {
-            throw new ResourceNotFoundException("Tenant not found.");
+            throw new ResourceNotFoundException(AuthMessages.TENANT_NOT_FOUND);
         }
 
         return ApiResponse.success(authMapper.toTenantResponse(tenant));
@@ -385,7 +393,7 @@ public class AuthServiceImpl implements AuthService {
     private AuthPrincipal currentPrincipal() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof AuthPrincipal principal)) {
-            throw new BadRequestException("Authentication required.");
+            throw new UnauthorizedException(AppConstants.AUTHENTICATION_REQUIRED);
         }
         if (TenantContext.getTenantId() == null) {
             TenantContext.set(principal.getTenantId(), principal.getTenantCode());
@@ -396,7 +404,7 @@ public class AuthServiceImpl implements AuthService {
     private void requireTenantAdmin(AuthPrincipal principal) {
         if (!UserRole.TENANT_ADMIN.name().equals(principal.getRole())
                 && !UserRole.SUPER_ADMIN.name().equals(principal.getRole())) {
-            throw new BadRequestException("Only tenant admin can perform this action.");
+            throw new ForbiddenException(AuthMessages.ONLY_TENANT_ADMIN_ALLOWED);
         }
     }
 

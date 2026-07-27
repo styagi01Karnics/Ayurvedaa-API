@@ -7,8 +7,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.ayurveda.common.enums.IdProofType;
 import com.ayurveda.patient.enums.Gender;
-import com.ayurveda.patient.enums.IdProofType;
 
 @Getter
 @Builder

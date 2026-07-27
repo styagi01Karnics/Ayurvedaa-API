@@ -13,4 +13,6 @@ public final class AppMessages {
 
     public static final String DOCUMENT_NOT_FOUND = "Document not found with id: ";
 
+    public static final String UNABLE_TO_UPLOAD_DOCUMENT = "Unable to upload document.";
+
 }

@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.ayurveda.auth.security.JsonAccessDeniedHandler;
+import com.ayurveda.auth.security.JsonAuthenticationEntryPoint;
 import com.ayurveda.auth.security.JwtAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint;
+    private final JsonAccessDeniedHandler jsonAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -31,6 +35,9 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(jsonAuthenticationEntryPoint)
+                        .accessDeniedHandler(jsonAccessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/swagger-ui.html",

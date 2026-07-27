@@ -16,8 +16,10 @@ import com.ayurveda.appointment.dto.request.RescheduleAppointmentBookingRequest;
 import com.ayurveda.appointment.dto.response.AppointmentBookingResponse;
 import com.ayurveda.appointment.dto.response.AppointmentStatsResponse;
 import com.ayurveda.appointment.dto.response.DoctorTodayScheduleResponse;
+import com.ayurveda.appointment.dto.response.PatientAppointmentListItemResponse;
 import com.ayurveda.appointment.enums.BookingStatus;
 import com.ayurveda.appointment.enums.ConsultationType;
+import com.ayurveda.appointment.enums.PatientListTab;
 import com.ayurveda.appointment.service.AppointmentBookingService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,6 +56,27 @@ public class AppointmentBookingController {
     }
 
     @Operation(
+            summary = "Active / Inactive patients list",
+            description = """
+                    Returns appointment rows for the patients screen.
+                    ACTIVE = SCHEDULED, RESCHEDULED.
+                    INACTIVE = COMPLETED, CANCELLED.
+                    Optional filters: search (patient id/code/name/mobile), status, visit type, dosha, doctor.
+                    """)
+    @GetMapping("/patients")
+    public ResponseEntity<ApiResponse<List<PatientAppointmentListItemResponse>>> getPatientList(
+            @RequestParam PatientListTab statusTab,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) ConsultationType consultationType,
+            @RequestParam(required = false) UUID doshaId,
+            @RequestParam(required = false) UUID doctorId) {
+
+        return ResponseEntity.ok(appointmentBookingService.getPatientList(
+                statusTab, search, bookingStatus, consultationType, doshaId, doctorId));
+    }
+
+    @Operation(
             summary = "Get cancelled appointments",
             description = "Cancelled appointment details including patient phone number.")
     @GetMapping("/cancelled")
@@ -78,7 +101,7 @@ public class AppointmentBookingController {
             description = """
                     Returns only today's appointments for the doctor (cancelled excluded),
                     ordered ascending by booking time (createdAt).
-                    No timeslot — uses booking time only.
+                    No timeslot — uses booking slotTime (ordered ascending).
                     """)
     @GetMapping("/doctor/{doctorId}/today")
     public ResponseEntity<ApiResponse<DoctorTodayScheduleResponse>> getDoctorTodaySchedule(

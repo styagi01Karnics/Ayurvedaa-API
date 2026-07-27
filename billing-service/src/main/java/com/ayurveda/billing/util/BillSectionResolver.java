@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import com.ayurveda.billing.constant.BillingMessages;
 import com.ayurveda.billing.dto.request.CreateInvoiceRequest;
 import com.ayurveda.billing.enums.BillSection;
 import com.ayurveda.common.exception.BadRequestException;
@@ -32,8 +33,7 @@ public final class BillSectionResolver {
         }
 
         if (sections.isEmpty()) {
-            throw new BadRequestException(
-                    "Invoice must include at least one section: Service Type, Medicine, or Therapy.");
+            throw new BadRequestException(BillingMessages.INVOICE_SECTION_REQUIRED);
         }
 
         return sections;

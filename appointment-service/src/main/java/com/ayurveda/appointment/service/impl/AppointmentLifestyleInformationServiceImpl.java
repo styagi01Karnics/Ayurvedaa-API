@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateAppointmentLifestyleInformationRequest;
 import com.ayurveda.appointment.dto.response.AppointmentLifestyleInformationResponse;
@@ -42,7 +43,8 @@ public class AppointmentLifestyleInformationServiceImpl
                 request.getPatientId());
 
         if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
-            throw new ResourceNotFoundException("Appointment not found for patient id : " + request.getPatientId());
+            throw new ResourceNotFoundException(
+                    Constants.APPOINTMENT_NOT_FOUND_FOR_PATIENT + request.getPatientId());
         }
 
         AppointmentLifestyleInformation lifestyleInformation =

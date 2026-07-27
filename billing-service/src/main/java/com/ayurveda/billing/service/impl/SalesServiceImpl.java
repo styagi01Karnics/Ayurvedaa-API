@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.ayurveda.billing.client.AppointmentServiceClient;
+import com.ayurveda.billing.constant.BillingMessages;
 import com.ayurveda.billing.dto.client.AppointmentTherapyClientResponse;
 import com.ayurveda.billing.dto.response.DashboardBillingSummaryResponse;
 import com.ayurveda.billing.dto.response.MonthlyRevenueResponse;
@@ -65,7 +66,7 @@ public class SalesServiceImpl implements SalesService {
                 .sales(sales)
                 .build();
 
-        return ApiResponse.success("Sales fetched successfully.", response);
+        return ApiResponse.success(BillingMessages.SALES_FETCHED_SUCCESSFULLY, response);
     }
 
     @Override
@@ -87,7 +88,7 @@ public class SalesServiceImpl implements SalesService {
                 .invoiceCount(invoiceCount)
                 .build();
 
-        return ApiResponse.success("Monthly revenue fetched successfully.", response);
+        return ApiResponse.success(BillingMessages.MONTHLY_REVENUE_FETCHED_SUCCESSFULLY, response);
     }
 
     @Override
@@ -107,7 +108,7 @@ public class SalesServiceImpl implements SalesService {
                 .collectedPayments(InvoiceCalculationUtil.money(invoiceRepository.sumPaidAmountBetween(from, to)))
                 .build();
 
-        return ApiResponse.success("Dashboard billing summary fetched successfully.", response);
+        return ApiResponse.success(BillingMessages.DASHBOARD_BILLING_SUMMARY_FETCHED, response);
     }
 
     private LocalDate[] resolvePeriodRange(BillingPeriod period) {

@@ -21,6 +21,7 @@ public class AppointmentBookingMapper {
         return AppointmentBooking.builder()
                 .patientId(patientId)
                 .registrationDate(request.getRegistrationDate())
+                .slotTime(request.getSlotTime())
                 .assignedDoctorId(request.getAssignedDoctorId())
                 .build();
     }
@@ -38,6 +39,7 @@ public class AppointmentBookingMapper {
                 .patientId(entity.getPatientId())
                 .patient(patient)
                 .registrationDate(entity.getRegistrationDate())
+                .slotTime(entity.getSlotTime())
                 .assignedDoctorId(entity.getAssignedDoctorId())
                 .assignedDoctor(doctor)
                 .bookingStatus(entity.getBookingStatus())

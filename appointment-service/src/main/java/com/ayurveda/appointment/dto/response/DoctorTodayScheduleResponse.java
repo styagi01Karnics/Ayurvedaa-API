@@ -2,6 +2,7 @@ package com.ayurveda.appointment.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,7 +38,9 @@ public class DoctorTodayScheduleResponse {
 
         private UUID bookingId;
 
-        /** When the appointment was booked (ascending sort key). */
+        private LocalTime slotTime;
+
+        /** Appointment date + slot time (falls back to createdAt if slot missing). */
         private LocalDateTime bookingTime;
 
         private BookingStatus bookingStatus;

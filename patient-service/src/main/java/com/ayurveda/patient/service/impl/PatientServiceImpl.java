@@ -6,10 +6,10 @@ import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.util.ResponseUtil;
+import com.ayurveda.common.validation.IdProofValidator;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
 import com.ayurveda.patient.dto.response.PatientResponse;
 import com.ayurveda.patient.entity.Patient;
-import com.ayurveda.patient.enums.IdProofType;
 import com.ayurveda.patient.mapper.PatientMapper;
 import com.ayurveda.patient.repository.PatientRepository;
 import com.ayurveda.patient.service.PatientService;
@@ -169,50 +169,7 @@ public class PatientServiceImpl implements PatientService {
             );
         }
 
-        validateIdProof(
-                request.getIdProofType(),
-                request.getIdProofNumber()
-        );
-    }
-    
-    private void validateIdProof(IdProofType proofType, String proofNumber) {
-
-        if (proofType == null || !StringUtils.hasText(proofNumber)) {
-            return;
-        }
-
-        switch (proofType) {
-
-            case AADHAAR -> {
-                if (!proofNumber.matches("^\\d{12}$")) {
-                    throw new BadRequestException(AppConstants.INVALID_AADHAAR);
-                }
-            }
-
-            case PAN -> {
-                if (!proofNumber.matches("^[A-Z]{5}[0-9]{4}[A-Z]$")) {
-                    throw new BadRequestException(AppConstants.INVALID_PAN);
-                }
-            }
-
-            case PASSPORT -> {
-                if (!proofNumber.matches("^[A-Z][0-9]{7}$")) {
-                    throw new BadRequestException(AppConstants.INVALID_PASSPORT);
-                }
-            }
-
-            case DRIVING_LICENSE -> {
-                if (!proofNumber.matches("^[A-Z]{2}[0-9]{13}$")) {
-                    throw new BadRequestException(AppConstants.INVALID_DRIVING_LICENSE);
-                }
-            }
-
-            case VOTER_ID -> {
-                if (!proofNumber.matches("^[A-Z]{3}[0-9]{7}$")) {
-                    throw new BadRequestException(AppConstants.INVALID_VOTER_ID);
-                }
-            }
-        }
+        IdProofValidator.validate(request.getIdProofType(), request.getIdProofNumber());
     }
      
     @Override

@@ -1,6 +1,7 @@
 package com.ayurveda.appointment.dto.request;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +25,9 @@ public class RescheduleAppointmentBookingRequest {
 
     @NotNull(message = "Registration date is required")
     private LocalDate registrationDate;
+
+    @NotNull(message = "Slot time is required")
+    private LocalTime slotTime;
 
     @NotNull(message = "Assigned doctor id is required")
     private UUID assignedDoctorId;
