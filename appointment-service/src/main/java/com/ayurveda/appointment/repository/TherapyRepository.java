@@ -13,12 +13,18 @@ import com.ayurveda.appointment.entity.TherapyMaster;
 public interface TherapyRepository
         extends JpaRepository<TherapyMaster, UUID> {
 
+    Optional<TherapyMaster> findByIdAndDeletedFalse(UUID id);
+
+    List<TherapyMaster> findAllByDeletedFalse();
+
     Optional<TherapyMaster> findByTherapyName(String therapyName);
 
-    boolean existsByTherapyName(String therapyName);
+    boolean existsByTherapyNameAndDeletedFalse(String therapyName);
 
     Optional<TherapyMaster> findTopByOrderByTherapyCodeDesc();
 
-    List<TherapyMaster> findByCategoryId(UUID categoryId);
+    List<TherapyMaster> findByCategoryIdAndDeletedFalse(UUID categoryId);
+
+    List<TherapyMaster> findByIdInAndDeletedFalse(List<UUID> ids);
 
 }

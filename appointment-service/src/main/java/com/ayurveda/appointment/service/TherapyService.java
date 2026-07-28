@@ -5,19 +5,22 @@ import java.util.UUID;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateTherapyRequest;
+import com.ayurveda.appointment.dto.response.AssignedTherapistResponse;
 import com.ayurveda.appointment.dto.response.TherapyResponse;
 
 public interface TherapyService {
 
-    ApiResponse<TherapyResponse> createTherapy(
-            CreateTherapyRequest request);
+    ApiResponse<TherapyResponse> createTherapy(CreateTherapyRequest request);
 
-    ApiResponse<TherapyResponse> getTherapyById(
-            UUID therapyId);
+    ApiResponse<TherapyResponse> getTherapyById(UUID therapyId);
 
     ApiResponse<List<TherapyResponse>> getAllTherapies();
 
-    ApiResponse<List<TherapyResponse>> getTherapiesByCategory(
-            UUID categoryId);
+    ApiResponse<List<TherapyResponse>> getTherapiesByCategory(UUID categoryId);
+
+    ApiResponse<List<AssignedTherapistResponse>> getAssignedTherapistsByTherapyIds(
+            List<UUID> therapyIds);
+
+    ApiResponse<Void> deleteTherapy(UUID therapyId);
 
 }

@@ -139,4 +139,25 @@ public final class Constants {
 
 	public static final String MEDICAL_ASSESSMENT_FETCHED =
 	        "Medical assessment fetched successfully.";
+
+	// ==========================
+	// Dosha
+	// ==========================
+
+	public static final String DOSHA_CREATED = "Dosha created successfully.";
+	public static final String DOSHA_FETCHED = "Dosha fetched successfully.";
+	public static final String DOSHAS_FETCHED = "Doshas fetched successfully.";
+	public static final String DOSHA_NOT_FOUND = "Dosha not found.";
+	public static final String DOSHA_ALREADY_EXISTS_WITH_NAME = "Dosha already exists with name: ";
+
+	// ==========================
+	// Appointment Therapy extras
+	// ==========================
+
+	public static final String THERAPIST_TODAY_SCHEDULE_FETCHED =
+	        "Therapist today's schedule fetched successfully.";
+	public static final String TREATMENT_CATEGORY_NOT_FOUND =
+	        "Treatment category not found";
+	public static final String APPOINTMENT_NOT_FOUND_FOR_PATIENT =
+	        "Appointment not found for patient id: ";
 }

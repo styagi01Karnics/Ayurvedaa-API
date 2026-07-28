@@ -1,7 +1,10 @@
 package com.ayurveda.appointment.entity;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.UUID;
+
 import com.ayurveda.appointment.enums.BookingStatus;
-import com.ayurveda.appointment.enums.WorkflowStep;
 import com.ayurveda.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,9 +16,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDate;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -32,11 +32,11 @@ public class AppointmentBooking extends BaseEntity {
     @Column(nullable = false)
     private LocalDate registrationDate;
 
+    /** Appointment slot time (e.g. 10:00). Required for new bookings. */
+    private LocalTime slotTime;
+
     @Column(nullable = false)
     private UUID assignedDoctorId;
-
-    @Enumerated(EnumType.STRING)
-    private WorkflowStep workflowStep;
 
     @Enumerated(EnumType.STRING)
     private BookingStatus bookingStatus;

@@ -1,11 +1,12 @@
 package com.ayurveda.therapist.service.impl;
 
 import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.exception.DuplicateResourceException;
+import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.therapist.dto.request.CreateTherapistRequest;
 import com.ayurveda.therapist.dto.response.TherapistResponse;
 import com.ayurveda.therapist.entity.Therapist;
+import com.ayurveda.therapist.enums.TherapistStatus;
 import com.ayurveda.therapist.mapper.TherapistMapper;
 import com.ayurveda.therapist.repository.TherapistRepository;
 import com.ayurveda.therapist.service.TherapistService;
@@ -13,10 +14,11 @@ import com.ayurveda.therapist.util.TherapistCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
@@ -28,41 +30,58 @@ public class TherapistServiceImpl implements TherapistService {
     @Override
     @Transactional
     public ApiResponse<TherapistResponse> createTherapist(CreateTherapistRequest request) {
-        if (StringUtils.hasText(request.getEmail())
-                && therapistRepository.existsByEmailAndDeletedFalse(request.getEmail())) {
-            throw new DuplicateResourceException("Therapist with this email already exists.");
-        }
+        TherapistStatus status = request.getStatus() != null ? request.getStatus() : TherapistStatus.ACTIVE;
+
+        List<String> therapies = request.getAssignedTherapies().stream()
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .distinct()
+                .toList();
 
         Therapist therapist = Therapist.builder()
-                .therapistName(request.getTherapistName())
+                .therapistName(request.getName().trim())
                 .therapistCode(therapistCodeGenerator.generate())
-                .specialization(request.getSpecialization())
-                .mobileNumber(request.getMobileNumber())
-                .email(request.getEmail())
-                .qualification(request.getQualification())
-                .therapyRoom(request.getTherapyRoom())
-                .active(true)
+                .status(status)
+                .assignedTherapies(new ArrayList<>(therapies))
+                .active(status == TherapistStatus.ACTIVE)
                 .build();
 
         Therapist savedTherapist = therapistRepository.save(therapist);
-        return ApiResponse.success("Therapist created successfully.", TherapistMapper.toResponse(savedTherapist));
+        return ApiResponse.success(
+                AppConstants.THERAPIST_CREATED_SUCCESSFULLY, TherapistMapper.toResponse(savedTherapist));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<TherapistResponse> getTherapistById(UUID therapistId) {
         Therapist therapist = therapistRepository.findByIdAndDeletedFalse(therapistId)
-                .orElseThrow(() -> new ResourceNotFoundException("Therapist not found."));
-        return ApiResponse.success("Therapist fetched successfully.", TherapistMapper.toResponse(therapist));
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND));
+        return ApiResponse.success(
+                AppConstants.THERAPIST_FETCHED_SUCCESSFULLY, TherapistMapper.toResponse(therapist));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<TherapistResponse>> getAllTherapists() {
+        AtomicInteger serial = new AtomicInteger(1);
         List<TherapistResponse> therapists = therapistRepository.findAllByDeletedFalse().stream()
-                .map(TherapistMapper::toResponse)
+                .map(therapist -> TherapistMapper.toResponse(therapist, serial.getAndIncrement()))
                 .toList();
-        return ApiResponse.success("Therapists fetched successfully.", therapists);
+        return ApiResponse.success(AppConstants.THERAPISTS_FETCHED_SUCCESSFULLY, therapists);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<Void> deleteTherapist(UUID therapistId) {
+        Therapist therapist = therapistRepository.findByIdAndDeletedFalse(therapistId)
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND));
+
+        therapist.setDeleted(true);
+        therapist.setActive(false);
+        therapist.setStatus(TherapistStatus.INACTIVE);
+        therapistRepository.save(therapist);
+
+        return ApiResponse.success(AppConstants.THERAPIST_DELETED_SUCCESSFULLY, null);
     }
 
 }

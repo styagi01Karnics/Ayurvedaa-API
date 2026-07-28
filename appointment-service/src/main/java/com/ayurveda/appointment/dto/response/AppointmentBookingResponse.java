@@ -1,11 +1,11 @@
 package com.ayurveda.appointment.dto.response;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
 import com.ayurveda.appointment.enums.BookingStatus;
-import com.ayurveda.appointment.enums.WorkflowStep;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,13 +28,13 @@ public class AppointmentBookingResponse {
 
     private LocalDate registrationDate;
 
+    private LocalTime slotTime;
+
     private UUID assignedDoctorId;
 
     private DoctorSummaryResponse assignedDoctor;
 
     private List<String> consultationTypes;
-
-    private WorkflowStep workflowStep;
 
     private BookingStatus bookingStatus;
 

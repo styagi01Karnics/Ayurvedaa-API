@@ -1,8 +1,8 @@
 package com.ayurveda.patient.entity;
 
 import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.enums.IdProofType;
 import com.ayurveda.patient.enums.Gender;
-import com.ayurveda.patient.enums.IdProofType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,6 +26,15 @@ import java.time.LocalDate;
 @Table(name = "mst_patient")
 public class Patient extends BaseEntity {
 
+    /**
+     * UI primary patient id, e.g. PT458652 (shown as #PT458652).
+     */
+    @Column(nullable = false, unique = true, length = 20)
+    private String patientDisplayId;
+
+    /**
+     * Tenant-scoped yearly code, e.g. GAN2025-0129 (GAN = Ganesha Ayurveda tenant).
+     */
     @Column(nullable = false, unique = true, length = 50)
     private String patientCode;
 

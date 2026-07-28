@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateDoshaRequest;
 import com.ayurveda.appointment.dto.response.DoshaResponse;
 import com.ayurveda.appointment.entity.DoshaMaster;
@@ -31,19 +32,20 @@ public class DoshaMasterServiceImpl implements DoshaMasterService {
     @Override
     public ApiResponse<DoshaResponse> createDosha(CreateDoshaRequest request) {
         if (doshaMasterRepository.existsByNameIgnoreCaseAndDeletedFalse(request.getName())) {
-            throw new DuplicateResourceException("Dosha already exists with name: " + request.getName());
+            throw new DuplicateResourceException(
+                    Constants.DOSHA_ALREADY_EXISTS_WITH_NAME + request.getName());
         }
 
         DoshaMaster saved = doshaMasterRepository.save(doshaMapper.toEntity(request));
-        return ApiResponse.success("Dosha created successfully.", doshaMapper.toResponse(saved));
+        return ApiResponse.success(Constants.DOSHA_CREATED, doshaMapper.toResponse(saved));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<DoshaResponse> getDoshaById(UUID doshaId) {
         DoshaMaster dosha = doshaMasterRepository.findByIdAndDeletedFalse(doshaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Dosha not found."));
-        return ApiResponse.success("Dosha fetched successfully.", doshaMapper.toResponse(dosha));
+                .orElseThrow(() -> new ResourceNotFoundException(Constants.DOSHA_NOT_FOUND));
+        return ApiResponse.success(Constants.DOSHA_FETCHED, doshaMapper.toResponse(dosha));
     }
 
     @Override
@@ -52,7 +54,7 @@ public class DoshaMasterServiceImpl implements DoshaMasterService {
         List<DoshaResponse> doshas = doshaMasterRepository.findAllByDeletedFalseOrderByNameAsc().stream()
                 .map(doshaMapper::toResponse)
                 .toList();
-        return ApiResponse.success("Doshas fetched successfully.", doshas);
+        return ApiResponse.success(Constants.DOSHAS_FETCHED, doshas);
     }
 
 }

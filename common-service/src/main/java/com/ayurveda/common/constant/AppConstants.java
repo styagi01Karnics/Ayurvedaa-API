@@ -26,10 +26,34 @@ public final class AppConstants {
     public static final String PATIENT_DELETED_SUCCESSFULLY = "Patient deleted successfully.";
 
     public static final String PATIENT_NOT_FOUND = "Patient not found.";
+    public static final String PATIENT_NOT_FOUND_WITH_ID = "Patient not found with id: ";
     public static final String PATIENT_EMAIL_ALREADY_EXISTS =
             "Patient with this email already exists.";
     public static final String PATIENT_MOBILE_ALREADY_EXISTS =
             "Patient with this mobile number already exists.";
+    public static final String UNABLE_TO_CREATE_PATIENT = "Unable to create patient.";
+
+    // ===========================
+    // Doctor
+    // ===========================
+
+    public static final String DOCTOR_CREATED_SUCCESSFULLY = "Doctor created successfully.";
+    public static final String DOCTOR_FETCHED_SUCCESSFULLY = "Doctor fetched successfully.";
+    public static final String DOCTORS_FETCHED_SUCCESSFULLY = "Doctors fetched successfully.";
+    public static final String DOCTOR_DELETED_SUCCESSFULLY = "Doctor deleted successfully.";
+    public static final String DOCTOR_NOT_FOUND = "Doctor not found.";
+    public static final String DOCTOR_NOT_FOUND_WITH_ID = "Doctor not found with id: ";
+
+    // ===========================
+    // Therapist
+    // ===========================
+
+    public static final String THERAPIST_CREATED_SUCCESSFULLY = "Therapist created successfully.";
+    public static final String THERAPIST_FETCHED_SUCCESSFULLY = "Therapist fetched successfully.";
+    public static final String THERAPISTS_FETCHED_SUCCESSFULLY = "Therapists fetched successfully.";
+    public static final String THERAPIST_DELETED_SUCCESSFULLY = "Therapist deleted successfully.";
+    public static final String THERAPIST_NOT_FOUND = "Therapist not found.";
+    public static final String THERAPIST_NOT_FOUND_WITH_ID = "Therapist not found with id: ";
 
     // ===========================
     // Attendance
@@ -99,4 +123,54 @@ public final class AppConstants {
 
     public static final String DUPLICATE_RESOURCE =
             "Resource already exists.";
+
+    public static final String REQUEST_CONFLICTS_WITH_EXISTING_DATA =
+            "Request conflicts with existing data.";
+
+    public static final String MALFORMED_REQUEST_BODY =
+            "Malformed or unreadable request body.";
+
+    public static final String ENDPOINT_NOT_FOUND =
+            "Endpoint not found.";
+
+    public static final String UPLOADED_FILE_EXCEEDS_MAX_SIZE =
+            "Uploaded file exceeds the maximum allowed size.";
+
+    public static final String INVALID_MULTIPART_REQUEST =
+            "Invalid multipart request.";
+
+    public static final String SOMETHING_WENT_WRONG =
+            "Something went wrong.";
+
+    public static final String INVALID_PARAMETER_VALUE =
+            "Invalid value '%s' for parameter '%s'. Expected type: %s.";
+
+    public static final String INVALID_ENUM_VALUE =
+            "Invalid value '%s' for field '%s'. Accepted values: %s.";
+
+    public static final String AUTHENTICATION_REQUIRED =
+            "Authentication required.";
+
+    public static final String ACCESS_DENIED =
+            "Access denied.";
+
+    // ===========================
+    // Downstream / Feign
+    // ===========================
+
+    public static final String DOWNSTREAM_RESOURCE_NOT_FOUND =
+            "Requested resource was not found.";
+
+    public static final String INVALID_DOWNSTREAM_REQUEST =
+            "Invalid request to downstream service.";
+
+    public static final String DOWNSTREAM_CONFLICT =
+            "Conflict reported by downstream service.";
+
+    public static final String DOWNSTREAM_UNAVAILABLE =
+            "Downstream service is unavailable. Please try again later.";
+
+    public static final String DOWNSTREAM_REQUEST_FAILED =
+            "Downstream service request failed.";
+
 }

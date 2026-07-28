@@ -1,5 +1,7 @@
 package com.ayurveda.appointment.repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,5 +17,7 @@ public interface AppointmentAyurvedicAssessmentRepository
     Optional<AppointmentAyurvedicAssessment> findByPatientId(UUID patientId);
 
     boolean existsByPatientId(UUID patientId);
+
+    List<AppointmentAyurvedicAssessment> findByPatientIdInAndDeletedFalse(Collection<UUID> patientIds);
 
 }

@@ -1,11 +1,12 @@
 package com.ayurveda.doctor.service.impl;
 
 import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.exception.DuplicateResourceException;
+import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
 import com.ayurveda.doctor.entity.Doctor;
+import com.ayurveda.doctor.enums.DoctorStatus;
 import com.ayurveda.doctor.mapper.DoctorMapper;
 import com.ayurveda.doctor.repository.DoctorRepository;
 import com.ayurveda.doctor.service.DoctorService;
@@ -13,10 +14,10 @@ import com.ayurveda.doctor.util.DoctorCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
@@ -28,42 +29,53 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     @Transactional
     public ApiResponse<DoctorResponse> createDoctor(CreateDoctorRequest request) {
-        if (StringUtils.hasText(request.getEmail())
-                && doctorRepository.existsByEmailAndDeletedFalse(request.getEmail())) {
-            throw new DuplicateResourceException("Doctor with this email already exists.");
-        }
+        DoctorStatus status = request.getStatus() != null ? request.getStatus() : DoctorStatus.ACTIVE;
 
         Doctor doctor = Doctor.builder()
-                .doctorName(request.getDoctorName())
+                .doctorName(request.getName().trim())
                 .doctorCode(doctorCodeGenerator.generate())
-                .specialization(request.getSpecialization())
-                .mobileNumber(request.getMobileNumber())
-                .email(request.getEmail())
-                .qualification(request.getQualification())
-                .department(request.getDepartment())
-                .consultationRoom(request.getConsultationRoom())
-                .active(true)
+                .specialization(request.getSpecialization().trim())
+                .status(status)
+                .consultationFees(request.getConsultationFees())
+                .followUpFees(request.getFollowUpFees())
+                .availability(request.getAvailability().trim())
+                .active(status == DoctorStatus.ACTIVE)
                 .build();
 
         Doctor savedDoctor = doctorRepository.save(doctor);
-        return ApiResponse.success("Doctor created successfully.", DoctorMapper.toResponse(savedDoctor));
+        return ApiResponse.success(AppConstants.DOCTOR_CREATED_SUCCESSFULLY, DoctorMapper.toResponse(savedDoctor));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<DoctorResponse> getDoctorById(UUID doctorId) {
         Doctor doctor = doctorRepository.findByIdAndDeletedFalse(doctorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found."));
-        return ApiResponse.success("Doctor fetched successfully.", DoctorMapper.toResponse(doctor));
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND));
+        return ApiResponse.success(AppConstants.DOCTOR_FETCHED_SUCCESSFULLY, DoctorMapper.toResponse(doctor));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<DoctorResponse>> getAllDoctors() {
+        AtomicInteger serial = new AtomicInteger(1);
         List<DoctorResponse> doctors = doctorRepository.findAllByDeletedFalse().stream()
-                .map(DoctorMapper::toResponse)
+                .map(doctor -> DoctorMapper.toResponse(doctor, serial.getAndIncrement()))
                 .toList();
-        return ApiResponse.success("Doctors fetched successfully.", doctors);
+        return ApiResponse.success(AppConstants.DOCTORS_FETCHED_SUCCESSFULLY, doctors);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<Void> deleteDoctor(UUID doctorId) {
+        Doctor doctor = doctorRepository.findByIdAndDeletedFalse(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND));
+
+        doctor.setDeleted(true);
+        doctor.setActive(false);
+        doctor.setStatus(DoctorStatus.INACTIVE);
+        doctorRepository.save(doctor);
+
+        return ApiResponse.success(AppConstants.DOCTOR_DELETED_SUCCESSFULLY, null);
     }
 
 }

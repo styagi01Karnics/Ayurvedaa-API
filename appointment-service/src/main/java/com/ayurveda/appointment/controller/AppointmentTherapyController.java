@@ -11,8 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateAppointmentTherapyRequest;
 import com.ayurveda.appointment.dto.response.AppointmentTherapyResponse;
+import com.ayurveda.appointment.dto.response.TherapistTodayScheduleResponse;
 import com.ayurveda.appointment.service.AppointmentTherapyService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,17 @@ public class AppointmentTherapyController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @Operation(
+            summary = "Get therapist's today scheduled slots",
+            description = "For a therapist: today's therapy time slots ordered by time. Cancelled excluded.")
+    @GetMapping("/therapist/{therapistId}/today")
+    public ResponseEntity<ApiResponse<TherapistTodayScheduleResponse>> getTherapistTodaySchedule(
+            @PathVariable UUID therapistId) {
+
+        return ResponseEntity.ok(
+                appointmentTherapyService.getTherapistTodaySchedule(therapistId));
     }
 
     @GetMapping("/{patientId}")
