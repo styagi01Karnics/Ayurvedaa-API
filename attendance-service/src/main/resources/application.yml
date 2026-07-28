@@ -20,6 +20,14 @@ spring:
 server:
   port: 8106
 
+# eSSL / ZKTeco ADMS device settings.
+# Leave allowed-serial-numbers empty to accept any device SN during setup.
+# After go-live, list your K90 Pro serial number(s), e.g.:
+#   allowed-serial-numbers:
+#     - ABC123456789
+adms:
+  allowed-serial-numbers: [NFZ8260502757]
+
 springdoc:
   api-docs:
     path: /api-docs

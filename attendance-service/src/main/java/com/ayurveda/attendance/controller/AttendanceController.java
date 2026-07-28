@@ -1,79 +1,81 @@
 package com.ayurveda.attendance.controller;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.ayurveda.attendance.service.DeviceAttendanceLogService;
+import com.ayurveda.attendance.dto.request.CheckOutRequest;
+import com.ayurveda.attendance.dto.request.CreateAttendanceRequest;
+import com.ayurveda.attendance.dto.request.UpdateAttendanceStatusRequest;
+import com.ayurveda.attendance.dto.response.AttendanceResponse;
+import com.ayurveda.attendance.service.AttendanceService;
+import com.ayurveda.common.ApiResponse;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+@Tag(name = "Attendance Management", description = "Manual attendance management APIs")
 @RestController
+@RequestMapping("/api/v1/attendances")
 @RequiredArgsConstructor
 @Validated
-@RequestMapping("/iclock")
-@Tag(name = "Attendance Management", description = "Attendance Management APIs")
 public class AttendanceController {
 
-	private final DeviceAttendanceLogService deviceAttendanceLogService;
+    private final AttendanceService attendanceService;
 
-	@PostMapping(value = "/cdata", consumes = MediaType.ALL_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> receiveAttendanceLog(
-			@RequestParam(value = "SN", required = false) String serialNumber,
-			@RequestParam(value = "table", required = false) String table,
-			@RequestBody(required = false) String rawBody) {
+    @PostMapping("/check-in")
+    public ResponseEntity<ApiResponse<AttendanceResponse>> checkIn(
+            @Valid @RequestBody CreateAttendanceRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(attendanceService.checkIn(request));
+    }
 
-		System.out.println("Received Punch from Machine SN: " + serialNumber);
+    @PutMapping("/{attendanceId}/check-out")
+    public ResponseEntity<ApiResponse<AttendanceResponse>> checkOut(
+            @PathVariable UUID attendanceId,
+            @RequestBody(required = false) CheckOutRequest request) {
+        return ResponseEntity.ok(attendanceService.checkOut(attendanceId,
+                request != null ? request : new CheckOutRequest()));
+    }
 
-		if (rawBody != null && !rawBody.trim().isEmpty()) {
-			// Raw text ko line by line split karein
-			String[] lines = rawBody.split("\\r?\\n");
+    @PutMapping("/{attendanceId}/status")
+    public ResponseEntity<ApiResponse<AttendanceResponse>> updateStatus(
+            @PathVariable UUID attendanceId,
+            @Valid @RequestBody UpdateAttendanceStatusRequest request) {
+        return ResponseEntity.ok(attendanceService.updateStatus(attendanceId, request));
+    }
 
-			for (String line : lines) {
-				line = line.trim();
-				if (line.isEmpty() || line.startsWith("SN=")) {
-					continue; // Header lines ko skip karein
-				}
+    @GetMapping("/{attendanceId}")
+    public ResponseEntity<ApiResponse<AttendanceResponse>> getAttendanceById(
+            @PathVariable UUID attendanceId) {
+        return ResponseEntity.ok(attendanceService.getAttendanceById(attendanceId));
+    }
 
-				// eSSL ADMS data tab-separated ya multiple spaces se split hota hai
-				String[] tokens = line.split("\\s+");
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<AttendanceResponse>>> getAllAttendances() {
+        return ResponseEntity.ok(attendanceService.getAllAttendances());
+    }
 
-				// Standard format: [EmployeeID, Date, Time, PunchType, VerifyMethod]
-				if (tokens.length >= 3) {
-					String employeeId = tokens[0];
-					String punchDate = tokens[1];
-					String punchTime = tokens[2];
-					String timestamp = punchDate + " " + punchTime;
+    @GetMapping("/employee/{empId}")
+    public ResponseEntity<ApiResponse<List<AttendanceResponse>>> getAttendancesByEmpId(
+            @PathVariable String empId) {
+        return ResponseEntity.ok(attendanceService.getAttendancesByEmpId(empId));
+    }
 
-					System.out.println("Emp ID: " + employeeId + " | Time: " + timestamp);
-
-					deviceAttendanceLogService.savePunchLog(serialNumber, table, employeeId, punchDate, punchTime,
-							line);
-					// TODO: Dashboard real-time update ke liye Spring WebSocket / SSE trigger
-					// karein
-				}
-			}
-		}
-
-		// Machine ko hamesha plain text "OK" aur HTTP 200 return karna compulsory hai
-		return new ResponseEntity<>("OK", HttpStatus.OK);
-	}
-
-	@GetMapping(value = "/data", produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> handshake() {
-
-		return new ResponseEntity<>("OK", HttpStatus.OK);
-
-	}
+    @DeleteMapping("/{attendanceId}")
+    public ResponseEntity<ApiResponse<Void>> deleteAttendance(@PathVariable UUID attendanceId) {
+        return ResponseEntity.ok(attendanceService.deleteAttendance(attendanceId));
+    }
 
 }

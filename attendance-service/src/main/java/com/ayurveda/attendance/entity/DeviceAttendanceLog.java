@@ -17,7 +17,7 @@ import java.time.LocalTime;
 
 /**
  * Stores raw punch logs pushed by biometric (eSSL/ZKTeco ADMS) devices
- * to the {@code /cdata.aspx} endpoint.
+ * to {@code /iclock/cdata} (and {@code /iclock/cdata.aspx} aliases).
  */
 @Getter
 @Setter
