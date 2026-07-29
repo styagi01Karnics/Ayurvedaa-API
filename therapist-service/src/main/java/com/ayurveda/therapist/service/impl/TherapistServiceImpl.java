@@ -197,14 +197,14 @@ public class TherapistServiceImpl implements TherapistService {
                     if (therapy.getId() == null) {
                         continue;
                     }
-                    String name = StringUtils.hasText(therapy.getTherapyName())
-                            ? therapy.getTherapyName()
-                            : therapy.getName();
-                    therapyNames.put(therapy.getId(), name);
+                    therapyNames.put(therapy.getId(), resolveTherapyName(therapy));
                 }
             }
         } catch (Exception ex) {
-            log.warn("Unable to load therapy names: {}", ex.getMessage());
+            log.error(
+                    "Unable to load therapy names from appointment-service (check SERVICES_APPOINTMENT_URL / Docker network): {}",
+                    ex.getMessage(),
+                    ex);
         }
         return therapyNames;
     }
@@ -217,9 +217,39 @@ public class TherapistServiceImpl implements TherapistService {
         return therapyIds.stream()
                 .map(id -> AssignedTherapyResponse.builder()
                         .id(id)
-                        .name(therapyNames.get(id))
+                        .name(resolveTherapyNameForId(id, therapyNames))
                         .build())
                 .toList();
+    }
+
+    private String resolveTherapyNameForId(UUID therapyId, Map<UUID, String> therapyNames) {
+        String cached = therapyNames.get(therapyId);
+        if (StringUtils.hasText(cached)) {
+            return cached;
+        }
+        try {
+            ApiResponse<TherapyMasterClientResponse> response =
+                    appointmentServiceClient.getTherapyById(therapyId);
+            if (response != null && response.isSuccess() && response.getData() != null) {
+                String name = resolveTherapyName(response.getData());
+                if (StringUtils.hasText(name)) {
+                    therapyNames.put(therapyId, name);
+                    return name;
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Unable to resolve therapy name for {}: {}", therapyId, ex.getMessage());
+        }
+        return null;
+    }
+
+    private String resolveTherapyName(TherapyMasterClientResponse therapy) {
+        if (therapy == null) {
+            return null;
+        }
+        return StringUtils.hasText(therapy.getTherapyName())
+                ? therapy.getTherapyName()
+                : therapy.getName();
     }
 
 }

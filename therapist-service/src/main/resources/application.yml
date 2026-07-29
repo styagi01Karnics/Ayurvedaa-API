@@ -21,6 +21,8 @@ server:
   port: 8104
 
 services:
+  # Overridden in Docker deploy via SERVICES_APPOINTMENT_URL (container DNS).
+  # Do not use localhost inside Docker — that is the therapist container itself.
   appointment:
     url: http://103.174.103.250:8103
 
