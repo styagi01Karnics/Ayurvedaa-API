@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.ayurveda.appointment.entity.TherapyMaster;
+import com.ayurveda.appointment.enums.TherapyMasterStatus;
 
 @Repository
 public interface TherapyRepository
@@ -17,6 +18,8 @@ public interface TherapyRepository
 
     List<TherapyMaster> findAllByDeletedFalse();
 
+    List<TherapyMaster> findAllByDeletedFalseAndStatus(TherapyMasterStatus status);
+
     Optional<TherapyMaster> findByTherapyName(String therapyName);
 
     boolean existsByTherapyNameAndDeletedFalse(String therapyName);
@@ -24,6 +27,9 @@ public interface TherapyRepository
     Optional<TherapyMaster> findTopByOrderByTherapyCodeDesc();
 
     List<TherapyMaster> findByCategoryIdAndDeletedFalse(UUID categoryId);
+
+    List<TherapyMaster> findByCategoryIdAndDeletedFalseAndStatus(
+            UUID categoryId, TherapyMasterStatus status);
 
     List<TherapyMaster> findByIdInAndDeletedFalse(List<UUID> ids);
 

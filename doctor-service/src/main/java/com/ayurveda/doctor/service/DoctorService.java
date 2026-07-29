@@ -2,6 +2,7 @@ package com.ayurveda.doctor.service;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
+import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
 
 import java.util.List;
@@ -14,6 +15,8 @@ public interface DoctorService {
     ApiResponse<DoctorResponse> getDoctorById(UUID doctorId);
 
     ApiResponse<List<DoctorResponse>> getAllDoctors();
+
+    ApiResponse<DoctorResponse> updateDoctorStatus(UUID doctorId, UpdateDoctorStatusRequest request);
 
     ApiResponse<Void> deleteDoctor(UUID doctorId);
 

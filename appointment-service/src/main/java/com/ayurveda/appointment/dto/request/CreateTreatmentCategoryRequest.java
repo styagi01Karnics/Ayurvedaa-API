@@ -1,5 +1,6 @@
 package com.ayurveda.appointment.dto.request;
 
+import com.ayurveda.appointment.enums.TreatmentCategoryStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -18,7 +19,6 @@ public class CreateTreatmentCategoryRequest {
     @Size(max = 255)
     private String description;
 
-    @Builder.Default
-    private Boolean active = true;
+    private TreatmentCategoryStatus status;
 
 }

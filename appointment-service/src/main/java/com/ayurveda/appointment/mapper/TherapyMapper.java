@@ -22,23 +22,15 @@ public class TherapyMapper {
                 .status(status)
                 .durationMinutes(request.getDurationMinutes())
                 .price(request.getPrice())
-                .assignedTherapistId(request.getAssignedTherapistId())
-                .active(status == TherapyMasterStatus.ACTIVE)
                 .build();
     }
 
-    public TherapyResponse toResponse(
-            TherapyMaster entity,
-            Integer serialNo,
-            String categoryName,
-            String assignedTherapistName) {
-
+    public TherapyResponse toResponse(TherapyMaster entity, String categoryName) {
         if (entity == null) {
             return null;
         }
 
         return TherapyResponse.builder()
-                .serialNo(serialNo)
                 .id(entity.getId())
                 .name(entity.getTherapyName())
                 .therapyName(entity.getTherapyName())
@@ -48,15 +40,12 @@ public class TherapyMapper {
                 .status(entity.getStatus())
                 .durationMinutes(entity.getDurationMinutes())
                 .price(entity.getPrice())
-                .assignedTherapistId(entity.getAssignedTherapistId())
-                .assignedTherapistName(assignedTherapistName)
                 .description(entity.getDescription())
-                .active(entity.getActive())
                 .build();
     }
 
     public TherapyResponse toResponse(TherapyMaster entity) {
-        return toResponse(entity, null, null, null);
+        return toResponse(entity, null);
     }
 
 }

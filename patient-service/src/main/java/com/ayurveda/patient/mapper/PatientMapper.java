@@ -32,7 +32,7 @@ public final class PatientMapper {
                 .idProofNumber(patient.getIdProofNumber())
                 .occupation(patient.getOccupation())
                 .insuranceDetails(patient.getInsuranceDetails())
-                .active(patient.getActive())
+                .status(patient.getStatus())
                 .createdAt(patient.getCreatedAt())
                 .updatedAt(patient.getUpdatedAt())
                 .build();

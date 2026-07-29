@@ -22,13 +22,13 @@ public interface MedicineRepository extends JpaRepository<Medicine, UUID> {
               AND (:medicineName IS NULL OR :medicineName = ''
                    OR LOWER(m.medicineName) LIKE LOWER(CONCAT('%', :medicineName, '%')))
               AND (:category IS NULL OR m.category = :category)
-              AND (:status IS NULL OR m.status = :status)
+              AND (:stockStatus IS NULL OR m.stockStatus = :stockStatus)
             ORDER BY m.medicineName ASC
             """)
     List<Medicine> search(
             @Param("medicineName") String medicineName,
             @Param("category") MedicineCategory category,
-            @Param("status") MedicineStockStatus status);
+            @Param("stockStatus") MedicineStockStatus stockStatus);
 
     @Query("""
             SELECT DISTINCT m.manufacturer FROM Medicine m
@@ -38,11 +38,11 @@ public interface MedicineRepository extends JpaRepository<Medicine, UUID> {
     List<String> findDistinctManufacturers();
 
     @Query("""
-            SELECT DISTINCT m.medicineName FROM Medicine m
+            SELECT m FROM Medicine m
             WHERE m.deleted = false
             ORDER BY m.medicineName ASC
             """)
-    List<String> findDistinctMedicineNames();
+    List<Medicine> findAllNamesOrdered();
 
     @Query("""
             SELECT COALESCE(SUM(m.quantity), 0) FROM Medicine m
@@ -64,8 +64,8 @@ public interface MedicineRepository extends JpaRepository<Medicine, UUID> {
             """)
     long countByCategory(@Param("category") MedicineCategory category);
 
-    List<Medicine> findByStatusAndDeletedFalseOrderByQuantityAsc(MedicineStockStatus status);
+    List<Medicine> findByStockStatusAndDeletedFalseOrderByQuantityAsc(MedicineStockStatus stockStatus);
 
-    long countByStatusAndDeletedFalse(MedicineStockStatus status);
+    long countByStockStatusAndDeletedFalse(MedicineStockStatus stockStatus);
 
 }

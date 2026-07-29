@@ -5,8 +5,10 @@ import java.util.UUID;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateTherapyRequest;
-import com.ayurveda.appointment.dto.response.AssignedTherapistResponse;
+import com.ayurveda.appointment.dto.request.UpdateTherapyRequest;
+import com.ayurveda.appointment.dto.request.UpdateTherapyStatusRequest;
 import com.ayurveda.appointment.dto.response.TherapyResponse;
+import com.ayurveda.appointment.enums.TherapyMasterStatus;
 
 public interface TherapyService {
 
@@ -14,13 +16,16 @@ public interface TherapyService {
 
     ApiResponse<TherapyResponse> getTherapyById(UUID therapyId);
 
-    ApiResponse<List<TherapyResponse>> getAllTherapies();
+    ApiResponse<List<TherapyResponse>> getAllTherapies(TherapyMasterStatus status);
 
-    ApiResponse<List<TherapyResponse>> getTherapiesByCategory(UUID categoryId);
+    ApiResponse<List<TherapyResponse>> getTherapiesByCategory(
+            UUID categoryId, TherapyMasterStatus status);
 
-    ApiResponse<List<AssignedTherapistResponse>> getAssignedTherapistsByTherapyIds(
-            List<UUID> therapyIds);
+    ApiResponse<TherapyResponse> updateTherapy(UUID therapyId, UpdateTherapyRequest request);
 
-    ApiResponse<Void> deleteTherapy(UUID therapyId);
+    ApiResponse<TherapyResponse> updateTherapyStatus(
+            UUID therapyId, UpdateTherapyStatusRequest request);
+
+    ApiResponse<TherapyResponse> deleteTherapy(UUID therapyId);
 
 }

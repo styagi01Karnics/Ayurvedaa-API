@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.ayurveda.appointment.dto.request.CreateTreatmentCategoryRequest;
 import com.ayurveda.appointment.dto.response.TreatmentCategoryResponse;
 import com.ayurveda.appointment.entity.TreatmentCategoryMaster;
+import com.ayurveda.appointment.enums.TreatmentCategoryStatus;
 
 @Component
 public class TreatmentCategoryMapper {
@@ -15,10 +16,13 @@ public class TreatmentCategoryMapper {
             return null;
         }
 
+        TreatmentCategoryStatus status =
+                request.getStatus() != null ? request.getStatus() : TreatmentCategoryStatus.ACTIVE;
+
         return TreatmentCategoryMaster.builder()
                 .categoryName(request.getCategoryName())
                 .description(request.getDescription())
-                .active(request.getActive())
+                .status(status)
                 .build();
     }
 
@@ -30,9 +34,10 @@ public class TreatmentCategoryMapper {
 
         return TreatmentCategoryResponse.builder()
                 .id(entity.getId())
+                .categoryCode(entity.getCategoryCode())
                 .categoryName(entity.getCategoryName())
                 .description(entity.getDescription())
-                .active(entity.getActive())
+                .status(entity.getStatus())
                 .build();
     }
 

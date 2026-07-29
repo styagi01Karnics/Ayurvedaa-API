@@ -18,11 +18,13 @@ import com.ayurveda.medicine.dto.request.StockAdjustRequest;
 import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
 import com.ayurveda.medicine.dto.response.CategoryStockCountResponse;
 import com.ayurveda.medicine.dto.response.DashboardMedicineStockResponse;
+import com.ayurveda.medicine.dto.response.MedicineNameResponse;
 import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.dto.response.StockStatusBreakdownResponse;
 import com.ayurveda.medicine.dto.response.StockSummaryResponse;
 import com.ayurveda.medicine.entity.Medicine;
 import com.ayurveda.medicine.enums.MedicineCategory;
+import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 import com.ayurveda.medicine.mapper.MedicineMapper;
 import com.ayurveda.medicine.repository.MedicineRepository;
@@ -45,13 +47,22 @@ public class MedicineServiceImpl implements MedicineService {
     private int defaultLowStockThreshold;
 
     @Override
-    public ApiResponse<MedicineResponse> createMedicine(CreateMedicineRequest request) {
-        log.info("Creating medicine inventory for {}", request.getMedicineName());
+    public ApiResponse<List<MedicineResponse>> createMedicines(List<CreateMedicineRequest> requests) {
+        log.info("Creating {} medicine inventory record(s)", requests.size());
 
-        Medicine medicine = medicineMapper.toEntity(request, defaultLowStockThreshold);
-        Medicine saved = medicineRepository.save(medicine);
+        List<Medicine> medicines = requests.stream()
+                .map(item -> medicineMapper.toEntity(item, defaultLowStockThreshold))
+                .toList();
 
-        return ApiResponse.success(MedicineMessages.MEDICINE_ADDED_SUCCESSFULLY, medicineMapper.toResponse(saved));
+        List<MedicineResponse> saved = medicineRepository.saveAll(medicines).stream()
+                .map(medicineMapper::toResponse)
+                .toList();
+
+        String message = saved.size() == 1
+                ? MedicineMessages.MEDICINE_ADDED_SUCCESSFULLY
+                : MedicineMessages.MEDICINES_ADDED_SUCCESSFULLY;
+
+        return ApiResponse.success(message, saved);
     }
 
     @Override
@@ -73,12 +84,12 @@ public class MedicineServiceImpl implements MedicineService {
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<MedicineResponse>> getMedicines(
-            String medicineName, MedicineCategory category, MedicineStockStatus status) {
+            String medicineName, MedicineCategory category, MedicineStockStatus stockStatus) {
 
         String nameFilter = StringUtils.hasText(medicineName) ? medicineName.trim() : null;
 
         List<MedicineResponse> medicines = medicineRepository
-                .search(nameFilter, category, status)
+                .search(nameFilter, category, stockStatus)
                 .stream()
                 .map(medicineMapper::toResponse)
                 .toList();
@@ -90,6 +101,7 @@ public class MedicineServiceImpl implements MedicineService {
     public ApiResponse<Void> deleteMedicine(UUID medicineId) {
         Medicine medicine = findActive(medicineId);
         medicine.setDeleted(true);
+        medicine.setStatus(MedicineStatus.INACTIVE);
         medicineRepository.save(medicine);
         return ApiResponse.success(MedicineMessages.MEDICINE_DELETED_SUCCESSFULLY, null);
     }
@@ -108,8 +120,14 @@ public class MedicineServiceImpl implements MedicineService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<String>> getMedicineNames() {
-        return ApiResponse.success(medicineRepository.findDistinctMedicineNames());
+    public ApiResponse<List<MedicineNameResponse>> getMedicineNames() {
+        List<MedicineNameResponse> names = medicineRepository.findAllNamesOrdered().stream()
+                .map(m -> MedicineNameResponse.builder()
+                        .id(m.getId())
+                        .medicineName(m.getMedicineName())
+                        .build())
+                .toList();
+        return ApiResponse.success(names);
     }
 
     @Override
@@ -147,7 +165,7 @@ public class MedicineServiceImpl implements MedicineService {
     @Transactional(readOnly = true)
     public ApiResponse<List<MedicineResponse>> getLowStockMedicines() {
         List<MedicineResponse> medicines = medicineRepository
-                .findByStatusAndDeletedFalseOrderByQuantityAsc(MedicineStockStatus.LOW_STOCK)
+                .findByStockStatusAndDeletedFalseOrderByQuantityAsc(MedicineStockStatus.LOW_STOCK)
                 .stream()
                 .map(medicineMapper::toResponse)
                 .toList();
@@ -161,7 +179,7 @@ public class MedicineServiceImpl implements MedicineService {
         int limit = lowStockLimit != null && lowStockLimit > 0 ? lowStockLimit : 5;
 
         List<MedicineResponse> lowStockItems = medicineRepository
-                .findByStatusAndDeletedFalseOrderByQuantityAsc(MedicineStockStatus.LOW_STOCK)
+                .findByStockStatusAndDeletedFalseOrderByQuantityAsc(MedicineStockStatus.LOW_STOCK)
                 .stream()
                 .limit(limit)
                 .map(medicineMapper::toResponse)
@@ -173,9 +191,9 @@ public class MedicineServiceImpl implements MedicineService {
                 .syrups(medicineRepository.sumStockByCategory(MedicineCategory.SYRUP))
                 .powder(medicineRepository.sumStockByCategory(MedicineCategory.POWDER))
                 .statusBreakdown(StockStatusBreakdownResponse.builder()
-                        .inStock(medicineRepository.countByStatusAndDeletedFalse(MedicineStockStatus.IN_STOCK))
-                        .outOfStock(medicineRepository.countByStatusAndDeletedFalse(MedicineStockStatus.OUT_OF_STOCK))
-                        .lowStock(medicineRepository.countByStatusAndDeletedFalse(MedicineStockStatus.LOW_STOCK))
+                        .inStock(medicineRepository.countByStockStatusAndDeletedFalse(MedicineStockStatus.IN_STOCK))
+                        .outOfStock(medicineRepository.countByStockStatusAndDeletedFalse(MedicineStockStatus.OUT_OF_STOCK))
+                        .lowStock(medicineRepository.countByStockStatusAndDeletedFalse(MedicineStockStatus.LOW_STOCK))
                         .build())
                 .lowStockItems(lowStockItems)
                 .build();
@@ -195,7 +213,7 @@ public class MedicineServiceImpl implements MedicineService {
         }
 
         medicine.setQuantity(medicine.getQuantity() - qty);
-        medicine.setStatus(MedicineStatusResolver.resolve(
+        medicine.setStockStatus(MedicineStatusResolver.resolve(
                 medicine.getQuantity(), medicine.getLowStockThreshold()));
         Medicine saved = medicineRepository.save(medicine);
 
@@ -206,7 +224,7 @@ public class MedicineServiceImpl implements MedicineService {
     public ApiResponse<MedicineResponse> restoreStock(UUID medicineId, StockAdjustRequest request) {
         Medicine medicine = findActive(medicineId);
         medicine.setQuantity(medicine.getQuantity() + request.getQuantity());
-        medicine.setStatus(MedicineStatusResolver.resolve(
+        medicine.setStockStatus(MedicineStatusResolver.resolve(
                 medicine.getQuantity(), medicine.getLowStockThreshold()));
         Medicine saved = medicineRepository.save(medicine);
 

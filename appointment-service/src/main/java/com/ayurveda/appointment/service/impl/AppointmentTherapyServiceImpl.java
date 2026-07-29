@@ -240,8 +240,6 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                 .status(therapy.getStatus())
                 .durationMinutes(therapy.getDurationMinutes())
                 .price(therapy.getPrice())
-                .assignedTherapistId(therapy.getAssignedTherapistId())
-                .active(therapy.getActive())
                 .build();
     }
     
@@ -259,7 +257,7 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                 .categoryCode(category.getCategoryCode())
                 .categoryName(category.getCategoryName())
                 .description(category.getDescription())
-                .active(category.getActive())
+                .status(category.getStatus())
                 .build();
     }
 

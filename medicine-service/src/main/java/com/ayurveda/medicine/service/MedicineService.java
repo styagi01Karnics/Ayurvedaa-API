@@ -9,6 +9,7 @@ import com.ayurveda.medicine.dto.request.StockAdjustRequest;
 import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
 import com.ayurveda.medicine.dto.response.CategoryStockCountResponse;
 import com.ayurveda.medicine.dto.response.DashboardMedicineStockResponse;
+import com.ayurveda.medicine.dto.response.MedicineNameResponse;
 import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.dto.response.StockSummaryResponse;
 import com.ayurveda.medicine.enums.MedicineCategory;
@@ -16,14 +17,14 @@ import com.ayurveda.medicine.enums.MedicineStockStatus;
 
 public interface MedicineService {
 
-    ApiResponse<MedicineResponse> createMedicine(CreateMedicineRequest request);
+    ApiResponse<List<MedicineResponse>> createMedicines(List<CreateMedicineRequest> requests);
 
     ApiResponse<MedicineResponse> updateMedicine(UUID medicineId, UpdateMedicineRequest request);
 
     ApiResponse<MedicineResponse> getMedicineById(UUID medicineId);
 
     ApiResponse<List<MedicineResponse>> getMedicines(
-            String medicineName, MedicineCategory category, MedicineStockStatus status);
+            String medicineName, MedicineCategory category, MedicineStockStatus stockStatus);
 
     ApiResponse<Void> deleteMedicine(UUID medicineId);
 
@@ -31,7 +32,7 @@ public interface MedicineService {
 
     ApiResponse<List<String>> getManufacturers();
 
-    ApiResponse<List<String>> getMedicineNames();
+    ApiResponse<List<MedicineNameResponse>> getMedicineNames();
 
     ApiResponse<StockSummaryResponse> getStockSummary();
 

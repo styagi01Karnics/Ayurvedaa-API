@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import com.ayurveda.medicine.enums.MedicineCategory;
+import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 
 import lombok.AllArgsConstructor;
@@ -32,6 +33,7 @@ public class MedicineResponse {
     private BigDecimal price;
     private Boolean lowStockAlertEnabled;
     private Integer lowStockThreshold;
-    private MedicineStockStatus status;
+    private MedicineStatus status;
+    private MedicineStockStatus stockStatus;
 
 }

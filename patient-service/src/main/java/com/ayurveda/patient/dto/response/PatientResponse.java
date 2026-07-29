@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import com.ayurveda.common.enums.IdProofType;
 import com.ayurveda.patient.enums.Gender;
+import com.ayurveda.patient.enums.PatientStatus;
 
 @Getter
 @Builder
@@ -38,7 +39,7 @@ public class PatientResponse {
     private String idProofNumber;
     private String occupation;
     private String insuranceDetails;
-    private Boolean active;
+    private PatientStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -10,6 +10,7 @@ import com.ayurveda.common.validation.IdProofValidator;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
 import com.ayurveda.patient.dto.response.PatientResponse;
 import com.ayurveda.patient.entity.Patient;
+import com.ayurveda.patient.enums.PatientStatus;
 import com.ayurveda.patient.mapper.PatientMapper;
 import com.ayurveda.patient.repository.PatientRepository;
 import com.ayurveda.patient.service.PatientService;
@@ -70,7 +71,7 @@ public class PatientServiceImpl implements PatientService {
                 .idProofNumber(request.getIdProofNumber())
                 .occupation(request.getOccupation())
                 .insuranceDetails(request.getInsuranceDetails())
-                .active(true)
+                .status(PatientStatus.ACTIVE)
                 .build();
 
         Patient savedPatient = patientRepository.save(patient);
@@ -242,7 +243,7 @@ public class PatientServiceImpl implements PatientService {
                 });
 
         patient.setDeleted(true);
-        patient.setActive(false);
+        patient.setStatus(PatientStatus.INACTIVE);
 
         patientRepository.save(patient);
 

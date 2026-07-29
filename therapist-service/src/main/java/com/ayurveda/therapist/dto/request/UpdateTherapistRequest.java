@@ -13,7 +13,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class CreateTherapistRequest {
+public class UpdateTherapistRequest {
 
     @NotBlank(message = "Name is required")
     @Size(max = 150, message = "Name must not exceed 150 characters")

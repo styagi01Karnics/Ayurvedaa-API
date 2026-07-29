@@ -3,6 +3,7 @@ package com.ayurveda.patient.entity;
 import com.ayurveda.common.BaseEntity;
 import com.ayurveda.common.enums.IdProofType;
 import com.ayurveda.patient.enums.Gender;
+import com.ayurveda.patient.enums.PatientStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -81,7 +82,7 @@ public class Patient extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private IdProofType idProofType;
-    
+
     @Column(length = 50)
     private String idProofNumber;
 
@@ -91,8 +92,8 @@ public class Patient extends BaseEntity {
     @Column(length = 255)
     private String insuranceDetails;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean active = true;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PatientStatus status;
 
 }

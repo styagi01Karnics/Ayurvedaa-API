@@ -2,6 +2,7 @@ package com.ayurveda.therapist.entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.ayurveda.common.BaseEntity;
 import com.ayurveda.therapist.enums.TherapistStatus;
@@ -45,8 +46,8 @@ public class Therapist extends BaseEntity {
             name = "mst_therapist_assigned_therapies",
             joinColumns = @JoinColumn(name = "therapist_id")
     )
-    @Column(name = "therapy_name", nullable = false, length = 150)
-    private List<String> assignedTherapies = new ArrayList<>();
+    @Column(name = "therapy_id", nullable = false)
+    private List<UUID> assignedTherapyIds = new ArrayList<>();
 
     @Column(length = 150)
     private String specialization;
@@ -62,9 +63,5 @@ public class Therapist extends BaseEntity {
 
     @Column(length = 100)
     private String therapyRoom;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean active = true;
 
 }

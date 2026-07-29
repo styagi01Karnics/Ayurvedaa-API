@@ -18,8 +18,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class TherapyResponse {
 
-    private Integer serialNo;
-
     private UUID id;
 
     private String name;
@@ -38,12 +36,6 @@ public class TherapyResponse {
 
     private BigDecimal price;
 
-    private UUID assignedTherapistId;
-
-    private String assignedTherapistName;
-
     private String description;
-
-    private Boolean active;
 
 }

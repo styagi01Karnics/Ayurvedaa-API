@@ -1,8 +1,7 @@
-package com.ayurveda.appointment.dto.response;
+package com.ayurveda.therapist.dto.client;
 
 import java.util.UUID;
 
-import com.ayurveda.appointment.enums.DoshaMasterStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,16 +13,10 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DoshaResponse {
+public class TherapyMasterClientResponse {
 
     private UUID id;
-
     private String name;
-
-    private String elements;
-
-    private String characteristics;
-
-    private DoshaMasterStatus status;
+    private String therapyName;
 
 }

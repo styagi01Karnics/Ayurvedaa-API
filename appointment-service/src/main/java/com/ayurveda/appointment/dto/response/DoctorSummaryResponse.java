@@ -1,5 +1,6 @@
 package com.ayurveda.appointment.dto.response;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -16,13 +17,16 @@ import lombok.Setter;
 public class DoctorSummaryResponse {
 
     private UUID id;
-    private String doctorName;
-    private String doctorCode;
+    private String name;
     private String specialization;
-    private String mobileNumber;
-    private String email;
-    private String qualification;
-    private String department;
-    private String consultationRoom;
+    private String status;
+    private BigDecimal consultationFees;
+    private BigDecimal followUpFees;
+    private String availability;
+
+    /** Compatibility helper for older call sites. */
+    public String getDoctorName() {
+        return name;
+    }
 
 }

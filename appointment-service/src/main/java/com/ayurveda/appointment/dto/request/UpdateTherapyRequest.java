@@ -20,7 +20,7 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateTherapyRequest {
+public class UpdateTherapyRequest {
 
     @NotBlank(message = "Name is required")
     @Size(max = 150)
