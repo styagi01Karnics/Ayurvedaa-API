@@ -140,54 +140,39 @@ pipeline {
         docker rm -f ayurvedaa-api-file-upload-service || true
         docker rm -f ayurvedaa-api-attendance-service || true
 
-        # Shared network so Feign can resolve sibling containers by name.
-        # Public IP / localhost both fail inside Docker (hairpin / container-local loopback).
-        docker network create ayurvedaa-api-net || true
-
         # Run patient-service
         docker run -d \
         --name ayurvedaa-api-patient-service \
-        --network ayurvedaa-api-net \
         -p 8101:8101 \
         sunardock/ayurvedaa-api-patient-service:${BUILD_NUMBER}
 
         # Run doctor-service
         docker run -d \
         --name ayurvedaa-api-doctor-service \
-        --network ayurvedaa-api-net \
         -p 8102:8102 \
         sunardock/ayurvedaa-api-doctor-service:${BUILD_NUMBER}
 
         # Run appointment-service
         docker run -d \
         --name ayurvedaa-api-appointment-service \
-        --network ayurvedaa-api-net \
         -p 8103:8103 \
-        -e SERVICES_PATIENT_URL=http://ayurvedaa-api-patient-service:8101 \
-        -e SERVICES_DOCTOR_URL=http://ayurvedaa-api-doctor-service:8102 \
-        -e SERVICES_THERAPIST_URL=http://ayurvedaa-api-therapist-service:8104 \
-        -e SERVICES_FILE_UPLOAD_URL=http://ayurvedaa-api-file-upload-service:8105 \
         sunardock/ayurvedaa-api-appointment-service:${BUILD_NUMBER}
 
         # Run therapist-service
         docker run -d \
         --name ayurvedaa-api-therapist-service \
-        --network ayurvedaa-api-net \
         -p 8104:8104 \
-        -e SERVICES_APPOINTMENT_URL=http://ayurvedaa-api-appointment-service:8103 \
         sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER}
 
         # Run file-upload-service
         docker run -d \
         --name ayurvedaa-api-file-upload-service \
-        --network ayurvedaa-api-net \
         -p 8105:8105 \
         sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER}
 
         # Run attendance-service
         docker run -d \
         --name ayurvedaa-api-attendance-service \
-        --network ayurvedaa-api-net \
         -p 8106:8106 \
         sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER}
         '''
