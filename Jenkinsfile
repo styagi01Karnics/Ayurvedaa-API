@@ -163,11 +163,11 @@ pipeline {
         sunardock/ayurvedaa-api-patient-service:${BUILD_NUMBER}
 
         # Run doctor-service
-        docker run -d \
+        docker run \
         --restart unless-stopped \
         --name ayurvedaa-api-doctor-service \
         -p 8102:8102 \
-        sunardock/ayurvedaa-api-doctor-service:latest
+        sunardock/ayurvedaa-api-doctor-service:${BUILD_NUMBER}
 
         # Run appointment-service
         docker run -d \
