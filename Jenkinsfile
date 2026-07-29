@@ -110,6 +110,11 @@ pipeline {
         docker build -t sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER} ./therapist-service
         docker build -t sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER} ./file-upload-service
         docker build -t sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER} ./attendance-service
+        docker build -t sunardock/ayurvedaa-api-auth-service:${BUILD_NUMBER} ./auth-service
+        docker build -t sunardock/ayurvedaa-api-activity-log-service:${BUILD_NUMBER} ./activity-log-service
+        docker build -t sunardock/ayurvedaa-api-medicine-service:${BUILD_NUMBER} ./medicine-service
+        docker build -t sunardock/ayurvedaa-api-billing-service:${BUILD_NUMBER} ./billing-service
+        docker build -t sunardock/ayurvedaa-api-notification-service:${BUILD_NUMBER} ./notification-service
         '''
     }
 }
@@ -125,6 +130,11 @@ pipeline {
             docker push sunardock/ayurvedaa-api-therapist-service:${BUILD_NUMBER}
             docker push sunardock/ayurvedaa-api-file-upload-service:${BUILD_NUMBER}
             docker push sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-auth-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-activity-log-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-medicine-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-billing-service:${BUILD_NUMBER}
+            docker push sunardock/ayurvedaa-api-notification-service:${BUILD_NUMBER}
             '''
         }
     }
@@ -139,6 +149,11 @@ pipeline {
         docker rm -f ayurvedaa-api-therapist-service || true
         docker rm -f ayurvedaa-api-file-upload-service || true
         docker rm -f ayurvedaa-api-attendance-service || true
+        docker rm -f ayurvedaa-api-auth-service || true
+        docker rm -f ayurvedaa-api-activity-log-service || true
+        docker rm -f ayurvedaa-api-medicine-service || true
+        docker rm -f ayurvedaa-api-billing-service || true
+        docker rm -f ayurvedaa-api-notification-service || true
 
         # Run patient-service
         docker run -d \
@@ -175,6 +190,36 @@ pipeline {
         --name ayurvedaa-api-attendance-service \
         -p 8106:8106 \
         sunardock/ayurvedaa-api-attendance-service:${BUILD_NUMBER}
+
+         # Run activity-log-service
+        docker run -d \
+        --name ayurvedaa-api-activity-log-service \
+        -p 8107:8107 \
+        sunardock/ayurvedaa-api-activity-log-service:${BUILD_NUMBER}
+
+        # Run medicine-service
+        docker run -d \
+        --name ayurvedaa-api-medicine-service \
+        -p 8108:8108 \
+        sunardock/ayurvedaa-api-medicine-service:${BUILD_NUMBER}
+
+        #Run billing-service
+        docker run -d \
+        --name ayurvedaa-api-billing-service \
+        -p 8109:8109 \
+        sunardock/ayurvedaa-api-billing-service:${BUILD_NUMBER}
+
+        # Run notification-service 
+        docker run -d \
+        --name ayurvedaa-api-notification-service \
+        -p 8110:8110 \
+        sunardock/ayurvedaa-api-notification-service:${BUILD_NUMBER}
+
+        # Run auth-service 
+        docker run -d \
+        --name ayurvedaa-api-auth-service \
+        -p 8111:8111 \
+        sunardock/ayurvedaa-api-auth-service:${BUILD_NUMBER}
         '''
     }
 }
