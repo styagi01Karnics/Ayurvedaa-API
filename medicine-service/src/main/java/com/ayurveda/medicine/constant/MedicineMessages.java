@@ -6,6 +6,7 @@ public final class MedicineMessages {
     }
 
     public static final String MEDICINE_ADDED_SUCCESSFULLY = "Medicine added successfully.";
+    public static final String MEDICINES_ADDED_SUCCESSFULLY = "Medicines added successfully.";
     public static final String MEDICINE_UPDATED_SUCCESSFULLY = "Medicine updated successfully.";
     public static final String MEDICINES_FETCHED_SUCCESSFULLY = "Medicines fetched successfully.";
     public static final String MEDICINE_DELETED_SUCCESSFULLY = "Medicine deleted successfully.";

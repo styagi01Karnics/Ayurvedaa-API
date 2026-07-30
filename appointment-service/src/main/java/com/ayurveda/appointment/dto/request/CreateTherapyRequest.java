@@ -39,9 +39,6 @@ public class CreateTherapyRequest {
     @DecimalMin(value = "0.0", inclusive = true, message = "Price must be 0 or more")
     private BigDecimal price;
 
-    @NotNull(message = "Assigned therapist id is required")
-    private UUID assignedTherapistId;
-
     @Size(max = 500)
     private String description;
 

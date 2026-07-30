@@ -18,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.medicine.dto.request.CreateMedicineRequest;
+import com.ayurveda.medicine.dto.request.CreateMedicineRequestList;
 import com.ayurveda.medicine.dto.request.StockAdjustRequest;
 import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
 import com.ayurveda.medicine.dto.response.CategoryStockCountResponse;
+import com.ayurveda.medicine.dto.response.MedicineNameResponse;
 import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.dto.response.StockSummaryResponse;
 import com.ayurveda.medicine.enums.MedicineCategory;
@@ -41,13 +43,15 @@ public class MedicineController {
 
     private final MedicineService medicineService;
 
-    @Operation(summary = "Add medicine")
+    @Operation(
+            summary = "Add medicine(s)",
+            description = "Accepts one medicine object or an array of medicines. Each saved record gets a unique id.")
     @PostMapping
-    public ResponseEntity<ApiResponse<MedicineResponse>> createMedicine(
-            @Valid @RequestBody CreateMedicineRequest request) {
+    public ResponseEntity<ApiResponse<List<MedicineResponse>>> createMedicines(
+            @Valid @RequestBody CreateMedicineRequestList request) {
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(medicineService.createMedicine(request));
+                .body(medicineService.createMedicines(request.getMedicines()));
     }
 
     @Operation(summary = "Update medicine")
@@ -66,9 +70,9 @@ public class MedicineController {
     public ResponseEntity<ApiResponse<List<MedicineResponse>>> getMedicines(
             @RequestParam(required = false) String medicineName,
             @RequestParam(required = false) MedicineCategory category,
-            @RequestParam(required = false) MedicineStockStatus status) {
+            @RequestParam(required = false) MedicineStockStatus stockStatus) {
 
-        return ResponseEntity.ok(medicineService.getMedicines(medicineName, category, status));
+        return ResponseEntity.ok(medicineService.getMedicines(medicineName, category, stockStatus));
     }
 
     @Operation(summary = "Total stock summary by category")
@@ -103,9 +107,9 @@ public class MedicineController {
         return ResponseEntity.ok(medicineService.getManufacturers());
     }
 
-    @Operation(summary = "List medicine names (dropdown)")
+    @Operation(summary = "List medicine id + name (dropdown)")
     @GetMapping("/meta/names")
-    public ResponseEntity<ApiResponse<List<String>>> getMedicineNames() {
+    public ResponseEntity<ApiResponse<List<MedicineNameResponse>>> getMedicineNames() {
         return ResponseEntity.ok(medicineService.getMedicineNames());
     }
 

@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.*;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateTherapyRequest;
-import com.ayurveda.appointment.dto.response.AssignedTherapistResponse;
+import com.ayurveda.appointment.dto.request.UpdateTherapyRequest;
+import com.ayurveda.appointment.dto.request.UpdateTherapyStatusRequest;
 import com.ayurveda.appointment.dto.response.TherapyResponse;
+import com.ayurveda.appointment.enums.TherapyMasterStatus;
 import com.ayurveda.appointment.service.TherapyService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,33 +42,28 @@ public class TherapyController {
     }
 
     @Operation(
-            summary = "Get assigned therapists by selected therapies",
-            description = "Pass one or more therapyIds. Returns unique assigned therapists for those therapies.")
-    @GetMapping("/assigned-therapists")
-    public ResponseEntity<ApiResponse<List<AssignedTherapistResponse>>> getAssignedTherapists(
-            @RequestParam List<UUID> therapyIds) {
-
-        return ResponseEntity.ok(
-                therapyService.getAssignedTherapistsByTherapyIds(therapyIds));
-    }
-
-    @Operation(summary = "List therapies")
+            summary = "List therapies",
+            description = "Returns all non-deleted therapies (ACTIVE and INACTIVE). Optional status filter.")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TherapyResponse>>> getAllTherapies() {
+    public ResponseEntity<ApiResponse<List<TherapyResponse>>> getAllTherapies(
+            @RequestParam(required = false) TherapyMasterStatus status) {
 
         ApiResponse<List<TherapyResponse>> response =
-                therapyService.getAllTherapies();
+                therapyService.getAllTherapies(status);
 
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "List therapies by category")
+    @Operation(
+            summary = "List therapies by category",
+            description = "Returns non-deleted therapies for the category (ACTIVE and INACTIVE). Optional status filter.")
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<ApiResponse<List<TherapyResponse>>> getTherapiesByCategory(
-            @PathVariable UUID categoryId) {
+            @PathVariable UUID categoryId,
+            @RequestParam(required = false) TherapyMasterStatus status) {
 
         ApiResponse<List<TherapyResponse>> response =
-                therapyService.getTherapiesByCategory(categoryId);
+                therapyService.getTherapiesByCategory(categoryId, status);
 
         return ResponseEntity.ok(response);
     }
@@ -82,9 +79,27 @@ public class TherapyController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Update therapy")
+    @PutMapping("/{therapyId}")
+    public ResponseEntity<ApiResponse<TherapyResponse>> updateTherapy(
+            @PathVariable UUID therapyId,
+            @Valid @RequestBody UpdateTherapyRequest request) {
+        return ResponseEntity.ok(therapyService.updateTherapy(therapyId, request));
+    }
+
+    @Operation(
+            summary = "Change therapy status",
+            description = "Updates status to ACTIVE or INACTIVE. Does not change deleted flag.")
+    @PatchMapping("/{therapyId}/status")
+    public ResponseEntity<ApiResponse<TherapyResponse>> updateTherapyStatus(
+            @PathVariable UUID therapyId,
+            @Valid @RequestBody UpdateTherapyStatusRequest request) {
+        return ResponseEntity.ok(therapyService.updateTherapyStatus(therapyId, request));
+    }
+
     @Operation(summary = "Delete therapy")
     @DeleteMapping("/{therapyId}")
-    public ResponseEntity<ApiResponse<Void>> deleteTherapy(@PathVariable UUID therapyId) {
+    public ResponseEntity<ApiResponse<TherapyResponse>> deleteTherapy(@PathVariable UUID therapyId) {
         return ResponseEntity.ok(therapyService.deleteTherapy(therapyId));
     }
 

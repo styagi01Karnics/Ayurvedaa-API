@@ -6,10 +6,11 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.ayurveda.appointment.entity.TreatmentCategoryMaster;
+import com.ayurveda.appointment.enums.TreatmentCategoryStatus;
 
 public interface TreatmentCategoryMasterRepository
         extends JpaRepository<TreatmentCategoryMaster, UUID> {
 
-    List<TreatmentCategoryMaster> findByActiveTrueOrderByCategoryNameAsc();
+    List<TreatmentCategoryMaster> findByStatusOrderByCategoryNameAsc(TreatmentCategoryStatus status);
 
 }

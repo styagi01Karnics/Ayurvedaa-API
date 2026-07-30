@@ -5,16 +5,20 @@ import org.springframework.stereotype.Component;
 import com.ayurveda.appointment.dto.request.CreateDoshaRequest;
 import com.ayurveda.appointment.dto.response.DoshaResponse;
 import com.ayurveda.appointment.entity.DoshaMaster;
+import com.ayurveda.appointment.enums.DoshaMasterStatus;
 
 @Component
 public class DoshaMapper {
 
     public DoshaMaster toEntity(CreateDoshaRequest request) {
+        DoshaMasterStatus status =
+                request.getStatus() != null ? request.getStatus() : DoshaMasterStatus.ACTIVE;
+
         return DoshaMaster.builder()
                 .name(request.getName())
                 .elements(request.getElements())
                 .characteristics(request.getCharacteristics())
-                .active(request.getActive() != null ? request.getActive() : true)
+                .status(status)
                 .build();
     }
 
@@ -24,7 +28,7 @@ public class DoshaMapper {
                 .name(dosha.getName())
                 .elements(dosha.getElements())
                 .characteristics(dosha.getCharacteristics())
-                .active(dosha.getActive())
+                .status(dosha.getStatus())
                 .build();
     }
 

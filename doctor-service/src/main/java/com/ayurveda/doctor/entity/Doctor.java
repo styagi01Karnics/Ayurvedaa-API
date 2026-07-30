@@ -61,8 +61,4 @@ public class Doctor extends BaseEntity {
     @Column(length = 100)
     private String consultationRoom;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean active = true;
-
 }

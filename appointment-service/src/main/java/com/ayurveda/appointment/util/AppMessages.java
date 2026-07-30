@@ -119,11 +119,14 @@ public final class AppMessages {
     public static final String THERAPY_CREATED =
             "Therapy created successfully.";
 
-    public static final String ASSIGNED_THERAPISTS_FETCHED =
-            "Assigned therapists fetched successfully.";
-
     public static final String THERAPY_DELETED =
             "Therapy deleted successfully.";
+
+    public static final String THERAPY_STATUS_UPDATED =
+            "Therapy status updated successfully.";
+
+    public static final String THERAPY_UPDATED =
+            "Therapy updated successfully.";
 
     public static final String TREATMENT_CATEGORY_NOT_FOUND_WITH_ID =
             "Treatment category not found with id: ";
@@ -133,12 +136,6 @@ public final class AppMessages {
 
     public static final String THERAPY_NOT_FOUND_WITH_ID =
             "Therapy not found with id: ";
-
-    public static final String AT_LEAST_ONE_THERAPY_ID_REQUIRED =
-            "At least one therapy id is required.";
-
-    public static final String NO_THERAPIES_FOUND_FOR_IDS =
-            "No therapies found for the given ids.";
 
     /* ==========================
        Documents

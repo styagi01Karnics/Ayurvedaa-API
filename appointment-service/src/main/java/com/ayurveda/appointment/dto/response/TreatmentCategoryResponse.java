@@ -2,6 +2,7 @@ package com.ayurveda.appointment.dto.response;
 
 import java.util.UUID;
 
+import com.ayurveda.appointment.enums.TreatmentCategoryStatus;
 import lombok.*;
 
 @Getter
@@ -12,13 +13,13 @@ import lombok.*;
 public class TreatmentCategoryResponse {
 
     private UUID id;
-    
+
     private String categoryCode;
 
     private String categoryName;
 
     private String description;
 
-    private Boolean active;
+    private TreatmentCategoryStatus status;
 
 }

@@ -1,10 +1,12 @@
 package com.ayurveda.therapist.dto.request;
 
 import java.util.List;
+import java.util.UUID;
 
 import com.ayurveda.therapist.enums.TherapistStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,7 +21,7 @@ public class CreateTherapistRequest {
 
     private TherapistStatus status;
 
-    @NotEmpty(message = "At least one assigned therapy is required")
-    private List<@NotBlank @Size(max = 150) String> assignedTherapies;
+    @NotEmpty(message = "At least one assigned therapy id is required")
+    private List<@NotNull UUID> assignedTherapyIds;
 
 }

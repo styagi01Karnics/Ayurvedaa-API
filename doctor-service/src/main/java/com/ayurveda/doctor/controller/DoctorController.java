@@ -2,6 +2,7 @@ package com.ayurveda.doctor.controller;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
+import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
 import com.ayurveda.doctor.service.DoctorService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,6 +50,16 @@ public class DoctorController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<DoctorResponse>>> getAllDoctors() {
         return ResponseEntity.ok(doctorService.getAllDoctors());
+    }
+
+    @Operation(
+            summary = "Change doctor status",
+            description = "Updates status to ACTIVE or INACTIVE. Does not change deleted flag.")
+    @PatchMapping("/{doctorId}/status")
+    public ResponseEntity<ApiResponse<DoctorResponse>> updateDoctorStatus(
+            @PathVariable UUID doctorId,
+            @Valid @RequestBody UpdateDoctorStatusRequest request) {
+        return ResponseEntity.ok(doctorService.updateDoctorStatus(doctorId, request));
     }
 
     @Operation(summary = "Delete doctor")

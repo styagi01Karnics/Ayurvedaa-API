@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 import com.ayurveda.common.BaseEntity;
 import com.ayurveda.medicine.enums.MedicineCategory;
+import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -61,6 +62,10 @@ public class Medicine extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private MedicineStockStatus status;
+    private MedicineStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private MedicineStockStatus stockStatus;
 
 }

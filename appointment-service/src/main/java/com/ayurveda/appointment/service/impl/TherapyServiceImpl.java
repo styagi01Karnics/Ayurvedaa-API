@@ -1,19 +1,15 @@
 package com.ayurveda.appointment.service.impl;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ayurveda.appointment.client.TherapistServiceClient;
 import com.ayurveda.appointment.dto.request.CreateTherapyRequest;
-import com.ayurveda.appointment.dto.response.AssignedTherapistResponse;
-import com.ayurveda.appointment.dto.response.TherapistSummaryResponse;
+import com.ayurveda.appointment.dto.request.UpdateTherapyRequest;
+import com.ayurveda.appointment.dto.request.UpdateTherapyStatusRequest;
 import com.ayurveda.appointment.dto.response.TherapyResponse;
 import com.ayurveda.appointment.entity.TherapyMaster;
 import com.ayurveda.appointment.entity.TreatmentCategoryMaster;
@@ -25,8 +21,6 @@ import com.ayurveda.appointment.service.TherapyService;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.appointment.util.TherapyCodeGenerator;
 import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.constant.AppConstants;
-import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 
@@ -41,7 +35,6 @@ public class TherapyServiceImpl implements TherapyService {
 
     private final TherapyRepository therapyRepository;
     private final TreatmentCategoryRepository treatmentCategoryRepository;
-    private final TherapistServiceClient therapistServiceClient;
     private final TherapyMapper therapyMapper;
     private final TherapyCodeGenerator therapyCodeGenerator;
 
@@ -52,8 +45,6 @@ public class TherapyServiceImpl implements TherapyService {
         TreatmentCategoryMaster category = treatmentCategoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.TREATMENT_CATEGORY_NOT_FOUND_WITH_ID + request.getCategoryId()));
-
-        TherapistSummaryResponse therapist = fetchTherapist(request.getAssignedTherapistId());
 
         String therapyName = request.getName().trim();
         if (therapyRepository.existsByTherapyNameAndDeletedFalse(therapyName)) {
@@ -73,11 +64,7 @@ public class TherapyServiceImpl implements TherapyService {
 
         return ApiResponse.success(
                 AppMessages.THERAPY_CREATED,
-                therapyMapper.toResponse(
-                        savedTherapy,
-                        null,
-                        category.getCategoryName(),
-                        therapist.getTherapistName()));
+                therapyMapper.toResponse(savedTherapy, category.getCategoryName()));
     }
 
     @Override
@@ -89,17 +76,20 @@ public class TherapyServiceImpl implements TherapyService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
 
-        return ApiResponse.success(toEnrichedResponse(therapy, null));
+        return ApiResponse.success(toEnrichedResponse(therapy));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<TherapyResponse>> getAllTherapies() {
-        log.info("Fetching all therapies");
+    public ApiResponse<List<TherapyResponse>> getAllTherapies(TherapyMasterStatus status) {
+        log.info("Fetching all therapies with status filter : {}", status);
 
-        AtomicInteger serial = new AtomicInteger(1);
-        List<TherapyResponse> response = therapyRepository.findAllByDeletedFalse().stream()
-                .map(therapy -> toEnrichedResponse(therapy, serial.getAndIncrement()))
+        List<TherapyMaster> therapies = status == null
+                ? therapyRepository.findAllByDeletedFalse()
+                : therapyRepository.findAllByDeletedFalseAndStatus(status);
+
+        List<TherapyResponse> response = therapies.stream()
+                .map(this::toEnrichedResponse)
                 .toList();
 
         return ApiResponse.success(response);
@@ -107,113 +97,97 @@ public class TherapyServiceImpl implements TherapyService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<TherapyResponse>> getTherapiesByCategory(UUID categoryId) {
-        log.info("Fetching therapies for category : {}", categoryId);
+    public ApiResponse<List<TherapyResponse>> getTherapiesByCategory(
+            UUID categoryId, TherapyMasterStatus status) {
+        log.info("Fetching therapies for category : {} with status filter : {}", categoryId, status);
 
         treatmentCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.TREATMENT_CATEGORY_NOT_FOUND_WITH_ID + categoryId));
 
-        AtomicInteger serial = new AtomicInteger(1);
-        List<TherapyResponse> response =
-                therapyRepository.findByCategoryIdAndDeletedFalse(categoryId).stream()
-                        .map(therapy -> toEnrichedResponse(therapy, serial.getAndIncrement()))
-                        .toList();
+        List<TherapyMaster> therapies = status == null
+                ? therapyRepository.findByCategoryIdAndDeletedFalse(categoryId)
+                : therapyRepository.findByCategoryIdAndDeletedFalseAndStatus(categoryId, status);
+
+        List<TherapyResponse> response = therapies.stream()
+                .map(this::toEnrichedResponse)
+                .toList();
 
         return ApiResponse.success(response);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public ApiResponse<List<AssignedTherapistResponse>> getAssignedTherapistsByTherapyIds(
-            List<UUID> therapyIds) {
+    public ApiResponse<TherapyResponse> updateTherapy(UUID therapyId, UpdateTherapyRequest request) {
+        log.info("Updating therapy : {}", therapyId);
 
-        if (therapyIds == null || therapyIds.isEmpty()) {
-            throw new BadRequestException(AppMessages.AT_LEAST_ONE_THERAPY_ID_REQUIRED);
+        TherapyMaster therapy = therapyRepository.findByIdAndDeletedFalse(therapyId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
+
+        TreatmentCategoryMaster category = treatmentCategoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        AppMessages.TREATMENT_CATEGORY_NOT_FOUND_WITH_ID + request.getCategoryId()));
+
+        String therapyName = request.getName().trim();
+        Optional<TherapyMaster> existingByName =
+                therapyRepository.findByTherapyName(therapyName);
+        if (existingByName.isPresent()
+                && !existingByName.get().getId().equals(therapyId)
+                && !Boolean.TRUE.equals(existingByName.get().getDeleted())) {
+            throw new DuplicateResourceException(
+                    AppMessages.THERAPY_ALREADY_EXISTS_WITH_NAME + therapyName);
         }
 
-        List<UUID> distinctTherapyIds = therapyIds.stream().distinct().toList();
-        log.info("Fetching assigned therapists for therapies: {}", distinctTherapyIds);
-
-        List<TherapyMaster> therapies =
-                therapyRepository.findByIdInAndDeletedFalse(distinctTherapyIds);
-
-        if (therapies.isEmpty()) {
-            throw new ResourceNotFoundException(AppMessages.NO_THERAPIES_FOUND_FOR_IDS);
+        therapy.setTherapyName(therapyName);
+        therapy.setCategoryId(request.getCategoryId());
+        therapy.setDurationMinutes(request.getDurationMinutes());
+        therapy.setPrice(request.getPrice());
+        therapy.setDescription(request.getDescription());
+        if (request.getStatus() != null) {
+            therapy.setStatus(request.getStatus());
         }
 
-        Map<UUID, AssignedTherapistResponse> therapistsById = new LinkedHashMap<>();
-
-        for (TherapyMaster therapy : therapies) {
-            UUID therapistId = therapy.getAssignedTherapistId();
-            if (therapistId == null) {
-                continue;
-            }
-
-            AssignedTherapistResponse existing = therapistsById.get(therapistId);
-            if (existing == null) {
-                TherapistSummaryResponse therapist = fetchTherapist(therapistId);
-                existing = AssignedTherapistResponse.builder()
-                        .therapistId(therapist.getId())
-                        .therapistName(therapist.getTherapistName())
-                        .therapistCode(therapist.getTherapistCode())
-                        .mobileNumber(therapist.getMobileNumber())
-                        .therapyIds(new ArrayList<>())
-                        .therapyNames(new ArrayList<>())
-                        .build();
-                therapistsById.put(therapistId, existing);
-            }
-
-            existing.getTherapyIds().add(therapy.getId());
-            existing.getTherapyNames().add(therapy.getTherapyName());
-        }
+        TherapyMaster savedTherapy = therapyRepository.save(therapy);
 
         return ApiResponse.success(
-                AppMessages.ASSIGNED_THERAPISTS_FETCHED,
-                new ArrayList<>(therapistsById.values()));
+                AppMessages.THERAPY_UPDATED,
+                therapyMapper.toResponse(savedTherapy, category.getCategoryName()));
     }
 
     @Override
-    public ApiResponse<Void> deleteTherapy(UUID therapyId) {
+    public ApiResponse<TherapyResponse> updateTherapyStatus(
+            UUID therapyId, UpdateTherapyStatusRequest request) {
+
+        TherapyMaster therapy = therapyRepository.findByIdAndDeletedFalse(therapyId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
+
+        therapy.setStatus(request.getStatus());
+        TherapyMaster savedTherapy = therapyRepository.save(therapy);
+
+        log.info("Therapy {} status updated to {} (deleted unchanged)", therapyId, request.getStatus());
+
+        return ApiResponse.success(AppMessages.THERAPY_STATUS_UPDATED, toEnrichedResponse(savedTherapy));
+    }
+
+    @Override
+    public ApiResponse<TherapyResponse> deleteTherapy(UUID therapyId) {
         TherapyMaster therapy = therapyRepository.findByIdAndDeletedFalse(therapyId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
 
         therapy.setDeleted(true);
-        therapy.setActive(false);
-        therapy.setStatus(TherapyMasterStatus.INACTIVE);
-        therapyRepository.save(therapy);
+        TherapyMaster savedTherapy = therapyRepository.save(therapy);
 
-        return ApiResponse.success(AppMessages.THERAPY_DELETED, null);
+        return ApiResponse.success(AppMessages.THERAPY_DELETED, toEnrichedResponse(savedTherapy));
     }
 
-    private TherapyResponse toEnrichedResponse(TherapyMaster therapy, Integer serialNo) {
+    private TherapyResponse toEnrichedResponse(TherapyMaster therapy) {
         String categoryName = treatmentCategoryRepository.findById(therapy.getCategoryId())
                 .map(TreatmentCategoryMaster::getCategoryName)
                 .orElse(null);
 
-        String therapistName = null;
-        if (therapy.getAssignedTherapistId() != null) {
-            try {
-                TherapistSummaryResponse therapist = fetchTherapist(therapy.getAssignedTherapistId());
-                therapistName = therapist != null ? therapist.getTherapistName() : null;
-            } catch (Exception ex) {
-                log.warn("Unable to fetch therapist {}: {}",
-                        therapy.getAssignedTherapistId(), ex.getMessage());
-            }
-        }
-
-        return therapyMapper.toResponse(therapy, serialNo, categoryName, therapistName);
-    }
-
-    private TherapistSummaryResponse fetchTherapist(UUID therapistId) {
-        ApiResponse<TherapistSummaryResponse> response =
-                therapistServiceClient.getTherapistById(therapistId);
-
-        if (response == null || !response.isSuccess() || response.getData() == null) {
-            throw new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND_WITH_ID + therapistId);
-        }
-        return response.getData();
+        return therapyMapper.toResponse(therapy, categoryName);
     }
 
 }

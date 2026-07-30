@@ -41,6 +41,7 @@ public final class AppConstants {
     public static final String DOCTOR_FETCHED_SUCCESSFULLY = "Doctor fetched successfully.";
     public static final String DOCTORS_FETCHED_SUCCESSFULLY = "Doctors fetched successfully.";
     public static final String DOCTOR_DELETED_SUCCESSFULLY = "Doctor deleted successfully.";
+    public static final String DOCTOR_STATUS_UPDATED_SUCCESSFULLY = "Doctor status updated successfully.";
     public static final String DOCTOR_NOT_FOUND = "Doctor not found.";
     public static final String DOCTOR_NOT_FOUND_WITH_ID = "Doctor not found with id: ";
 
@@ -49,11 +50,21 @@ public final class AppConstants {
     // ===========================
 
     public static final String THERAPIST_CREATED_SUCCESSFULLY = "Therapist created successfully.";
+    public static final String THERAPIST_UPDATED_SUCCESSFULLY = "Therapist updated successfully.";
     public static final String THERAPIST_FETCHED_SUCCESSFULLY = "Therapist fetched successfully.";
     public static final String THERAPISTS_FETCHED_SUCCESSFULLY = "Therapists fetched successfully.";
+    public static final String THERAPISTS_BY_THERAPIES_FETCHED_SUCCESSFULLY =
+            "Therapists fetched successfully for selected therapies.";
     public static final String THERAPIST_DELETED_SUCCESSFULLY = "Therapist deleted successfully.";
+    public static final String THERAPIST_STATUS_UPDATED_SUCCESSFULLY =
+            "Therapist status updated successfully.";
     public static final String THERAPIST_NOT_FOUND = "Therapist not found.";
     public static final String THERAPIST_NOT_FOUND_WITH_ID = "Therapist not found with id: ";
+    public static final String THERAPY_IDS_REQUIRED =
+            "At least one therapy id is required.";
+
+    public static final String INVALID_THERAPY_ID =
+            "Invalid therapy id: ";
 
     // ===========================
     // Attendance

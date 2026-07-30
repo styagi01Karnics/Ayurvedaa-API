@@ -47,11 +47,4 @@ public class TherapyMaster extends BaseEntity {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
-    @Column(nullable = false)
-    private UUID assignedTherapistId;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean active = true;
-
 }

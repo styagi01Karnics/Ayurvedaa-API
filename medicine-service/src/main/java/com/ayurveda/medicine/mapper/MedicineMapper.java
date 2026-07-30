@@ -6,6 +6,7 @@ import com.ayurveda.medicine.dto.request.CreateMedicineRequest;
 import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
 import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.entity.Medicine;
+import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 import com.ayurveda.medicine.util.MedicineStatusResolver;
 
@@ -17,7 +18,9 @@ public class MedicineMapper {
                 ? request.getLowStockThreshold()
                 : defaultThreshold;
         boolean alertEnabled = Boolean.TRUE.equals(request.getLowStockAlertEnabled());
-        MedicineStockStatus status = MedicineStatusResolver.resolve(request.getQuantity(), threshold);
+        MedicineStockStatus stockStatus = MedicineStatusResolver.resolve(request.getQuantity(), threshold);
+        MedicineStatus status =
+                request.getStatus() != null ? request.getStatus() : MedicineStatus.ACTIVE;
 
         return Medicine.builder()
                 .medicineName(request.getMedicineName().trim())
@@ -31,6 +34,7 @@ public class MedicineMapper {
                 .lowStockAlertEnabled(alertEnabled)
                 .lowStockThreshold(threshold)
                 .status(status)
+                .stockStatus(stockStatus)
                 .build();
     }
 
@@ -49,7 +53,10 @@ public class MedicineMapper {
         medicine.setSellingPrice(request.getSellingPrice());
         medicine.setLowStockAlertEnabled(Boolean.TRUE.equals(request.getLowStockAlertEnabled()));
         medicine.setLowStockThreshold(threshold);
-        medicine.setStatus(MedicineStatusResolver.resolve(request.getQuantity(), threshold));
+        medicine.setStockStatus(MedicineStatusResolver.resolve(request.getQuantity(), threshold));
+        if (request.getStatus() != null) {
+            medicine.setStatus(request.getStatus());
+        }
     }
 
     public MedicineResponse toResponse(Medicine medicine) {
@@ -67,6 +74,7 @@ public class MedicineMapper {
                 .lowStockAlertEnabled(medicine.getLowStockAlertEnabled())
                 .lowStockThreshold(medicine.getLowStockThreshold())
                 .status(medicine.getStatus())
+                .stockStatus(medicine.getStockStatus())
                 .build();
     }
 

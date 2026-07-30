@@ -1,5 +1,6 @@
 package com.ayurveda.appointment.dto.request;
 
+import com.ayurveda.appointment.enums.DoshaMasterStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -23,7 +24,6 @@ public class CreateDoshaRequest {
 
     private String characteristics;
 
-    @Builder.Default
-    private Boolean active = true;
+    private DoshaMasterStatus status;
 
 }

@@ -4,6 +4,7 @@ import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
+import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
 import com.ayurveda.doctor.entity.Doctor;
 import com.ayurveda.doctor.enums.DoctorStatus;
@@ -17,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +39,6 @@ public class DoctorServiceImpl implements DoctorService {
                 .consultationFees(request.getConsultationFees())
                 .followUpFees(request.getFollowUpFees())
                 .availability(request.getAvailability().trim())
-                .active(status == DoctorStatus.ACTIVE)
                 .build();
 
         Doctor savedDoctor = doctorRepository.save(doctor);
@@ -57,11 +56,24 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<DoctorResponse>> getAllDoctors() {
-        AtomicInteger serial = new AtomicInteger(1);
         List<DoctorResponse> doctors = doctorRepository.findAllByDeletedFalse().stream()
-                .map(doctor -> DoctorMapper.toResponse(doctor, serial.getAndIncrement()))
+                .map(DoctorMapper::toResponse)
                 .toList();
         return ApiResponse.success(AppConstants.DOCTORS_FETCHED_SUCCESSFULLY, doctors);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<DoctorResponse> updateDoctorStatus(
+            UUID doctorId, UpdateDoctorStatusRequest request) {
+        Doctor doctor = doctorRepository.findByIdAndDeletedFalse(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND));
+
+        doctor.setStatus(request.getStatus());
+        Doctor savedDoctor = doctorRepository.save(doctor);
+
+        return ApiResponse.success(
+                AppConstants.DOCTOR_STATUS_UPDATED_SUCCESSFULLY, DoctorMapper.toResponse(savedDoctor));
     }
 
     @Override
@@ -71,8 +83,6 @@ public class DoctorServiceImpl implements DoctorService {
                 .orElseThrow(() -> new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND));
 
         doctor.setDeleted(true);
-        doctor.setActive(false);
-        doctor.setStatus(DoctorStatus.INACTIVE);
         doctorRepository.save(doctor);
 
         return ApiResponse.success(AppConstants.DOCTOR_DELETED_SUCCESSFULLY, null);

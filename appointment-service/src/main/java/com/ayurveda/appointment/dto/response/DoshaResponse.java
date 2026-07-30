@@ -2,6 +2,7 @@ package com.ayurveda.appointment.dto.response;
 
 import java.util.UUID;
 
+import com.ayurveda.appointment.enums.DoshaMasterStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,6 +24,6 @@ public class DoshaResponse {
 
     private String characteristics;
 
-    private Boolean active;
+    private DoshaMasterStatus status;
 
 }

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.ayurveda.medicine.enums.MedicineCategory;
+import com.ayurveda.medicine.enums.MedicineStatus;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -56,5 +57,7 @@ public class UpdateMedicineRequest {
 
     @Min(value = 1, message = "Low stock threshold must be at least 1")
     private Integer lowStockThreshold;
+
+    private MedicineStatus status;
 
 }
