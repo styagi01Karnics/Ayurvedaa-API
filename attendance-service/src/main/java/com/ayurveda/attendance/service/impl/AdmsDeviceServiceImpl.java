@@ -84,6 +84,7 @@ public class AdmsDeviceServiceImpl implements AdmsDeviceService {
             log.warn("Skipping unparseable ADMS punch line from SN={}: {}", serialNumber, line);
             return;
         }
+        log.info("incoming punch data: {}", tokens);
 
         String employeeId = tokens[0];
         String punchDate = tokens[1];
