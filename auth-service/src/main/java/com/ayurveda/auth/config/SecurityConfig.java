@@ -40,15 +40,15 @@ public class SecurityConfig {
                         .accessDeniedHandler(jsonAccessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/api-docs/**",
-                                "/v3/api-docs/**"
-                                "/actuator",
-                                "/actuator/**",
-                                "/actuator/health",
-                                "/actuator/prometheus"
-                        ).permitAll()
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/api-docs/**",
+                        "/v3/api-docs/**",
+                        "/actuator",
+                        "/actuator/**",
+                        "/actuator/health",
+                        "/actuator/prometheus"
+                ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/tenants/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/signup").permitAll()
