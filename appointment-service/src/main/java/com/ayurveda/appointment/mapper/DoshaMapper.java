@@ -14,12 +14,15 @@ public class DoshaMapper {
         DoshaMasterStatus status =
                 request.getStatus() != null ? request.getStatus() : DoshaMasterStatus.ACTIVE;
 
-        return DoshaMaster.builder()
-                .name(request.getName())
+        DoshaMaster dosha = DoshaMaster.builder()
+                .name(request.getName().trim())
                 .elements(request.getElements())
                 .characteristics(request.getCharacteristics())
                 .status(status)
+                .active(status == DoshaMasterStatus.ACTIVE)
                 .build();
+        dosha.setDeleted(false);
+        return dosha;
     }
 
     public DoshaResponse toResponse(DoshaMaster dosha) {

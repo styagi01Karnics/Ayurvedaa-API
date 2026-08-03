@@ -40,6 +40,7 @@ public final class AppConstants {
     public static final String DOCTOR_CREATED_SUCCESSFULLY = "Doctor created successfully.";
     public static final String DOCTOR_FETCHED_SUCCESSFULLY = "Doctor fetched successfully.";
     public static final String DOCTORS_FETCHED_SUCCESSFULLY = "Doctors fetched successfully.";
+    public static final String ACTIVE_DOCTORS_FETCHED_SUCCESSFULLY = "Active doctors fetched successfully.";
     public static final String DOCTOR_DELETED_SUCCESSFULLY = "Doctor deleted successfully.";
     public static final String DOCTOR_STATUS_UPDATED_SUCCESSFULLY = "Doctor status updated successfully.";
     public static final String DOCTOR_NOT_FOUND = "Doctor not found.";

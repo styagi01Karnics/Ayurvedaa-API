@@ -1,6 +1,9 @@
 package com.ayurveda.appointment.dto.response;
 
+import java.util.List;
 import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,6 +32,8 @@ public class MedicalAssessmentResponse {
 
     private AppointmentTreatmentPlanResponse treatmentPlan;
 
-    private java.util.List<AppointmentDocumentResponse> documents;
+    /** Only present for /with-documents when files were uploaded. */
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<AppointmentDocumentResponse> documents;
 
 }

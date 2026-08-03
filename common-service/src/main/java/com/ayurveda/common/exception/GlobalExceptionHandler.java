@@ -73,11 +73,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
-        log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+        String cause = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : ex.getMessage();
+        log.warn("Data integrity violation: {}", cause);
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.failure(
                         HttpStatus.CONFLICT.value(),
-                        AppConstants.REQUEST_CONFLICTS_WITH_EXISTING_DATA));
+                        AppConstants.REQUEST_CONFLICTS_WITH_EXISTING_DATA
+                                + (cause != null ? " (" + cause + ")" : "")));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -154,6 +158,19 @@ public class GlobalExceptionHandler {
                 && invalidFormatException.getTargetType().isEnum()) {
 
             String message = buildInvalidEnumMessage(invalidFormatException);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), message));
+        }
+
+        if (cause instanceof InvalidFormatException invalidFormatException) {
+            String field = invalidFormatException.getPath().isEmpty()
+                    ? "value"
+                    : invalidFormatException.getPath().get(invalidFormatException.getPath().size() - 1).getFieldName();
+            String message = "Invalid value for '" + field + "': " + invalidFormatException.getValue()
+                    + ". Expected type: "
+                    + (invalidFormatException.getTargetType() != null
+                            ? invalidFormatException.getTargetType().getSimpleName()
+                            : "unknown");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), message));
         }

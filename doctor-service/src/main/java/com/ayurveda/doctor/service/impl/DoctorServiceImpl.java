@@ -63,6 +63,17 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<List<DoctorResponse>> getActiveDoctors() {
+        List<DoctorResponse> doctors = doctorRepository
+                .findAllByStatusAndDeletedFalse(DoctorStatus.ACTIVE)
+                .stream()
+                .map(DoctorMapper::toResponse)
+                .toList();
+        return ApiResponse.success(AppConstants.ACTIVE_DOCTORS_FETCHED_SUCCESSFULLY, doctors);
+    }
+
+    @Override
     @Transactional
     public ApiResponse<DoctorResponse> updateDoctorStatus(
             UUID doctorId, UpdateDoctorStatusRequest request) {

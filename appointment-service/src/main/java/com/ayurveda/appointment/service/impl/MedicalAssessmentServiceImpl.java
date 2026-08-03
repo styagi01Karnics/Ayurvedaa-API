@@ -91,18 +91,22 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
         uploadDocuments(request.getPatientId(), labReports,
                 DocumentType.LAB_REPORT, documents);
 
-        MedicalAssessmentResponse response = MedicalAssessmentResponse.builder()
-                .patientId(request.getPatientId())
-                .ayurvedicAssessment(ayurvedic)
-                .physicalExamination(physical)
-                .medicalHistory(medicalHistory)
-                .lifestyleInformation(lifestyle)
-                .systemicExamination(systemic)
-                .treatmentPlan(treatmentPlan)
-                .documents(documents)
-                .build();
+        MedicalAssessmentResponse.MedicalAssessmentResponseBuilder responseBuilder =
+                MedicalAssessmentResponse.builder()
+                        .patientId(request.getPatientId())
+                        .ayurvedicAssessment(ayurvedic)
+                        .physicalExamination(physical)
+                        .medicalHistory(medicalHistory)
+                        .lifestyleInformation(lifestyle)
+                        .systemicExamination(systemic)
+                        .treatmentPlan(treatmentPlan);
 
-        return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_SAVED, response);
+        // Include documents only when files were uploaded (/with-documents).
+        if (!documents.isEmpty()) {
+            responseBuilder.documents(documents);
+        }
+
+        return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_SAVED, responseBuilder.build());
     }
 
     @Override
@@ -123,7 +127,6 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
                         systemicExaminationService.getSystemicExaminationByPatientId(patientId).getData())
                 .treatmentPlan(
                         treatmentPlanService.getTreatmentPlanByPatientId(patientId).getData())
-                .documents(Collections.emptyList())
                 .build();
 
         return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_FETCHED, response);

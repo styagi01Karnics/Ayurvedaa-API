@@ -137,6 +137,9 @@ public final class AppMessages {
     public static final String THERAPY_NOT_FOUND_WITH_ID =
             "Therapy not found with id: ";
 
+    public static final String THERAPIST_NOT_FOUND_WITH_ID =
+            "Therapist not found with id: ";
+
     /* ==========================
        Documents
        ========================== */

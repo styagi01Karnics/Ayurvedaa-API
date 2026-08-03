@@ -16,6 +16,8 @@ public interface DoctorService {
 
     ApiResponse<List<DoctorResponse>> getAllDoctors();
 
+    ApiResponse<List<DoctorResponse>> getActiveDoctors();
+
     ApiResponse<DoctorResponse> updateDoctorStatus(UUID doctorId, UpdateDoctorStatusRequest request);
 
     ApiResponse<Void> deleteDoctor(UUID doctorId);

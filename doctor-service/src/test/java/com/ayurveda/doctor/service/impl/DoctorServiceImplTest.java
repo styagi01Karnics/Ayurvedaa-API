@@ -100,6 +100,17 @@ class DoctorServiceImplTest {
     }
 
     @Test
+    void getActiveDoctors_returnsOnlyActive() {
+        when(doctorRepository.findAllByStatusAndDeletedFalse(DoctorStatus.ACTIVE))
+                .thenReturn(List.of(doctor));
+
+        ApiResponse<List<DoctorResponse>> response = doctorService.getActiveDoctors();
+
+        assertEquals(1, response.getData().size());
+        assertEquals(DoctorStatus.ACTIVE, response.getData().get(0).getStatus());
+    }
+
+    @Test
     void updateDoctorStatus_updatesStatus() {
         UpdateDoctorStatusRequest request = new UpdateDoctorStatusRequest();
         request.setStatus(DoctorStatus.INACTIVE);

@@ -229,6 +229,11 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
     }
 
     private TherapyResponse mapTherapy(TherapyMaster therapy) {
+        String categoryName = therapy.getCategoryId() == null
+                ? null
+                : treatmentCategoryRepository.findById(therapy.getCategoryId())
+                        .map(TreatmentCategoryMaster::getCategoryName)
+                        .orElse(null);
 
         return TherapyResponse.builder()
                 .id(therapy.getId())
@@ -237,6 +242,7 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                 .therapyName(therapy.getTherapyName())
                 .description(therapy.getDescription())
                 .categoryId(therapy.getCategoryId())
+                .categoryName(categoryName)
                 .status(therapy.getStatus())
                 .durationMinutes(therapy.getDurationMinutes())
                 .price(therapy.getPrice())
@@ -244,10 +250,22 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
     }
     
     private TherapistSummaryResponse fetchTherapist(UUID therapistId) {
-
-        return therapistServiceClient
+        TherapistSummaryResponse therapist = therapistServiceClient
                 .getTherapistById(therapistId)
                 .getData();
+
+        if (therapist == null) {
+            throw new ResourceNotFoundException(AppMessages.THERAPIST_NOT_FOUND_WITH_ID + therapistId);
+        }
+
+        // Return only fields aligned with current therapist master (no legacy nulls).
+        return TherapistSummaryResponse.builder()
+                .id(therapist.getId())
+                .name(therapist.getName() != null ? therapist.getName() : therapist.getTherapistName())
+                .therapistName(therapist.getTherapistName())
+                .therapistCode(therapist.getTherapistCode())
+                .status(therapist.getStatus())
+                .build();
     }
     
     private TreatmentCategoryResponse mapTreatmentCategory(TreatmentCategoryMaster category) {

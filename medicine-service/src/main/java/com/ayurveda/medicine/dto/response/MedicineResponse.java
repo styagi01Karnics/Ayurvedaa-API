@@ -27,6 +27,11 @@ public class MedicineResponse {
     private String manufacturer;
     private String batchNumber;
     private Integer stockQuantity;
+
+    /** Same value as stockQuantity — kept for clients that send/update using quantity. */
+    public Integer getQuantity() {
+        return stockQuantity;
+    }
     private LocalDate expiryDate;
     private BigDecimal purchasePrice;
     private BigDecimal sellingPrice;
