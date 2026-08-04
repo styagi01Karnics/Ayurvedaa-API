@@ -11,6 +11,7 @@ import com.ayurveda.appointment.dto.request.CreateAppointmentAyurvedicAssessment
 import com.ayurveda.appointment.dto.response.AppointmentAyurvedicAssessmentResponse;
 import com.ayurveda.appointment.service.AppointmentAyurvedicAssessmentService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class AppointmentAyurvedicAssessmentController {
     private final AppointmentAyurvedicAssessmentService
             appointmentAyurvedicAssessmentService;
 
+    @Operation(summary = "Save ayurvedic assessment", description = "Creates or updates ayurvedic assessment for a patient.")
     @PostMapping
     public ResponseEntity<ApiResponse<AppointmentAyurvedicAssessmentResponse>>
             saveAyurvedicAssessment(
@@ -37,6 +39,7 @@ public class AppointmentAyurvedicAssessmentController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Get ayurvedic assessment by patient ID", description = "Returns ayurvedic assessment for the given patient.")
     @GetMapping("/{patientId}")
     public ResponseEntity<ApiResponse<AppointmentAyurvedicAssessmentResponse>>
             getAyurvedicAssessmentByPatientId(

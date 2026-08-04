@@ -38,7 +38,7 @@ public final class AuthMessages {
     public static final String CANNOT_CREATE_SUPER_ADMIN_VIA_TENANT_REGISTRATION =
             "Cannot create SUPER_ADMIN via tenant registration.";
     public static final String USER_NOT_FOUND = "User not found.";
-    public static final String ONLY_TENANT_ADMIN_ALLOWED =
-            "Only tenant admin can perform this action.";
+    public static final String ONLY_ADMIN_ALLOWED =
+            "Only admin or super admin can perform this action.";
 
 }

@@ -79,6 +79,8 @@ public class TreatmentCategoryServiceImpl implements TreatmentCategoryService {
         TreatmentCategoryResponse response =
                 treatmentCategoryMapper.toResponse(category);
 
+        log.info("Treatment category fetched successfully with id: {}", categoryId);
+
         return ApiResponse.success(response);
     }
 
@@ -93,6 +95,8 @@ public class TreatmentCategoryServiceImpl implements TreatmentCategoryService {
                         .stream()
                         .map(treatmentCategoryMapper::toResponse)
                         .toList();
+
+        log.info("Fetched {} treatment categories successfully", response.size());
 
         return ApiResponse.success(response);
     }

@@ -11,15 +11,18 @@ import com.ayurveda.common.ApiResponse;
 
 public interface MedicalAssessmentService {
 
+    /** Saves all medical assessment sections for a patient (JSON only). */
     ApiResponse<MedicalAssessmentResponse> saveMedicalAssessment(
             CreateMedicalAssessmentRequest request);
 
+    /** Saves all medical assessment sections with optional document uploads. */
     ApiResponse<MedicalAssessmentResponse> saveMedicalAssessment(
             CreateMedicalAssessmentRequest request,
             List<MultipartFile> pastMedicalReports,
             List<MultipartFile> prescriptions,
             List<MultipartFile> labReports);
 
+    /** Fetches the complete medical assessment for a patient. */
     ApiResponse<MedicalAssessmentResponse> getMedicalAssessmentByPatientId(UUID patientId);
 
 }

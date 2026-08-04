@@ -28,6 +28,9 @@ public class AppointmentTherapyController {
 
     private final AppointmentTherapyService appointmentTherapyService;
 
+    @Operation(
+            summary = "Create appointment therapy",
+            description = "Assigns therapies and a therapist for a patient's appointment.")
     @PostMapping
     public ResponseEntity<ApiResponse<AppointmentTherapyResponse>>
             createAppointmentTherapy(
@@ -52,6 +55,9 @@ public class AppointmentTherapyController {
                 appointmentTherapyService.getTherapistTodaySchedule(therapistId));
     }
 
+    @Operation(
+            summary = "Get appointment therapies by patient ID",
+            description = "Returns all therapy assignments for the given patient. Empty list when none exist.")
     @GetMapping("/{patientId}")
     public ResponseEntity<ApiResponse<List<AppointmentTherapyResponse>>> getAppointmentTherapyByPatientId(
             @PathVariable UUID patientId) {

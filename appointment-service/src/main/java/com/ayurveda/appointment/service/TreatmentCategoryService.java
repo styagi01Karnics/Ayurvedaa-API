@@ -9,12 +9,15 @@ import com.ayurveda.appointment.dto.response.TreatmentCategoryResponse;
 
 public interface TreatmentCategoryService {
 
+    /** Creates a new treatment category. */
     ApiResponse<TreatmentCategoryResponse> createTreatmentCategory(
             CreateTreatmentCategoryRequest request);
 
+    /** Fetches a treatment category by ID. */
     ApiResponse<TreatmentCategoryResponse> getTreatmentCategoryById(
             UUID categoryId);
 
+    /** Lists all treatment categories. */
     ApiResponse<List<TreatmentCategoryResponse>> getAllTreatmentCategories();
 
 }

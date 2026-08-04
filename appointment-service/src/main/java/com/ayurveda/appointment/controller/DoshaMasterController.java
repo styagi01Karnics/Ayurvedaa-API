@@ -18,6 +18,7 @@ import com.ayurveda.appointment.dto.response.DoshaResponse;
 import com.ayurveda.appointment.service.DoshaMasterService;
 import com.ayurveda.common.ApiResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,17 +32,20 @@ public class DoshaMasterController {
 
     private final DoshaMasterService doshaMasterService;
 
+    @Operation(summary = "Create dosha", description = "Creates a new dosha master record.")
     @PostMapping
     public ResponseEntity<ApiResponse<DoshaResponse>> createDosha(
             @Valid @RequestBody CreateDoshaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(doshaMasterService.createDosha(request));
     }
 
+    @Operation(summary = "Get dosha by ID", description = "Returns a non-deleted dosha by its ID.")
     @GetMapping("/{doshaId}")
     public ResponseEntity<ApiResponse<DoshaResponse>> getDoshaById(@PathVariable UUID doshaId) {
         return ResponseEntity.ok(doshaMasterService.getDoshaById(doshaId));
     }
 
+    @Operation(summary = "List all doshas", description = "Returns all non-deleted doshas ordered by name.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<DoshaResponse>>> getAllDoshas() {
         return ResponseEntity.ok(doshaMasterService.getAllDoshas());

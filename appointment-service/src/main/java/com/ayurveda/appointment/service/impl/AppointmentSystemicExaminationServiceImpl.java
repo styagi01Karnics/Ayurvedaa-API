@@ -77,6 +77,9 @@ public class AppointmentSystemicExaminationServiceImpl
                 appointmentSystemicExaminationMapper
                         .toResponse(savedSystemicExamination);
 
+        log.info("Systemic examination saved successfully for patient: {}",
+                request.getPatientId());
+
         return ApiResponse.success(message, response);
     }
 
@@ -98,6 +101,9 @@ public class AppointmentSystemicExaminationServiceImpl
         AppointmentSystemicExaminationResponse response =
                 appointmentSystemicExaminationMapper
                         .toResponse(systemicExamination);
+
+        log.info("Systemic examination fetched successfully for patient: {}",
+                patientId);
 
         return ApiResponse.success(
                 Constants.SYSTEMIC_EXAMINATION_FETCHED,

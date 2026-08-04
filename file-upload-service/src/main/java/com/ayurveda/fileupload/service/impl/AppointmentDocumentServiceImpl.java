@@ -72,11 +72,16 @@ public class AppointmentDocumentServiceImpl implements AppointmentDocumentServic
     @Override
     @Transactional(readOnly = true)
     public ResponseEntity<Resource> downloadDocument(UUID documentId) {
+        log.info("Downloading document with ID: {}", documentId);
+
         AppointmentDocument document = appointmentDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.DOCUMENT_NOT_FOUND + documentId));
 
         ByteArrayResource resource = new ByteArrayResource(document.getFileData());
+
+        log.info("Document downloaded successfully. Document ID: {}, File name: {}",
+                documentId, document.getFileName());
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -88,11 +93,15 @@ public class AppointmentDocumentServiceImpl implements AppointmentDocumentServic
 
     @Override
     public ApiResponse<String> deleteDocument(UUID documentId) {
+        log.info("Received request to delete document with ID: {}", documentId);
+
         AppointmentDocument document = appointmentDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.DOCUMENT_NOT_FOUND + documentId));
 
         appointmentDocumentRepository.delete(document);
+
+        log.info("Document deleted successfully. Document ID: {}", documentId);
 
         return ApiResponse.success(AppMessages.DOCUMENT_DELETED, "Deleted");
     }

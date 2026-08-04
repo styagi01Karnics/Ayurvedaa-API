@@ -38,6 +38,8 @@ public class DoctorTodayScheduleResponse {
 
         private UUID bookingId;
 
+        private UUID assignedDoctorId;
+
         private LocalTime slotTime;
 
         /** Appointment date + slot time (falls back to createdAt if slot missing). */

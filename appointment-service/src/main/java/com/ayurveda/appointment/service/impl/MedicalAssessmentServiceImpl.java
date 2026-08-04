@@ -106,12 +106,16 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
             responseBuilder.documents(documents);
         }
 
+        log.info("Complete medical assessment saved successfully for patient {}", request.getPatientId());
+
         return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_SAVED, responseBuilder.build());
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<MedicalAssessmentResponse> getMedicalAssessmentByPatientId(UUID patientId) {
+
+        log.info("Fetching complete medical assessment for patient {}", patientId);
 
         MedicalAssessmentResponse response = MedicalAssessmentResponse.builder()
                 .patientId(patientId)
@@ -128,6 +132,8 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
                 .treatmentPlan(
                         treatmentPlanService.getTreatmentPlanByPatientId(patientId).getData())
                 .build();
+
+        log.info("Complete medical assessment fetched successfully for patient {}", patientId);
 
         return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_FETCHED, response);
     }

@@ -26,6 +26,14 @@ public interface AppointmentBookingRepository
 
     List<AppointmentBooking> findByBookingStatusAndDeletedFalse(BookingStatus bookingStatus);
 
+    @Query("""
+            SELECT a FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND (:status IS NULL OR a.bookingStatus = :status)
+            """)
+    List<AppointmentBooking> findByOptionalStatusAndDeletedFalse(
+            @Param("status") BookingStatus status);
+
     List<AppointmentBooking> findByRegistrationDateAndDeletedFalse(LocalDate registrationDate);
 
     long countByRegistrationDateBetweenAndDeletedFalseAndBookingStatusNot(

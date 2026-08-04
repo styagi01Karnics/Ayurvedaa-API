@@ -77,6 +77,9 @@ public class AppointmentPhysicalExaminationServiceImpl
                 appointmentPhysicalExaminationMapper
                         .toResponse(savedPhysicalExamination);
 
+        log.info("Physical examination saved successfully for patient: {}",
+                request.getPatientId());
+
         return ApiResponse.success(message, response);
     }
 
@@ -98,6 +101,9 @@ public class AppointmentPhysicalExaminationServiceImpl
         AppointmentPhysicalExaminationResponse response =
                 appointmentPhysicalExaminationMapper
                         .toResponse(physicalExamination);
+
+        log.info("Physical examination fetched successfully for patient: {}",
+                patientId);
 
         return ApiResponse.success(
                 "Physical examination fetched successfully.",

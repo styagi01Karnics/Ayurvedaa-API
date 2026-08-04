@@ -12,6 +12,7 @@ import com.ayurveda.appointment.dto.request.CreateAppointmentMedicalHistoryReque
 import com.ayurveda.appointment.dto.response.AppointmentMedicalHistoryResponse;
 import com.ayurveda.appointment.service.AppointmentMedicalHistoryService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AppointmentMedicalHistoryController {
     private final AppointmentMedicalHistoryService
             appointmentMedicalHistoryService;
 
+    @Operation(summary = "Save medical history", description = "Creates or updates medical history for a patient.")
     @PostMapping
     public ResponseEntity<ApiResponse<AppointmentMedicalHistoryResponse>>
             saveMedicalHistory(
@@ -38,6 +40,7 @@ public class AppointmentMedicalHistoryController {
                 .body(response);
     }
 
+    @Operation(summary = "Get medical history by patient ID", description = "Returns medical history for the given patient.")
     @GetMapping("/{patientId}")
     public ResponseEntity<ApiResponse<AppointmentMedicalHistoryResponse>>
             getMedicalHistoryByPatientId(

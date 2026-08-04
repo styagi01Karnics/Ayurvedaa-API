@@ -49,8 +49,13 @@ public class ActivityLogServiceImpl implements ActivityLogService {
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<ActivityLogResponse> getActivityLogById(UUID id) {
+        log.info("Fetching activity log details for id: {}", id);
+
         ActivityLog entity = activityLogRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ActivityLogMessages.ACTIVITY_LOG_NOT_FOUND));
+
+        log.info("Activity log fetched successfully. ID: {}", id);
+
         return ApiResponse.success(activityLogMapper.toResponse(entity));
     }
 
@@ -58,6 +63,8 @@ public class ActivityLogServiceImpl implements ActivityLogService {
     @Transactional(readOnly = true)
     public ApiResponse<List<ActivityLogResponse>> getActivityLogs(
             String page, ActivityAction action, String search) {
+
+        log.info("Fetching activity logs with page={}, action={}, search={}", page, action, search);
 
         String pageFilter = StringUtils.hasText(page) ? page.trim() : null;
         String searchFilter = StringUtils.hasText(search) ? search.trim() : null;
@@ -67,6 +74,8 @@ public class ActivityLogServiceImpl implements ActivityLogService {
                 .stream()
                 .map(activityLogMapper::toResponse)
                 .toList();
+
+        log.info("Successfully fetched {} activity logs.", logs.size());
 
         return ApiResponse.success(ActivityLogMessages.ACTIVITY_LOGS_FETCHED_SUCCESSFULLY, logs);
     }

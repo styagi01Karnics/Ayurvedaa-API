@@ -11,6 +11,7 @@ import com.ayurveda.appointment.dto.request.CreateAppointmentSystemicExamination
 import com.ayurveda.appointment.dto.response.AppointmentSystemicExaminationResponse;
 import com.ayurveda.appointment.service.AppointmentSystemicExaminationService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class AppointmentSystemicExaminationController {
     private final AppointmentSystemicExaminationService
             appointmentSystemicExaminationService;
 
+    @Operation(summary = "Save systemic examination", description = "Creates or updates systemic examination for a patient.")
     @PostMapping
     public ResponseEntity<ApiResponse<AppointmentSystemicExaminationResponse>>
             saveSystemicExamination(
@@ -37,6 +39,7 @@ public class AppointmentSystemicExaminationController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Get systemic examination by patient ID", description = "Returns systemic examination for the given patient.")
     @GetMapping("/{patientId}")
     public ResponseEntity<ApiResponse<AppointmentSystemicExaminationResponse>>
             getSystemicExaminationByPatientId(

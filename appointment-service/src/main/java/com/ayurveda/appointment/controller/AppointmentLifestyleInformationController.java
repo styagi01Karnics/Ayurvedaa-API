@@ -12,6 +12,7 @@ import com.ayurveda.appointment.dto.request.CreateAppointmentLifestyleInformatio
 import com.ayurveda.appointment.dto.response.AppointmentLifestyleInformationResponse;
 import com.ayurveda.appointment.service.AppointmentLifestyleInformationService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AppointmentLifestyleInformationController {
     private final AppointmentLifestyleInformationService
             appointmentLifestyleInformationService;
 
+    @Operation(summary = "Save lifestyle information", description = "Creates or updates lifestyle information for a patient.")
     @PostMapping
     public ResponseEntity<ApiResponse<AppointmentLifestyleInformationResponse>>
             saveLifestyleInformation(
@@ -39,6 +41,7 @@ public class AppointmentLifestyleInformationController {
                 .body(response);
     }
 
+    @Operation(summary = "Get lifestyle information by patient ID", description = "Returns lifestyle information for the given patient.")
     @GetMapping("/{patientId}")
     public ResponseEntity<ApiResponse<AppointmentLifestyleInformationResponse>>
             getLifestyleInformationByPatientId(

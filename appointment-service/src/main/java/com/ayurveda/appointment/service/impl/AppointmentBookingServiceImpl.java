@@ -366,20 +366,49 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     public ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
             BookingStatus bookingStatus) {
 
-        log.info("Fetching appointments for booking status: {}", bookingStatus);
+        log.info("Fetching appointments for booking status: {}",
+                bookingStatus == null ? "ALL" : bookingStatus);
 
         List<AppointmentBooking> appointments =
-                appointmentBookingRepository.findByBookingStatusAndDeletedFalse(bookingStatus);
+                appointmentBookingRepository.findByOptionalStatusAndDeletedFalse(bookingStatus);
 
         if (appointments.isEmpty()) {
-            throw new ResourceNotFoundException(AppMessages.NO_APPOINTMENTS_FOR_STATUS + bookingStatus);
+            log.info("No appointments available for status: {}",
+                    bookingStatus == null ? "ALL" : bookingStatus);
+            return ApiResponse.success(AppMessages.NO_APPOINTMENTS_AVAILABLE, List.of());
         }
 
+        LocalDate today = LocalDate.now();
         List<AppointmentBookingResponse> responses = appointments.stream()
+                .sorted(appointmentDatePriorityComparator(today))
                 .map(this::toResponse)
                 .toList();
 
-        return ApiResponse.success(responses);
+        log.info("Fetched {} appointments successfully", responses.size());
+        return ApiResponse.success(AppMessages.APPOINTMENTS_FETCHED, responses);
+    }
+
+    /**
+     * Today → tomorrow → day after → later future, then past (newest past first), then by slot.
+     */
+    private Comparator<AppointmentBooking> appointmentDatePriorityComparator(LocalDate today) {
+        return Comparator
+                .comparing((AppointmentBooking a) -> {
+                    LocalDate date = a.getRegistrationDate();
+                    if (date == null) {
+                        return 2;
+                    }
+                    return date.isBefore(today) ? 1 : 0;
+                })
+                .thenComparing(AppointmentBooking::getRegistrationDate,
+                        Comparator.nullsLast((d1, d2) -> {
+                            boolean past = d1.isBefore(today);
+                            return past ? d2.compareTo(d1) : d1.compareTo(d2);
+                        }))
+                .thenComparing(AppointmentBooking::getSlotTime,
+                        Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(AppointmentBooking::getCreatedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
     @Override
@@ -505,6 +534,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
                     return DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse.builder()
                             .bookingId(appointment.getId())
+                            .assignedDoctorId(appointment.getAssignedDoctorId())
                             .slotTime(appointment.getSlotTime())
                             .bookingTime(resolveBookingDateTime(appointment))
                             .bookingStatus(appointment.getBookingStatus())
@@ -524,6 +554,51 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 .build();
 
         return ApiResponse.success(AppMessages.DOCTOR_TODAY_APPOINTMENTS_FETCHED, response);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<DoctorTodayScheduleResponse> getTodayAppointments() {
+        LocalDate today = LocalDate.now();
+        log.info("Fetching today's appointments for all doctors on {}", today);
+
+        List<AppointmentBooking> appointmentsList =
+                appointmentBookingRepository.findTodaySchedule(today, BookingStatus.CANCELLED, null);
+
+        List<DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse> appointments =
+                appointmentsList.stream()
+                .map(appointment -> {
+                    PatientSummaryResponse patient = fetchPatient(appointment.getPatientId());
+
+                    List<String> consultationTypes =
+                            appointmentConsultationTypeRepository.findByBookingId(appointment.getId())
+                                    .stream()
+                                    .map(c -> c.getConsultationType().name())
+                                    .toList();
+
+                    return DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse.builder()
+                            .bookingId(appointment.getId())
+                            .assignedDoctorId(appointment.getAssignedDoctorId())
+                            .slotTime(appointment.getSlotTime())
+                            .bookingTime(resolveBookingDateTime(appointment))
+                            .bookingStatus(appointment.getBookingStatus())
+                            .patientId(appointment.getPatientId())
+                            .patientName(patient.getFullName())
+                            .patientMobileNumber(patient.getMobileNumber())
+                            .consultationTypes(consultationTypes)
+                            .build();
+                })
+                .toList();
+
+        DoctorTodayScheduleResponse response = DoctorTodayScheduleResponse.builder()
+                .doctorId(null)
+                .date(today)
+                .totalAppointments(appointments.size())
+                .appointments(appointments)
+                .build();
+
+        log.info("Fetched {} today's appointments successfully", appointments.size());
+        return ApiResponse.success(AppMessages.TODAY_APPOINTMENTS_FETCHED, response);
     }
 
     @Override
@@ -638,8 +713,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         AppointmentBooking appointment = findActiveBooking(bookingId);
 
         BookingStatus currentStatus = appointment.getBookingStatus();
-        if (currentStatus == BookingStatus.CANCELLED
-                || currentStatus == BookingStatus.COMPLETED
+        // Allow SCHEDULED, RESCHEDULED, and CANCELLED → becomes RESCHEDULED (active again).
+        if (currentStatus == BookingStatus.COMPLETED
                 || currentStatus == BookingStatus.IN_CONSULTATION) {
             throw new BadRequestException(
                     AppMessages.APPOINTMENT_CANNOT_RESCHEDULE_FROM_STATUS + currentStatus);
@@ -679,6 +754,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 appointmentBookingMapper.toResponse(saved, patient, doctor);
         response.setConsultationTypes(request.getConsultationTypes());
 
+        log.info("Appointment {} rescheduled successfully. Previous status: {}, new status: RESCHEDULED",
+                bookingId, currentStatus);
         return ApiResponse.success(AppMessages.APPOINTMENT_RESCHEDULED, response);
     }
 

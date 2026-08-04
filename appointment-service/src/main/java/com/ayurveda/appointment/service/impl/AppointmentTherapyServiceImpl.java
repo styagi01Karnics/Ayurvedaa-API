@@ -124,8 +124,9 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                 appointmentTherapyRepository.findAllByPatientId(patientId);
 
         if (appointmentTherapies.isEmpty()) {
-            throw new ResourceNotFoundException(
-                    "Therapy details not found for patient: " + patientId);
+            log.info("No therapy details found for patient: {}", patientId);
+            return ApiResponse.success(
+                    Constants.APPOINTMENT_THERAPY_NO_RECORDS, List.of());
         }
 
         PatientSummaryResponse patient = patientServiceClient
@@ -168,7 +169,10 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                 })
                 .toList();
 
-        return ApiResponse.success(responses);
+        log.info("Therapy details fetched successfully for patient: {} (count: {})",
+                patientId, responses.size());
+
+        return ApiResponse.success(Constants.APPOINTMENT_THERAPY_FETCHED, responses);
     }
 
     @Override
@@ -224,6 +228,9 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                 .totalSlots(slots.size())
                 .slots(slots)
                 .build();
+
+        log.info("Therapist today's schedule fetched successfully for therapist {} (slots: {})",
+                therapistId, slots.size());
 
         return ApiResponse.success(Constants.THERAPIST_TODAY_SCHEDULE_FETCHED, response);
     }

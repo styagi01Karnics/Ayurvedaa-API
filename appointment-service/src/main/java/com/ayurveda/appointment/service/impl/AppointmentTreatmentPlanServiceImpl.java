@@ -76,6 +76,9 @@ public class AppointmentTreatmentPlanServiceImpl
                 appointmentTreatmentPlanMapper
                         .toResponse(savedTreatmentPlan);
 
+        log.info("Treatment plan saved successfully for patient: {}",
+                request.getPatientId());
+
         return ApiResponse.success(message, response);
     }
 
@@ -97,6 +100,9 @@ public class AppointmentTreatmentPlanServiceImpl
         AppointmentTreatmentPlanResponse response =
                 appointmentTreatmentPlanMapper
                         .toResponse(treatmentPlan);
+
+        log.info("Treatment plan fetched successfully for patient: {}",
+                patientId);
 
         return ApiResponse.success(
                 Constants.TREATMENT_PLAN_FETCHED,

@@ -51,6 +51,9 @@ public final class AppMessages {
     public static final String DOCTOR_TODAY_APPOINTMENTS_FETCHED =
             "Doctor today's appointments fetched successfully.";
 
+    public static final String TODAY_APPOINTMENTS_FETCHED =
+            "Today's appointments fetched successfully.";
+
     public static final String DASHBOARD_TODAY_SCHEDULE_FETCHED =
             "Dashboard today's schedule fetched successfully.";
 
@@ -87,6 +90,12 @@ public final class AppMessages {
 
     public static final String NO_APPOINTMENTS_FOR_PATIENT =
             "No appointments found for patient id: ";
+
+    public static final String APPOINTMENTS_FETCHED =
+            "Appointments fetched successfully.";
+
+    public static final String NO_APPOINTMENTS_AVAILABLE =
+            "No appointments available.";
 
     public static final String NO_APPOINTMENTS_FOR_STATUS =
             "No appointments found for status: ";

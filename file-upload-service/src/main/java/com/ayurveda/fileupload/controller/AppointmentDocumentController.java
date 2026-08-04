@@ -5,6 +5,7 @@ import com.ayurveda.fileupload.dto.request.UploadAppointmentDocumentRequest;
 import com.ayurveda.fileupload.dto.response.AppointmentDocumentResponse;
 import com.ayurveda.fileupload.enums.DocumentType;
 import com.ayurveda.fileupload.service.AppointmentDocumentService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -31,6 +32,7 @@ public class AppointmentDocumentController {
 
     private final AppointmentDocumentService appointmentDocumentService;
 
+    @Operation(summary = "Upload an appointment document")
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<AppointmentDocumentResponse>> uploadDocument(
             @RequestParam UUID bookingId,
@@ -49,6 +51,7 @@ public class AppointmentDocumentController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "List documents for a booking")
     @GetMapping("/{bookingId}")
     public ResponseEntity<ApiResponse<List<AppointmentDocumentResponse>>> getDocumentsByBookingId(
             @PathVariable UUID bookingId) {
@@ -59,11 +62,13 @@ public class AppointmentDocumentController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Download an appointment document")
     @GetMapping("/{documentId}/download")
     public ResponseEntity<Resource> downloadDocument(@PathVariable UUID documentId) {
         return appointmentDocumentService.downloadDocument(documentId);
     }
 
+    @Operation(summary = "Delete an appointment document")
     @DeleteMapping("/{documentId}")
     public ResponseEntity<ApiResponse<String>> deleteDocument(@PathVariable UUID documentId) {
         ApiResponse<String> response = appointmentDocumentService.deleteDocument(documentId);

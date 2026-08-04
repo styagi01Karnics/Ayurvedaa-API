@@ -34,6 +34,10 @@ public interface AppointmentBookingService {
 
     ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByPatientId(UUID patientId);
 
+    /**
+     * Lists non-deleted appointments. When {@code bookingStatus} is null, returns all.
+     * Ordered: today first, then tomorrow, day after, then later; past dates after that.
+     */
     ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
             BookingStatus bookingStatus);
 
@@ -48,6 +52,9 @@ public interface AppointmentBookingService {
             ConsultationType consultationType);
 
     ApiResponse<DoctorTodayScheduleResponse> getDoctorTodaySchedule(UUID doctorId);
+
+    /** All doctors – today's appointments (cancelled excluded). */
+    ApiResponse<DoctorTodayScheduleResponse> getTodayAppointments();
 
     /** Dashboard page – Today's Schedule card. */
     ApiResponse<DashboardTodaysScheduleResponse> getDashboardTodaysSchedule(UUID doctorId);

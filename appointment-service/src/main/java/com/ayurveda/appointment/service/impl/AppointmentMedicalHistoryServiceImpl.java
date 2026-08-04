@@ -76,6 +76,9 @@ public class AppointmentMedicalHistoryServiceImpl
                 appointmentMedicalHistoryMapper
                         .toResponse(savedMedicalHistory);
 
+        log.info("Medical history saved successfully for patient: {}",
+                request.getPatientId());
+
         return ApiResponse.success(message, response);
     }
 
@@ -96,6 +99,8 @@ public class AppointmentMedicalHistoryServiceImpl
         AppointmentMedicalHistoryResponse response =
                 appointmentMedicalHistoryMapper
                         .toResponse(medicalHistory);
+
+        log.info("Medical history fetched successfully for patient: {}", patientId);
 
         return ApiResponse.success(response);
     }

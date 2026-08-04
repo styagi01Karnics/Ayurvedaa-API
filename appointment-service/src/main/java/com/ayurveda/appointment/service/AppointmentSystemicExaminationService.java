@@ -8,9 +8,11 @@ import com.ayurveda.appointment.dto.response.AppointmentSystemicExaminationRespo
 
 public interface AppointmentSystemicExaminationService {
 
+    /** Creates or updates systemic examination for a patient. */
     ApiResponse<AppointmentSystemicExaminationResponse> saveSystemicExamination(
             CreateAppointmentSystemicExaminationRequest request);
 
+    /** Fetches systemic examination by patient ID. */
     ApiResponse<AppointmentSystemicExaminationResponse> getSystemicExaminationByPatientId(
             UUID patientId);
 

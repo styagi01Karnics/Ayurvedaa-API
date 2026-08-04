@@ -11,6 +11,7 @@ import com.ayurveda.appointment.dto.request.CreateAppointmentTreatmentPlanReques
 import com.ayurveda.appointment.dto.response.AppointmentTreatmentPlanResponse;
 import com.ayurveda.appointment.service.AppointmentTreatmentPlanService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class AppointmentTreatmentPlanController {
     private final AppointmentTreatmentPlanService
             appointmentTreatmentPlanService;
 
+    @Operation(summary = "Save treatment plan", description = "Creates or updates treatment plan for a patient.")
     @PostMapping
     public ResponseEntity<ApiResponse<AppointmentTreatmentPlanResponse>>
             saveTreatmentPlan(
@@ -37,6 +39,7 @@ public class AppointmentTreatmentPlanController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Get treatment plan by patient ID", description = "Returns treatment plan for the given patient.")
     @GetMapping("/{patientId}")
     public ResponseEntity<ApiResponse<AppointmentTreatmentPlanResponse>>
             getTreatmentPlanByPatientId(

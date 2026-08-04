@@ -97,7 +97,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.getAdminEmail().trim().toLowerCase())
                 .fullName(request.getAdminFullName().trim())
                 .passwordHash(passwordEncoder.encode(request.getAdminPassword()))
-                .role(UserRole.TENANT_ADMIN)
+                .role(UserRole.ADMIN)
                 .status(UserStatus.ACTIVE)
                 .build();
 
@@ -178,7 +178,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(email)
                 .fullName(request.getFullName().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(UserRole.STAFF)
+                .role(UserRole.RECEPTIONIST)
                 .status(UserStatus.ACTIVE)
                 .build();
 
@@ -308,6 +308,8 @@ public class AuthServiceImpl implements AuthService {
 
         AuthUser saved = authUserRepository.save(user);
 
+        log.info("Registered user {} with role {} for tenant {}", username, request.getRole(), tenant.getTenantCode());
+
         return ApiResponse.success(AuthMessages.USER_REGISTERED_SUCCESSFULLY, authMapper.toUserResponse(saved));
     }
 
@@ -317,6 +319,9 @@ public class AuthServiceImpl implements AuthService {
         AuthPrincipal principal = currentPrincipal();
         AuthUser user = authUserRepository.findByIdAndDeletedFalse(principal.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND));
+
+        log.info("Fetched current user {}", user.getUsername());
+
         return ApiResponse.success(authMapper.toUserResponse(user));
     }
 
@@ -332,6 +337,8 @@ public class AuthServiceImpl implements AuthService {
                 .map(authMapper::toUserResponse)
                 .toList();
 
+        log.info("Fetched {} users for tenant {}", users.size(), principal.getTenantCode());
+
         return ApiResponse.success(users);
     }
 
@@ -346,6 +353,8 @@ public class AuthServiceImpl implements AuthService {
             throw new ResourceNotFoundException(AuthMessages.TENANT_NOT_FOUND);
         }
 
+        log.info("Fetched current tenant {}", tenant.getTenantCode());
+
         return ApiResponse.success(authMapper.toTenantResponse(tenant));
     }
 
@@ -353,6 +362,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public ApiResponse<TokenValidationResponse> validateToken(String authorizationHeader) {
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            log.info("Token validation failed: missing or invalid Authorization header");
             return ApiResponse.success(TokenValidationResponse.builder().valid(false).build());
         }
 
@@ -366,8 +376,10 @@ public class AuthServiceImpl implements AuthService {
                     .email(principal.getEmail())
                     .role(principal.getRole())
                     .build();
+            log.info("Token validated for user {} tenant {}", principal.getEmail(), principal.getTenantCode());
             return ApiResponse.success(response);
         } catch (Exception ex) {
+            log.info("Token validation failed: {}", ex.getMessage());
             return ApiResponse.success(TokenValidationResponse.builder().valid(false).build());
         }
     }
@@ -402,9 +414,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void requireTenantAdmin(AuthPrincipal principal) {
-        if (!UserRole.TENANT_ADMIN.name().equals(principal.getRole())
+        if (!UserRole.ADMIN.name().equals(principal.getRole())
                 && !UserRole.SUPER_ADMIN.name().equals(principal.getRole())) {
-            throw new ForbiddenException(AuthMessages.ONLY_TENANT_ADMIN_ALLOWED);
+            throw new ForbiddenException(AuthMessages.ONLY_ADMIN_ALLOWED);
         }
     }
 

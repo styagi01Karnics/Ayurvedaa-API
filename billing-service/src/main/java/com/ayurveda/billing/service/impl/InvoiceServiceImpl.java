@@ -106,21 +106,32 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw ex;
         }
 
+        log.info("Invoice created successfully. Invoice ID: {}, Invoice Number: {}",
+                saved.getId(), saved.getInvoiceNumber());
+
         return ApiResponse.success(BillingMessages.INVOICE_GENERATED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<InvoiceResponse> getInvoiceById(UUID invoiceId) {
+        log.info("Fetching invoice details for invoiceId: {}", invoiceId);
+
         Invoice invoice = findActive(invoiceId);
         invoice.getItems().size();
         invoice.getPayments().size();
+
+        log.info("Invoice fetched successfully. Invoice ID: {}, Invoice Number: {}",
+                invoice.getId(), invoice.getInvoiceNumber());
+
         return ApiResponse.success(invoiceMapper.toResponse(invoice));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<InvoiceListResponse>> getInvoices(String patientId, InvoiceStatus status) {
+        log.info("Fetching invoices with patientId={}, status={}", patientId, status);
+
         UUID parsedPatientId = null;
         String patientSearch = null;
 
@@ -139,11 +150,15 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .map(invoiceMapper::toListResponse)
                 .toList();
 
+        log.info("Successfully fetched {} invoices.", invoices.size());
+
         return ApiResponse.success(BillingMessages.INVOICES_FETCHED_SUCCESSFULLY, invoices);
     }
 
     @Override
     public ApiResponse<InvoiceResponse> recordPartPayment(UUID invoiceId, PartPaymentRequest request) {
+        log.info("Recording part payment for invoiceId: {}, amount: {}", invoiceId, request.getAmountPaid());
+
         Invoice invoice = findActive(invoiceId);
 
         if (invoice.getStatus() == InvoiceStatus.COMPLETED) {
@@ -162,17 +177,26 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         saved.getItems().size();
         saved.getPayments().size();
+
+        log.info("Part payment recorded successfully. Invoice ID: {}, Status: {}, Left Amount: {}",
+                saved.getId(), saved.getStatus(), saved.getLeftAmount());
+
         return ApiResponse.success(
                 BillingMessages.PART_PAYMENT_RECORDED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
     }
 
     @Override
     public ApiResponse<Void> deleteInvoice(UUID invoiceId) {
+        log.info("Received request to delete invoice with ID: {}", invoiceId);
+
         Invoice invoice = findActive(invoiceId);
         invoice.getItems().size();
         restoreMedicineStock(invoice.getItems());
         invoice.setDeleted(true);
         invoiceRepository.save(invoice);
+
+        log.info("Invoice deleted successfully. Invoice ID: {}", invoiceId);
+
         return ApiResponse.success(BillingMessages.INVOICE_DELETED_SUCCESSFULLY, null);
     }
 

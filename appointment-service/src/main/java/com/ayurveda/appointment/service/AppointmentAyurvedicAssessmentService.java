@@ -8,9 +8,11 @@ import com.ayurveda.appointment.dto.response.AppointmentAyurvedicAssessmentRespo
 
 public interface AppointmentAyurvedicAssessmentService {
 
+    /** Creates or updates ayurvedic assessment for a patient. */
     ApiResponse<AppointmentAyurvedicAssessmentResponse> saveAyurvedicAssessment(
             CreateAppointmentAyurvedicAssessmentRequest request);
 
+    /** Fetches ayurvedic assessment by patient ID. */
     ApiResponse<AppointmentAyurvedicAssessmentResponse> getAyurvedicAssessmentByPatientId(
             UUID patientId);
 
