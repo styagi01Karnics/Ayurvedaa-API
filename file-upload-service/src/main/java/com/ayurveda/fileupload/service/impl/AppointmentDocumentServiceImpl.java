@@ -35,11 +35,11 @@ public class AppointmentDocumentServiceImpl implements AppointmentDocumentServic
 
     @Override
     public ApiResponse<AppointmentDocumentResponse> uploadDocument(UploadAppointmentDocumentRequest request) {
-        log.info("Uploading document for booking : {}", request.getBookingId());
+        log.info("Uploading document for patient: {}", request.getPatientId());
 
         try {
             AppointmentDocument document = AppointmentDocument.builder()
-                    .bookingId(request.getBookingId())
+                    .patientId(request.getPatientId())
                     .documentType(request.getDocumentType())
                     .fileName(request.getFile().getOriginalFilename())
                     .fileType(request.getFile().getContentType())
@@ -50,6 +50,9 @@ public class AppointmentDocumentServiceImpl implements AppointmentDocumentServic
             AppointmentDocument savedDocument = appointmentDocumentRepository.save(document);
             AppointmentDocumentResponse response = appointmentDocumentMapper.toResponse(savedDocument);
 
+            log.info("Document uploaded successfully. Document ID: {}, Patient ID: {}",
+                    savedDocument.getId(), savedDocument.getPatientId());
+
             return ApiResponse.success(AppMessages.DOCUMENT_UPLOADED, response);
         } catch (IOException ex) {
             throw new BadRequestException(AppMessages.UNABLE_TO_UPLOAD_DOCUMENT);
@@ -58,14 +61,15 @@ public class AppointmentDocumentServiceImpl implements AppointmentDocumentServic
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<AppointmentDocumentResponse>> getDocumentsByBookingId(UUID bookingId) {
-        log.info("Fetching documents for booking : {}", bookingId);
+    public ApiResponse<List<AppointmentDocumentResponse>> getDocumentsByPatientId(UUID patientId) {
+        log.info("Fetching documents for patient: {}", patientId);
 
-        List<AppointmentDocumentResponse> response = appointmentDocumentRepository.findByBookingId(bookingId)
+        List<AppointmentDocumentResponse> response = appointmentDocumentRepository.findByPatientId(patientId)
                 .stream()
                 .map(appointmentDocumentMapper::toResponse)
                 .toList();
 
+        log.info("Fetched {} documents for patient: {}", response.size(), patientId);
         return ApiResponse.success(AppMessages.DOCUMENTS_FETCHED, response);
     }
 

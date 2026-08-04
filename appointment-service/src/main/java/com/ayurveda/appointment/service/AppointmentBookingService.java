@@ -18,12 +18,15 @@ import com.ayurveda.appointment.enums.PatientListTab;
 
 public interface AppointmentBookingService {
 
+    /** Creates a new appointment booking (and patient when needed). */
     ApiResponse<AppointmentBookingResponse> createAppointment(
             CreateAppointmentBookingRequest request);
 
+    /** Returns a non-deleted appointment by booking id. */
     ApiResponse<AppointmentBookingResponse> getAppointmentById(
             UUID bookingId);
 
+    /** Patient list for appointments UI with optional filters. */
     ApiResponse<List<PatientAppointmentListItemResponse>> getPatientList(
             PatientListTab statusTab,
             String search,
@@ -32,6 +35,7 @@ public interface AppointmentBookingService {
             UUID doshaId,
             UUID doctorId);
 
+    /** Returns all appointments for a patient. */
     ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByPatientId(UUID patientId);
 
     /**
@@ -41,16 +45,21 @@ public interface AppointmentBookingService {
     ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
             BookingStatus bookingStatus);
 
+    /** Returns non-deleted appointments for a registration date. */
     ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByDate(
             LocalDate registrationDate);
 
+    /** Returns month/today appointment statistics. */
     ApiResponse<AppointmentStatsResponse> getAppointmentStats();
 
+    /** Returns cancelled, non-deleted appointments. */
     ApiResponse<List<AppointmentBookingResponse>> getCancelledAppointments();
 
+    /** Returns today's non-cancelled appointments for a consultation type. */
     ApiResponse<List<AppointmentBookingResponse>> getTodayAppointmentsByConsultationType(
             ConsultationType consultationType);
 
+    /** Today's appointments for one doctor (cancelled excluded). */
     ApiResponse<DoctorTodayScheduleResponse> getDoctorTodaySchedule(UUID doctorId);
 
     /** All doctors – today's appointments (cancelled excluded). */
@@ -59,15 +68,23 @@ public interface AppointmentBookingService {
     /** Dashboard page – Today's Schedule card. */
     ApiResponse<DashboardTodaysScheduleResponse> getDashboardTodaysSchedule(UUID doctorId);
 
+    /**
+     * Reschedules an appointment. Allowed from SCHEDULED, RESCHEDULED, or CANCELLED;
+     * result status is RESCHEDULED.
+     */
     ApiResponse<AppointmentBookingResponse> rescheduleAppointment(
             UUID bookingId, RescheduleAppointmentBookingRequest request);
 
+    /** Sets booking status to CANCELLED. */
     ApiResponse<AppointmentBookingResponse> cancelAppointment(UUID bookingId);
 
+    /** Soft-deletes an appointment and marks it CANCELLED. */
     ApiResponse<Void> deleteAppointment(UUID bookingId);
 
+    /** Moves SCHEDULED/RESCHEDULED appointment to IN_CONSULTATION. */
     ApiResponse<AppointmentBookingResponse> markInConsultation(UUID bookingId);
 
+    /** Moves IN_CONSULTATION appointment to COMPLETED. */
     ApiResponse<AppointmentBookingResponse> markCompleted(UUID bookingId);
 
 }

@@ -17,7 +17,7 @@ import java.util.UUID;
 public class AppointmentDocumentResponse {
 
     private UUID id;
-    private UUID bookingId;
+    private UUID patientId;
     private DocumentType documentType;
     private String fileName;
     private String fileType;

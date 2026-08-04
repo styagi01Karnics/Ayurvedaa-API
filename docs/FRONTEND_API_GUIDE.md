@@ -728,11 +728,11 @@ Also accepts GET-response aliases: `stockQuantity` → `quantity`, `price` → `
 
 ## 13. File upload (`:8105`)
 
-`POST /api/v1/documents/upload` — multipart: `bookingId`, `documentType`, `file`
+`POST /api/v1/documents/upload` — multipart: `patientId`, `documentType`, `file`
 
 | Method | Path |
 |---|---|
-| GET | `/api/v1/documents/{bookingId}` |
+| GET | `/api/v1/documents/{patientId}` |
 | GET | `/api/v1/documents/{documentId}/download` (raw file) |
 | DELETE | `/api/v1/documents/{documentId}` |
 

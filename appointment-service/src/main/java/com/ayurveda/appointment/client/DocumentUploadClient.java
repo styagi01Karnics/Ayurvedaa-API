@@ -35,7 +35,7 @@ public class DocumentUploadClient {
     private String fileUploadServiceUrl;
 
     public AppointmentDocumentResponse uploadDocument(
-            UUID bookingId,
+            UUID patientId,
             DocumentType documentType,
             MultipartFile file) {
 
@@ -47,7 +47,7 @@ public class DocumentUploadClient {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("bookingId", bookingId);
+        body.add("patientId", patientId);
         body.add("documentType", documentType.name());
         body.add("file", file.getResource());
 
@@ -72,7 +72,7 @@ public class DocumentUploadClient {
         } catch (BadRequestException ex) {
             throw ex;
         } catch (RestClientException ex) {
-            log.error("File-upload service call failed for booking {}", bookingId, ex);
+            log.error("File-upload service call failed for patient {}", patientId, ex);
             throw new BadRequestException(AppMessages.UNABLE_TO_UPLOAD_DOCUMENT_SERVICE_UNAVAILABLE);
         }
     }
