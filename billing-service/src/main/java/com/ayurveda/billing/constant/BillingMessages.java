@@ -40,4 +40,15 @@ public final class BillingMessages {
     public static final String INSUFFICIENT_STOCK_AVAILABLE_SUFFIX = "'. Available: ";
     public static final String INSUFFICIENT_STOCK_REQUESTED_SUFFIX = ", requested: ";
 
+    public static final String PATIENT_PACKAGE_CREATED =
+            "Patient package created successfully.";
+    public static final String PATIENT_PACKAGE_UPDATED =
+            "Patient package updated successfully.";
+    public static final String PATIENT_PACKAGES_FETCHED =
+            "Patient packages fetched successfully.";
+    public static final String PATIENT_PACKAGE_STATUS_UPDATED =
+            "Patient package status updated successfully.";
+    public static final String PATIENT_PACKAGE_NOT_FOUND_WITH_ID =
+            "Patient package not found with id: ";
+
 }
