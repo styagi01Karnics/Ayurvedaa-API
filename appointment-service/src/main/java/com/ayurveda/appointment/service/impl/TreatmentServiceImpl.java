@@ -8,13 +8,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ayurveda.appointment.client.PatientServiceClient;
 import com.ayurveda.appointment.client.TherapistServiceClient;
+import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateTreatmentRequest;
 import com.ayurveda.appointment.dto.request.UpdateTreatmentRequest;
 import com.ayurveda.appointment.dto.request.UpdateTreatmentStatusRequest;
 import com.ayurveda.appointment.dto.response.TherapistSummaryResponse;
 import com.ayurveda.appointment.dto.response.TreatmentResponse;
 import com.ayurveda.appointment.entity.Treatment;
+import com.ayurveda.appointment.entity.TreatmentPlanMaster;
 import com.ayurveda.appointment.enums.TreatmentStatus;
+import com.ayurveda.appointment.repository.TreatmentPlanMasterRepository;
 import com.ayurveda.appointment.repository.TreatmentRepository;
 import com.ayurveda.appointment.service.TreatmentService;
 import com.ayurveda.appointment.util.AppMessages;
@@ -32,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 public class TreatmentServiceImpl implements TreatmentService {
 
     private final TreatmentRepository treatmentRepository;
+    private final TreatmentPlanMasterRepository treatmentPlanMasterRepository;
     private final PatientServiceClient patientServiceClient;
     private final TherapistServiceClient therapistServiceClient;
 
@@ -40,6 +44,7 @@ public class TreatmentServiceImpl implements TreatmentService {
         log.info("Creating treatment for patient: {}", request.getPatientId());
 
         validatePatient(request.getPatientId());
+        TreatmentPlanMaster treatmentPlan = fetchTreatmentPlan(request.getTreatmentPlanId());
         TherapistSummaryResponse therapist = fetchTherapist(request.getAssignedTherapistId());
         validateDates(request.getStartDate(), request.getEndDate());
 
@@ -52,7 +57,7 @@ public class TreatmentServiceImpl implements TreatmentService {
 
         Treatment treatment = Treatment.builder()
                 .patientId(request.getPatientId())
-                .treatmentPlanName(request.getTreatmentPlanName().trim())
+                .treatmentPlanId(treatmentPlan.getId())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .totalSessions(request.getTotalSessions())
@@ -65,7 +70,8 @@ public class TreatmentServiceImpl implements TreatmentService {
         Treatment saved = treatmentRepository.save(treatment);
         log.info("Treatment created successfully. Treatment ID: {}", saved.getId());
 
-        return ApiResponse.success(AppMessages.TREATMENT_CREATED, toResponse(saved, therapist));
+        return ApiResponse.success(
+                AppMessages.TREATMENT_CREATED, toResponse(saved, therapist, treatmentPlan));
     }
 
     @Override
@@ -107,12 +113,13 @@ public class TreatmentServiceImpl implements TreatmentService {
         log.info("Updating treatment: {}", treatmentId);
 
         Treatment treatment = findActiveTreatment(treatmentId);
+        TreatmentPlanMaster treatmentPlan = fetchTreatmentPlan(request.getTreatmentPlanId());
         TherapistSummaryResponse therapist = fetchTherapist(request.getAssignedTherapistId());
         validateDates(request.getStartDate(), request.getEndDate());
 
         int remaining = calculateRemaining(request.getTotalSessions(), request.getCompletedSessions());
 
-        treatment.setTreatmentPlanName(request.getTreatmentPlanName().trim());
+        treatment.setTreatmentPlanId(treatmentPlan.getId());
         treatment.setStartDate(request.getStartDate());
         treatment.setEndDate(request.getEndDate());
         treatment.setTotalSessions(request.getTotalSessions());
@@ -123,7 +130,8 @@ public class TreatmentServiceImpl implements TreatmentService {
         Treatment saved = treatmentRepository.save(treatment);
         log.info("Treatment updated successfully. Treatment ID: {}", treatmentId);
 
-        return ApiResponse.success(AppMessages.TREATMENT_UPDATED, toResponse(saved, therapist));
+        return ApiResponse.success(
+                AppMessages.TREATMENT_UPDATED, toResponse(saved, therapist, treatmentPlan));
     }
 
     @Override
@@ -145,6 +153,11 @@ public class TreatmentServiceImpl implements TreatmentService {
         return treatmentRepository.findByIdAndDeletedFalse(treatmentId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.TREATMENT_NOT_FOUND_WITH_ID + treatmentId));
+    }
+
+    private TreatmentPlanMaster fetchTreatmentPlan(UUID treatmentPlanId) {
+        return treatmentPlanMasterRepository.findByIdAndDeletedFalse(treatmentPlanId)
+                .orElseThrow(() -> new ResourceNotFoundException(Constants.TREATMENT_PLAN_MASTER_NOT_FOUND));
     }
 
     private void validatePatient(UUID patientId) {
@@ -179,16 +192,27 @@ public class TreatmentServiceImpl implements TreatmentService {
 
     private TreatmentResponse toResponse(Treatment treatment) {
         TherapistSummaryResponse therapist = null;
+        TreatmentPlanMaster treatmentPlan = null;
         try {
             therapist = fetchTherapist(treatment.getAssignedTherapistId());
         } catch (ResourceNotFoundException ex) {
             log.warn("Therapist not found for treatment {}: {}",
                     treatment.getId(), treatment.getAssignedTherapistId());
         }
-        return toResponse(treatment, therapist);
+        try {
+            treatmentPlan = fetchTreatmentPlan(treatment.getTreatmentPlanId());
+        } catch (ResourceNotFoundException ex) {
+            log.warn("Treatment plan not found for treatment {}: {}",
+                    treatment.getId(), treatment.getTreatmentPlanId());
+        }
+        return toResponse(treatment, therapist, treatmentPlan);
     }
 
-    private TreatmentResponse toResponse(Treatment treatment, TherapistSummaryResponse therapist) {
+    private TreatmentResponse toResponse(
+            Treatment treatment,
+            TherapistSummaryResponse therapist,
+            TreatmentPlanMaster treatmentPlan) {
+
         String therapistName = null;
         if (therapist != null) {
             therapistName = therapist.getName() != null
@@ -199,7 +223,8 @@ public class TreatmentServiceImpl implements TreatmentService {
         return TreatmentResponse.builder()
                 .id(treatment.getId())
                 .patientId(treatment.getPatientId())
-                .treatmentPlanName(treatment.getTreatmentPlanName())
+                .treatmentPlanId(treatment.getTreatmentPlanId())
+                .treatmentPlanName(treatmentPlan != null ? treatmentPlan.getName() : null)
                 .startDate(treatment.getStartDate())
                 .endDate(treatment.getEndDate())
                 .totalSessions(treatment.getTotalSessions())

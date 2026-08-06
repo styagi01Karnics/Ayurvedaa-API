@@ -33,6 +33,6 @@ public class RescheduleAppointmentBookingRequest {
     private UUID assignedDoctorId;
 
     @NotEmpty(message = "At least one consultation type is required")
-    private List<String> consultationTypes;
+    private List<UUID> consultationTypeIds;
 
 }

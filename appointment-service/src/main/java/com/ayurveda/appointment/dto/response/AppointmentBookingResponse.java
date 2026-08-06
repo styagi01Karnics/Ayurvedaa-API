@@ -34,7 +34,7 @@ public class AppointmentBookingResponse {
 
     private DoctorSummaryResponse assignedDoctor;
 
-    private List<String> consultationTypes;
+    private List<ConsultationTypeItemResponse> consultationTypes;
 
     private BookingStatus bookingStatus;
 

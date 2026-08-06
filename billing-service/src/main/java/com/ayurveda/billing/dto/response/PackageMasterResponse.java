@@ -1,10 +1,9 @@
 package com.ayurveda.billing.dto.response;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.UUID;
 
-import com.ayurveda.billing.enums.PackageStatus;
+import com.ayurveda.billing.enums.PackageMasterStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,15 +16,14 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PatientPackageResponse {
+public class PackageMasterResponse {
 
     private UUID id;
-    private UUID patientId;
-    private UUID packageMasterId;
-    private String packageName;
+
+    private String name;
+
     private BigDecimal packagePrice;
-    private LocalDate validity;
-    private PackageStatus status;
-    private BigDecimal discountApplied;
+
+    private PackageMasterStatus status;
 
 }

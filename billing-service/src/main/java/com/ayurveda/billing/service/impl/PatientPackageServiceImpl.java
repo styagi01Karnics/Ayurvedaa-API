@@ -11,8 +11,10 @@ import com.ayurveda.billing.dto.request.CreatePatientPackageRequest;
 import com.ayurveda.billing.dto.request.UpdatePatientPackageRequest;
 import com.ayurveda.billing.dto.request.UpdatePatientPackageStatusRequest;
 import com.ayurveda.billing.dto.response.PatientPackageResponse;
+import com.ayurveda.billing.entity.PackageMaster;
 import com.ayurveda.billing.entity.PatientPackage;
 import com.ayurveda.billing.enums.PackageStatus;
+import com.ayurveda.billing.repository.PackageMasterRepository;
 import com.ayurveda.billing.repository.PatientPackageRepository;
 import com.ayurveda.billing.service.PatientPackageService;
 import com.ayurveda.common.ApiResponse;
@@ -28,10 +30,13 @@ import lombok.extern.slf4j.Slf4j;
 public class PatientPackageServiceImpl implements PatientPackageService {
 
     private final PatientPackageRepository patientPackageRepository;
+    private final PackageMasterRepository packageMasterRepository;
 
     @Override
     public ApiResponse<PatientPackageResponse> createPackage(CreatePatientPackageRequest request) {
         log.info("Creating patient package for patient: {}", request.getPatientId());
+
+        PackageMaster packageMaster = fetchPackageMaster(request.getPackageMasterId());
 
         PackageStatus status = request.getStatus() != null
                 ? request.getStatus()
@@ -39,7 +44,7 @@ public class PatientPackageServiceImpl implements PatientPackageService {
 
         PatientPackage patientPackage = PatientPackage.builder()
                 .patientId(request.getPatientId())
-                .packageName(request.getPackageName().trim())
+                .packageMasterId(packageMaster.getId())
                 .validity(request.getValidity())
                 .status(status)
                 .discountApplied(request.getDiscountApplied())
@@ -48,7 +53,8 @@ public class PatientPackageServiceImpl implements PatientPackageService {
         PatientPackage saved = patientPackageRepository.save(patientPackage);
         log.info("Patient package created successfully. Package ID: {}", saved.getId());
 
-        return ApiResponse.success(BillingMessages.PATIENT_PACKAGE_CREATED, toResponse(saved));
+        return ApiResponse.success(
+                BillingMessages.PATIENT_PACKAGE_CREATED, toResponse(saved, packageMaster));
     }
 
     @Override
@@ -88,14 +94,17 @@ public class PatientPackageServiceImpl implements PatientPackageService {
         log.info("Updating patient package: {}", packageId);
 
         PatientPackage patientPackage = findActivePackage(packageId);
-        patientPackage.setPackageName(request.getPackageName().trim());
+        PackageMaster packageMaster = fetchPackageMaster(request.getPackageMasterId());
+
+        patientPackage.setPackageMasterId(packageMaster.getId());
         patientPackage.setValidity(request.getValidity());
         patientPackage.setDiscountApplied(request.getDiscountApplied());
 
         PatientPackage saved = patientPackageRepository.save(patientPackage);
         log.info("Patient package updated successfully. Package ID: {}", packageId);
 
-        return ApiResponse.success(BillingMessages.PATIENT_PACKAGE_UPDATED, toResponse(saved));
+        return ApiResponse.success(
+                BillingMessages.PATIENT_PACKAGE_UPDATED, toResponse(saved, packageMaster));
     }
 
     @Override
@@ -119,11 +128,29 @@ public class PatientPackageServiceImpl implements PatientPackageService {
                         BillingMessages.PATIENT_PACKAGE_NOT_FOUND_WITH_ID + packageId));
     }
 
+    private PackageMaster fetchPackageMaster(UUID packageMasterId) {
+        return packageMasterRepository.findByIdAndDeletedFalse(packageMasterId)
+                .orElseThrow(() -> new ResourceNotFoundException(BillingMessages.PACKAGE_MASTER_NOT_FOUND));
+    }
+
     private PatientPackageResponse toResponse(PatientPackage patientPackage) {
+        PackageMaster packageMaster = null;
+        try {
+            packageMaster = fetchPackageMaster(patientPackage.getPackageMasterId());
+        } catch (ResourceNotFoundException ex) {
+            log.warn("Package master not found for patient package {}: {}",
+                    patientPackage.getId(), patientPackage.getPackageMasterId());
+        }
+        return toResponse(patientPackage, packageMaster);
+    }
+
+    private PatientPackageResponse toResponse(PatientPackage patientPackage, PackageMaster packageMaster) {
         return PatientPackageResponse.builder()
                 .id(patientPackage.getId())
                 .patientId(patientPackage.getPatientId())
-                .packageName(patientPackage.getPackageName())
+                .packageMasterId(patientPackage.getPackageMasterId())
+                .packageName(packageMaster != null ? packageMaster.getName() : null)
+                .packagePrice(packageMaster != null ? packageMaster.getPackagePrice() : null)
                 .validity(patientPackage.getValidity())
                 .status(patientPackage.getStatus())
                 .discountApplied(patientPackage.getDiscountApplied())

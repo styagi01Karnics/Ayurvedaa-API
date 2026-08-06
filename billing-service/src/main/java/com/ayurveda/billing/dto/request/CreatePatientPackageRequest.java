@@ -7,9 +7,7 @@ import java.util.UUID;
 import com.ayurveda.billing.enums.PackageStatus;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,9 +24,8 @@ public class CreatePatientPackageRequest {
     @NotNull(message = "Patient id is required")
     private UUID patientId;
 
-    @NotBlank(message = "Package name is required")
-    @Size(max = 150)
-    private String packageName;
+    @NotNull(message = "Package master id is required")
+    private UUID packageMasterId;
 
     @NotNull(message = "Validity is required")
     private LocalDate validity;

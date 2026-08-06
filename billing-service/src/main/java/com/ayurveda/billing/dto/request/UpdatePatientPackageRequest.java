@@ -2,11 +2,10 @@ package com.ayurveda.billing.dto.request;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,9 +19,8 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UpdatePatientPackageRequest {
 
-    @NotBlank(message = "Package name is required")
-    @Size(max = 150)
-    private String packageName;
+    @NotNull(message = "Package master id is required")
+    private UUID packageMasterId;
 
     @NotNull(message = "Validity is required")
     private LocalDate validity;

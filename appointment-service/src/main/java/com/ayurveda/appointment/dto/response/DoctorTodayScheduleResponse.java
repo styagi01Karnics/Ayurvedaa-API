@@ -53,7 +53,7 @@ public class DoctorTodayScheduleResponse {
 
         private String patientMobileNumber;
 
-        private List<String> consultationTypes;
+        private List<ConsultationTypeItemResponse> consultationTypes;
 
     }
 

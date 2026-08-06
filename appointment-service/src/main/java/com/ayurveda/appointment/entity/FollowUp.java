@@ -3,7 +3,6 @@ package com.ayurveda.appointment.entity;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import com.ayurveda.appointment.enums.ConsultationType;
 import com.ayurveda.appointment.enums.FollowUpStatus;
 import com.ayurveda.common.BaseEntity;
 
@@ -36,9 +35,8 @@ public class FollowUp extends BaseEntity {
     /** Consult booking that triggered this follow-up (optional). */
     private UUID sourceBookingId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private ConsultationType visitType;
+    @Column(name = "visit_type_id", nullable = false)
+    private UUID visitTypeId;
 
     @Column(nullable = false)
     private LocalDateTime appointmentDate;

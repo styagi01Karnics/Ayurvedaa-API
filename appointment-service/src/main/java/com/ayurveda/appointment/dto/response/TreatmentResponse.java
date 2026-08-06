@@ -20,6 +20,7 @@ public class TreatmentResponse {
 
     private UUID id;
     private UUID patientId;
+    private UUID treatmentPlanId;
     private String treatmentPlanName;
     private LocalDate startDate;
     private LocalDate endDate;

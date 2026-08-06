@@ -18,7 +18,6 @@ import com.ayurveda.appointment.dto.response.AppointmentStatsResponse;
 import com.ayurveda.appointment.dto.response.DoctorTodayScheduleResponse;
 import com.ayurveda.appointment.dto.response.PatientAppointmentListItemResponse;
 import com.ayurveda.appointment.enums.BookingStatus;
-import com.ayurveda.appointment.enums.ConsultationType;
 import com.ayurveda.appointment.enums.PatientListTab;
 import com.ayurveda.appointment.service.AppointmentBookingService;
 
@@ -71,12 +70,12 @@ public class AppointmentBookingController {
             @RequestParam PatientListTab statusTab,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) BookingStatus bookingStatus,
-            @RequestParam(required = false) ConsultationType consultationType,
+            @RequestParam(required = false) UUID consultationTypeId,
             @RequestParam(required = false) UUID doshaId,
             @RequestParam(required = false) UUID doctorId) {
 
         return ResponseEntity.ok(appointmentBookingService.getPatientList(
-                statusTab, search, bookingStatus, consultationType, doshaId, doctorId));
+                statusTab, search, bookingStatus, consultationTypeId, doshaId, doctorId));
     }
 
     @Operation(
@@ -104,13 +103,13 @@ public class AppointmentBookingController {
 
     @Operation(
             summary = "Get today's appointments by consultation type",
-            description = "Returns today's non-cancelled appointments for CONSULTATION or THERAPY, with patient details.")
-    @GetMapping("/today/{consultationType}")
+            description = "Returns today's non-cancelled appointments for the given consultation type id, with patient details.")
+    @GetMapping("/today/consultation-type/{consultationTypeId}")
     public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getTodayAppointmentsByConsultationType(
-            @PathVariable ConsultationType consultationType) {
+            @PathVariable UUID consultationTypeId) {
 
         return ResponseEntity.ok(
-                appointmentBookingService.getTodayAppointmentsByConsultationType(consultationType));
+                appointmentBookingService.getTodayAppointmentsByConsultationType(consultationTypeId));
     }
 
     @Operation(

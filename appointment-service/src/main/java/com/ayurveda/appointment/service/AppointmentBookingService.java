@@ -13,7 +13,6 @@ import com.ayurveda.appointment.dto.response.DashboardTodaysScheduleResponse;
 import com.ayurveda.appointment.dto.response.DoctorTodayScheduleResponse;
 import com.ayurveda.appointment.dto.response.PatientAppointmentListItemResponse;
 import com.ayurveda.appointment.enums.BookingStatus;
-import com.ayurveda.appointment.enums.ConsultationType;
 import com.ayurveda.appointment.enums.PatientListTab;
 
 public interface AppointmentBookingService {
@@ -31,7 +30,7 @@ public interface AppointmentBookingService {
             PatientListTab statusTab,
             String search,
             BookingStatus bookingStatus,
-            ConsultationType consultationType,
+            UUID consultationTypeId,
             UUID doshaId,
             UUID doctorId);
 
@@ -57,7 +56,7 @@ public interface AppointmentBookingService {
 
     /** Returns today's non-cancelled appointments for a consultation type. */
     ApiResponse<List<AppointmentBookingResponse>> getTodayAppointmentsByConsultationType(
-            ConsultationType consultationType);
+            UUID consultationTypeId);
 
     /** Today's appointments for one doctor (cancelled excluded). */
     ApiResponse<DoctorTodayScheduleResponse> getDoctorTodaySchedule(UUID doctorId);

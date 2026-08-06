@@ -1,26 +1,24 @@
 package com.ayurveda.appointment.entity;
 
 import com.ayurveda.common.BaseEntity;
-import com.ayurveda.appointment.enums.ConsultationType;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.UUID;
 
 @Entity
-@Table(name="appointment_consultation_types")
+@Table(name = "appointment_consultation_types")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AppointmentConsultationType extends BaseEntity{
+public class AppointmentConsultationType extends BaseEntity {
 
-    @Column(nullable=false)
+    @Column(nullable = false)
     private UUID bookingId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable=false)
-    private ConsultationType consultationType;
+    @Column(name = "consultation_type_id", nullable = false)
+    private UUID consultationTypeId;
 
 }

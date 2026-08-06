@@ -3,7 +3,6 @@ package com.ayurveda.appointment.dto.request;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import com.ayurveda.appointment.enums.ConsultationType;
 import com.ayurveda.appointment.enums.FollowUpStatus;
 
 import jakarta.validation.constraints.NotNull;
@@ -30,8 +29,8 @@ public class CreateFollowUpRequest {
     /** Optional consult booking that created this follow-up. */
     private UUID sourceBookingId;
 
-    @NotNull(message = "Visit type is required")
-    private ConsultationType visitType;
+    @NotNull(message = "Visit type id is required")
+    private UUID visitTypeId;
 
     @NotNull(message = "Appointment date is required")
     private LocalDateTime appointmentDate;

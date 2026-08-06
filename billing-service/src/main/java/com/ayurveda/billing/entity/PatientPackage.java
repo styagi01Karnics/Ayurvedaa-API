@@ -30,8 +30,8 @@ public class PatientPackage extends BaseEntity {
     @Column(nullable = false)
     private UUID patientId;
 
-    @Column(nullable = false, length = 150)
-    private String packageName;
+    @Column(name = "package_master_id", nullable = false)
+    private UUID packageMasterId;
 
     @Column(nullable = false)
     private LocalDate validity;

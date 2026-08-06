@@ -29,8 +29,8 @@ public class Treatment extends BaseEntity {
     @Column(nullable = false)
     private UUID patientId;
 
-    @Column(nullable = false, length = 150)
-    private String treatmentPlanName;
+    @Column(name = "treatment_plan_id", nullable = false)
+    private UUID treatmentPlanId;
 
     @Column(nullable = false)
     private LocalDate startDate;

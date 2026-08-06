@@ -3,7 +3,6 @@ package com.ayurveda.appointment.dto.response;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import com.ayurveda.appointment.enums.ConsultationType;
 import com.ayurveda.appointment.enums.FollowUpStatus;
 
 import lombok.AllArgsConstructor;
@@ -26,7 +25,8 @@ public class FollowUpResponse {
     private UUID assignedDoctorId;
     private String doctorName;
     private UUID sourceBookingId;
-    private ConsultationType visitType;
+    private UUID visitTypeId;
+    private String visitTypeName;
     private LocalDateTime appointmentDate;
     private String schedulingOption;
     private Boolean smsReminderEnabled;

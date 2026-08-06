@@ -6,9 +6,7 @@ import java.util.UUID;
 import com.ayurveda.appointment.enums.TreatmentStatus;
 
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,9 +23,8 @@ public class CreateTreatmentRequest {
     @NotNull(message = "Patient id is required")
     private UUID patientId;
 
-    @NotBlank(message = "Treatment plan name is required")
-    @Size(max = 150)
-    private String treatmentPlanName;
+    @NotNull(message = "Treatment plan id is required")
+    private UUID treatmentPlanId;
 
     @NotNull(message = "Start date is required")
     private LocalDate startDate;

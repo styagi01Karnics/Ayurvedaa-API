@@ -8,13 +8,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ayurveda.appointment.client.DoctorServiceClient;
 import com.ayurveda.appointment.client.PatientServiceClient;
+import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateFollowUpRequest;
 import com.ayurveda.appointment.dto.request.UpdateFollowUpStatusRequest;
 import com.ayurveda.appointment.dto.response.DoctorSummaryResponse;
 import com.ayurveda.appointment.dto.response.FollowUpResponse;
 import com.ayurveda.appointment.dto.response.PatientSummaryResponse;
+import com.ayurveda.appointment.entity.ConsultationTypeMaster;
 import com.ayurveda.appointment.entity.FollowUp;
 import com.ayurveda.appointment.enums.FollowUpStatus;
+import com.ayurveda.appointment.repository.ConsultationTypeMasterRepository;
 import com.ayurveda.appointment.repository.FollowUpRepository;
 import com.ayurveda.appointment.service.FollowUpService;
 import com.ayurveda.appointment.util.AppMessages;
@@ -32,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 public class FollowUpServiceImpl implements FollowUpService {
 
     private final FollowUpRepository followUpRepository;
+    private final ConsultationTypeMasterRepository consultationTypeMasterRepository;
     private final PatientServiceClient patientServiceClient;
     private final DoctorServiceClient doctorServiceClient;
 
@@ -42,6 +46,7 @@ public class FollowUpServiceImpl implements FollowUpService {
 
         PatientSummaryResponse patient = fetchPatient(request.getPatientId());
         DoctorSummaryResponse doctor = fetchDoctor(request.getAssignedDoctorId());
+        ConsultationTypeMaster visitType = fetchConsultationType(request.getVisitTypeId());
 
         FollowUpStatus status = request.getStatus() != null
                 ? request.getStatus()
@@ -51,7 +56,7 @@ public class FollowUpServiceImpl implements FollowUpService {
                 .patientId(request.getPatientId())
                 .assignedDoctorId(request.getAssignedDoctorId())
                 .sourceBookingId(request.getSourceBookingId())
-                .visitType(request.getVisitType())
+                .visitTypeId(visitType.getId())
                 .appointmentDate(request.getAppointmentDate())
                 .schedulingOption(request.getSchedulingOption() != null
                         ? request.getSchedulingOption().trim()
@@ -63,7 +68,8 @@ public class FollowUpServiceImpl implements FollowUpService {
         FollowUp saved = followUpRepository.save(followUp);
         log.info("Follow-up created successfully. Follow-up ID: {}", saved.getId());
 
-        return ApiResponse.success(AppMessages.FOLLOW_UP_CREATED, toResponse(saved, patient, doctor));
+        return ApiResponse.success(
+                AppMessages.FOLLOW_UP_CREATED, toResponse(saved, patient, doctor, visitType));
     }
 
     @Override
@@ -151,9 +157,15 @@ public class FollowUpServiceImpl implements FollowUpService {
         return doctor;
     }
 
+    private ConsultationTypeMaster fetchConsultationType(UUID visitTypeId) {
+        return consultationTypeMasterRepository.findByIdAndDeletedFalse(visitTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException(Constants.CONSULTATION_TYPE_NOT_FOUND));
+    }
+
     private FollowUpResponse toResponse(FollowUp followUp) {
         PatientSummaryResponse patient = null;
         DoctorSummaryResponse doctor = null;
+        ConsultationTypeMaster visitType = null;
         try {
             patient = fetchPatient(followUp.getPatientId());
         } catch (ResourceNotFoundException ex) {
@@ -164,13 +176,19 @@ public class FollowUpServiceImpl implements FollowUpService {
         } catch (ResourceNotFoundException ex) {
             log.warn("Doctor not found for follow-up {}: {}", followUp.getId(), followUp.getAssignedDoctorId());
         }
-        return toResponse(followUp, patient, doctor);
+        try {
+            visitType = fetchConsultationType(followUp.getVisitTypeId());
+        } catch (ResourceNotFoundException ex) {
+            log.warn("Visit type not found for follow-up {}: {}", followUp.getId(), followUp.getVisitTypeId());
+        }
+        return toResponse(followUp, patient, doctor, visitType);
     }
 
     private FollowUpResponse toResponse(
             FollowUp followUp,
             PatientSummaryResponse patient,
-            DoctorSummaryResponse doctor) {
+            DoctorSummaryResponse doctor,
+            ConsultationTypeMaster visitType) {
 
         return FollowUpResponse.builder()
                 .id(followUp.getId())
@@ -180,7 +198,8 @@ public class FollowUpServiceImpl implements FollowUpService {
                 .assignedDoctorId(followUp.getAssignedDoctorId())
                 .doctorName(doctor != null ? doctor.getName() : null)
                 .sourceBookingId(followUp.getSourceBookingId())
-                .visitType(followUp.getVisitType())
+                .visitTypeId(followUp.getVisitTypeId())
+                .visitTypeName(visitType != null ? visitType.getName() : null)
                 .appointmentDate(followUp.getAppointmentDate())
                 .schedulingOption(followUp.getSchedulingOption())
                 .smsReminderEnabled(followUp.getSmsReminderEnabled())

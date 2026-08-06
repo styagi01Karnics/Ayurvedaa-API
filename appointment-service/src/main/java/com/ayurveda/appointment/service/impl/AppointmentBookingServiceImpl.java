@@ -24,11 +24,13 @@ import org.springframework.util.StringUtils;
 
 import com.ayurveda.appointment.client.DoctorServiceClient;
 import com.ayurveda.appointment.client.PatientServiceClient;
+import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateAppointmentBookingRequest;
 import com.ayurveda.appointment.dto.request.CreatePatientClientRequest;
 import com.ayurveda.appointment.dto.request.RescheduleAppointmentBookingRequest;
 import com.ayurveda.appointment.dto.response.AppointmentBookingResponse;
 import com.ayurveda.appointment.dto.response.AppointmentStatsResponse;
+import com.ayurveda.appointment.dto.response.ConsultationTypeItemResponse;
 import com.ayurveda.appointment.dto.response.DashboardTodaysScheduleResponse;
 import com.ayurveda.appointment.dto.response.DoctorSummaryResponse;
 import com.ayurveda.appointment.dto.response.DoctorTodayScheduleResponse;
@@ -38,16 +40,18 @@ import com.ayurveda.appointment.entity.AppointmentAyurvedicAssessment;
 import com.ayurveda.appointment.entity.AppointmentBooking;
 import com.ayurveda.appointment.entity.AppointmentConsultationType;
 import com.ayurveda.appointment.entity.AppointmentTherapy;
+import com.ayurveda.appointment.entity.ConsultationTypeMaster;
 import com.ayurveda.appointment.entity.DoshaMaster;
 import com.ayurveda.appointment.entity.TreatmentCategoryMaster;
 import com.ayurveda.appointment.enums.BookingStatus;
-import com.ayurveda.appointment.enums.ConsultationType;
 import com.ayurveda.appointment.enums.PatientListTab;
 import com.ayurveda.appointment.mapper.AppointmentBookingMapper;
+import com.ayurveda.appointment.mapper.ConsultationTypeMapper;
 import com.ayurveda.appointment.repository.AppointmentAyurvedicAssessmentRepository;
 import com.ayurveda.appointment.repository.AppointmentBookingRepository;
 import com.ayurveda.appointment.repository.AppointmentConsultationTypeRepository;
 import com.ayurveda.appointment.repository.AppointmentTherapyRepository;
+import com.ayurveda.appointment.repository.ConsultationTypeMasterRepository;
 import com.ayurveda.appointment.repository.DoshaMasterRepository;
 import com.ayurveda.appointment.repository.TreatmentCategoryRepository;
 import com.ayurveda.appointment.service.AppointmentBookingService;
@@ -70,6 +74,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     private final AppointmentBookingRepository appointmentBookingRepository;
     private final AppointmentBookingMapper appointmentBookingMapper;
     private final AppointmentConsultationTypeRepository appointmentConsultationTypeRepository;
+    private final ConsultationTypeMasterRepository consultationTypeMasterRepository;
+    private final ConsultationTypeMapper consultationTypeMapper;
     private final AppointmentTherapyRepository appointmentTherapyRepository;
     private final TreatmentCategoryRepository treatmentCategoryRepository;
     private final AppointmentAyurvedicAssessmentRepository appointmentAyurvedicAssessmentRepository;
@@ -122,16 +128,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         AppointmentBooking savedAppointment =
                 appointmentBookingRepository.save(appointment);
 
-        request.getConsultationTypes().forEach(type -> {
-
-            AppointmentConsultationType consultation =
-                    AppointmentConsultationType.builder()
-                            .bookingId(savedAppointment.getId())
-                            .consultationType(ConsultationType.valueOf(type))
-                            .build();
-
-            appointmentConsultationTypeRepository.save(consultation);
-        });
+        List<ConsultationTypeItemResponse> consultationTypes =
+                saveConsultationTypes(savedAppointment.getId(), request.getConsultationTypeIds());
 
         log.info("Appointment created successfully with id: {}",
                 savedAppointment.getId());
@@ -142,7 +140,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                         patient,
                         doctor);
 
-        response.setConsultationTypes(request.getConsultationTypes());
+        response.setConsultationTypes(consultationTypes);
 
         return ApiResponse.success(AppMessages.PATIENT_CREATED_AND_APPOINTMENT_BOOKED, response);
     }
@@ -164,23 +162,24 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
             PatientListTab statusTab,
             String search,
             BookingStatus bookingStatus,
-            ConsultationType consultationType,
+            UUID consultationTypeId,
             UUID doshaId,
             UUID doctorId) {
 
-        log.info("Fetching {} patient list. status={}, visitType={}, doshaId={}, doctorId={}, search={}",
-                statusTab, bookingStatus, consultationType, doshaId, doctorId, search);
+        log.info("Fetching {} patient list. status={}, visitTypeId={}, doshaId={}, doctorId={}, search={}",
+                statusTab, bookingStatus, consultationTypeId, doshaId, doctorId, search);
 
         Set<BookingStatus> statuses = resolvePatientListStatuses(statusTab, bookingStatus);
 
         List<AppointmentBooking> bookings = appointmentBookingRepository.findPatientList(
-                statuses, doctorId, consultationType, doshaId);
+                statuses, doctorId, consultationTypeId, doshaId);
 
         if (bookings.isEmpty()) {
             return ApiResponse.success(AppMessages.PATIENT_LIST_FETCHED, List.of());
         }
 
-        Map<UUID, List<String>> consultationTypesByBooking = loadConsultationTypes(bookings);
+        Map<UUID, List<ConsultationTypeItemResponse>> consultationTypesByBooking =
+                loadConsultationTypes(bookings);
         Map<UUID, AppointmentAyurvedicAssessment> assessmentByPatient = loadAssessments(bookings);
         Map<UUID, String> doshaNameById = loadDoshaNames(assessmentByPatient.values());
         Map<UUID, PatientSummaryResponse> patientsById = new HashMap<>();
@@ -237,17 +236,97 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         return EnumSet.of(bookingStatus);
     }
 
-    private Map<UUID, List<String>> loadConsultationTypes(List<AppointmentBooking> bookings) {
+    private Map<UUID, List<ConsultationTypeItemResponse>> loadConsultationTypes(
+            List<AppointmentBooking> bookings) {
         Set<UUID> bookingIds = bookings.stream()
                 .map(AppointmentBooking::getId)
                 .collect(Collectors.toSet());
 
-        return appointmentConsultationTypeRepository.findByBookingIdIn(bookingIds).stream()
+        List<AppointmentConsultationType> mappings =
+                appointmentConsultationTypeRepository.findByBookingIdIn(bookingIds);
+
+        Set<UUID> typeIds = mappings.stream()
+                .map(AppointmentConsultationType::getConsultationTypeId)
+                .collect(Collectors.toSet());
+
+        Map<UUID, ConsultationTypeMaster> mastersById = consultationTypeMasterRepository
+                .findByIdInAndDeletedFalse(typeIds)
+                .stream()
+                .collect(Collectors.toMap(ConsultationTypeMaster::getId, Function.identity()));
+
+        return mappings.stream()
                 .collect(Collectors.groupingBy(
                         AppointmentConsultationType::getBookingId,
                         Collectors.mapping(
-                                type -> type.getConsultationType().name(),
+                                mapping -> {
+                                    ConsultationTypeMaster master =
+                                            mastersById.get(mapping.getConsultationTypeId());
+                                    if (master == null) {
+                                        return ConsultationTypeItemResponse.builder()
+                                                .id(mapping.getConsultationTypeId())
+                                                .name(null)
+                                                .build();
+                                    }
+                                    return consultationTypeMapper.toItem(master);
+                                },
                                 Collectors.toList())));
+    }
+
+    private List<ConsultationTypeItemResponse> saveConsultationTypes(
+            UUID bookingId, List<UUID> consultationTypeIds) {
+
+        List<UUID> distinctIds = consultationTypeIds.stream().distinct().toList();
+        List<ConsultationTypeMaster> masters =
+                consultationTypeMasterRepository.findByIdInAndDeletedFalse(distinctIds);
+
+        if (masters.size() != distinctIds.size()) {
+            throw new BadRequestException(Constants.INVALID_CONSULTATION_TYPE_IDS);
+        }
+
+        Map<UUID, ConsultationTypeMaster> byId = masters.stream()
+                .collect(Collectors.toMap(ConsultationTypeMaster::getId, Function.identity()));
+
+        List<ConsultationTypeItemResponse> items = new ArrayList<>();
+        for (UUID typeId : distinctIds) {
+            ConsultationTypeMaster master = byId.get(typeId);
+            AppointmentConsultationType consultation = AppointmentConsultationType.builder()
+                    .bookingId(bookingId)
+                    .consultationTypeId(typeId)
+                    .build();
+            appointmentConsultationTypeRepository.save(consultation);
+            items.add(consultationTypeMapper.toItem(master));
+        }
+        return items;
+    }
+
+    private List<ConsultationTypeItemResponse> resolveConsultationTypes(UUID bookingId) {
+        List<AppointmentConsultationType> mappings =
+                appointmentConsultationTypeRepository.findByBookingId(bookingId);
+        if (mappings.isEmpty()) {
+            return List.of();
+        }
+
+        Set<UUID> typeIds = mappings.stream()
+                .map(AppointmentConsultationType::getConsultationTypeId)
+                .collect(Collectors.toSet());
+
+        Map<UUID, ConsultationTypeMaster> mastersById = consultationTypeMasterRepository
+                .findByIdInAndDeletedFalse(typeIds)
+                .stream()
+                .collect(Collectors.toMap(ConsultationTypeMaster::getId, Function.identity()));
+
+        return mappings.stream()
+                .map(mapping -> {
+                    ConsultationTypeMaster master = mastersById.get(mapping.getConsultationTypeId());
+                    if (master == null) {
+                        return ConsultationTypeItemResponse.builder()
+                                .id(mapping.getConsultationTypeId())
+                                .name(null)
+                                .build();
+                    }
+                    return consultationTypeMapper.toItem(master);
+                })
+                .toList();
     }
 
     private Map<UUID, AppointmentAyurvedicAssessment> loadAssessments(List<AppointmentBooking> bookings) {
@@ -346,13 +425,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
             AppointmentBookingResponse response =
                     appointmentBookingMapper.toResponse(appointment, patient, doctor);
 
-            List<String> consultationTypes =
-                    appointmentConsultationTypeRepository.findByBookingId(appointment.getId())
-                            .stream()
-                            .map(consultation -> consultation.getConsultationType().name())
-                            .toList();
-
-            response.setConsultationTypes(consultationTypes);
+            response.setConsultationTypes(resolveConsultationTypes(appointment.getId()));
 
             return response;
 
@@ -490,21 +563,24 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<AppointmentBookingResponse>> getTodayAppointmentsByConsultationType(
-            ConsultationType consultationType) {
+            UUID consultationTypeId) {
 
         LocalDate today = LocalDate.now();
-        log.info("Fetching today's appointments for consultation type: {}", consultationType);
+        log.info("Fetching today's appointments for consultation type: {}", consultationTypeId);
+
+        consultationTypeMasterRepository.findByIdAndDeletedFalse(consultationTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException(Constants.CONSULTATION_TYPE_NOT_FOUND));
 
         List<AppointmentBooking> appointments =
                 appointmentBookingRepository.findByDateAndConsultationType(
-                        today, consultationType, BookingStatus.CANCELLED);
+                        today, consultationTypeId, BookingStatus.CANCELLED);
 
         List<AppointmentBookingResponse> responses = appointments.stream()
                 .map(this::toResponse)
                 .toList();
 
         return ApiResponse.success(
-                AppMessages.TODAY_APPOINTMENTS_BY_CONSULTATION_TYPE_FETCHED + consultationType + ".",
+                AppMessages.TODAY_APPOINTMENTS_BY_CONSULTATION_TYPE_FETCHED + consultationTypeId + ".",
                 responses);
     }
 
@@ -526,11 +602,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 .map(appointment -> {
                     PatientSummaryResponse patient = fetchPatient(appointment.getPatientId());
 
-                    List<String> consultationTypes =
-                            appointmentConsultationTypeRepository.findByBookingId(appointment.getId())
-                                    .stream()
-                                    .map(c -> c.getConsultationType().name())
-                                    .toList();
+                    List<ConsultationTypeItemResponse> consultationTypes =
+                            resolveConsultationTypes(appointment.getId());
 
                     return DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse.builder()
                             .bookingId(appointment.getId())
@@ -570,11 +643,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 .map(appointment -> {
                     PatientSummaryResponse patient = fetchPatient(appointment.getPatientId());
 
-                    List<String> consultationTypes =
-                            appointmentConsultationTypeRepository.findByBookingId(appointment.getId())
-                                    .stream()
-                                    .map(c -> c.getConsultationType().name())
-                                    .toList();
+                    List<ConsultationTypeItemResponse> consultationTypes =
+                            resolveConsultationTypes(appointment.getId());
 
                     return DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse.builder()
                             .bookingId(appointment.getId())
@@ -658,10 +728,10 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     private String resolveServiceType(AppointmentBooking appointment) {
         String categoryName = resolveTreatmentCategoryName(appointment.getPatientId());
         List<String> consultationTypes =
-                appointmentConsultationTypeRepository.findByBookingId(appointment.getId())
-                        .stream()
-                        .map(AppointmentConsultationType::getConsultationType)
-                        .map(this::formatConsultationType)
+                resolveConsultationTypes(appointment.getId()).stream()
+                        .map(ConsultationTypeItemResponse::getName)
+                        .filter(StringUtils::hasText)
+                        .map(this::formatConsultationTypeName)
                         .toList();
 
         if (StringUtils.hasText(categoryName) && !consultationTypes.isEmpty()) {
@@ -696,11 +766,11 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 .orElse(null);
     }
 
-    private String formatConsultationType(ConsultationType type) {
-        if (type == null) {
+    private String formatConsultationTypeName(String name) {
+        if (!StringUtils.hasText(name)) {
             return null;
         }
-        String lower = type.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        String lower = name.toLowerCase(Locale.ROOT).replace('_', ' ');
         return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 
@@ -741,18 +811,12 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         AppointmentBooking saved = appointmentBookingRepository.save(appointment);
 
         appointmentConsultationTypeRepository.deleteByBookingId(saved.getId());
-        request.getConsultationTypes().forEach(type -> {
-            AppointmentConsultationType consultation =
-                    AppointmentConsultationType.builder()
-                            .bookingId(saved.getId())
-                            .consultationType(ConsultationType.valueOf(type))
-                            .build();
-            appointmentConsultationTypeRepository.save(consultation);
-        });
+        List<ConsultationTypeItemResponse> consultationTypes =
+                saveConsultationTypes(saved.getId(), request.getConsultationTypeIds());
 
         AppointmentBookingResponse response =
                 appointmentBookingMapper.toResponse(saved, patient, doctor);
-        response.setConsultationTypes(request.getConsultationTypes());
+        response.setConsultationTypes(consultationTypes);
 
         log.info("Appointment {} rescheduled successfully. Previous status: {}, new status: RESCHEDULED",
                 bookingId, currentStatus);
@@ -852,13 +916,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         AppointmentBookingResponse response =
                 appointmentBookingMapper.toResponse(appointment, patient, doctor);
 
-        List<String> consultationTypes =
-                appointmentConsultationTypeRepository.findByBookingId(appointment.getId())
-                        .stream()
-                        .map(consultation -> consultation.getConsultationType().name())
-                        .toList();
-
-        response.setConsultationTypes(consultationTypes);
+        response.setConsultationTypes(resolveConsultationTypes(appointment.getId()));
         return response;
     }
 

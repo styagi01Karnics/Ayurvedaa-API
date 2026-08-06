@@ -188,7 +188,7 @@ curl -X POST http://localhost:8082/api/v1/appointments \
   -d @curl-samples/03-appointment-booking.json
 ```
 
-> **Note:** `consultationTypes` must be `CONSULTATION` or `THERAPY` (not `OPD`).
+> **Note:** `consultationTypeIds` is a list of UUIDs from consultation type master (`GET /api/v1/consultation-types`).
 
 ## Project structure
 

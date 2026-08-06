@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 
 import com.ayurveda.appointment.entity.AppointmentBooking;
 import com.ayurveda.appointment.enums.BookingStatus;
-import com.ayurveda.appointment.enums.ConsultationType;
 
 import java.time.LocalTime;
 
@@ -52,12 +51,12 @@ public interface AppointmentBookingRepository
               AND a.bookingStatus <> :cancelled
               AND a.id IN (
                   SELECT c.bookingId FROM AppointmentConsultationType c
-                  WHERE c.consultationType = :consultationType
+                  WHERE c.consultationTypeId = :consultationTypeId
               )
             """)
     List<AppointmentBooking> findByDateAndConsultationType(
             @Param("date") LocalDate date,
-            @Param("consultationType") ConsultationType consultationType,
+            @Param("consultationTypeId") UUID consultationTypeId,
             @Param("cancelled") BookingStatus cancelled);
 
     @Query("""
@@ -109,10 +108,10 @@ public interface AppointmentBookingRepository
               AND a.bookingStatus IN :statuses
               AND (:doctorId IS NULL OR a.assignedDoctorId = :doctorId)
               AND (
-                    :consultationType IS NULL
+                    :consultationTypeId IS NULL
                     OR a.id IN (
                         SELECT c.bookingId FROM AppointmentConsultationType c
-                        WHERE c.consultationType = :consultationType
+                        WHERE c.consultationTypeId = :consultationTypeId
                     )
               )
               AND (
@@ -128,7 +127,7 @@ public interface AppointmentBookingRepository
     List<AppointmentBooking> findPatientList(
             @Param("statuses") Collection<BookingStatus> statuses,
             @Param("doctorId") UUID doctorId,
-            @Param("consultationType") ConsultationType consultationType,
+            @Param("consultationTypeId") UUID consultationTypeId,
             @Param("doshaId") UUID doshaId);
 
 }
