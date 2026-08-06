@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Treatment Plan Master", description = "Treatment plan name master data APIs")
 @RestController
-@RequestMapping("/api/v1/treatment-plans")
+@RequestMapping("/api/v1/treatment-plan-masters")
 @RequiredArgsConstructor
 @Validated
 public class TreatmentPlanMasterController {
