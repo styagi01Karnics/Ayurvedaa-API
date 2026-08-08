@@ -12,7 +12,7 @@ pipeline {
         IMAGE_PREFIX = "sunardock/ayurvedaa-api"
 
         // New application server
-        APP_SERVER = "root@karnics-app"
+        APP_SERVER = "root@45.195.229.15"
 
         // Application directory on new server
         APP_DIR = "/root/ayurvedaa"
