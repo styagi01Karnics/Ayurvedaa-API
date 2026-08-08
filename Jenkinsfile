@@ -204,55 +204,97 @@ pipeline {
 
 
         stage('Deploy') {
-
+        
             steps {
-
+        
                 sh '''
                     set -e
-
+        
                     echo "=========================================="
                     echo "Deploying Ayurvedaa Application"
-                    echo "Server: ${APP_SERVER}"
                     echo "Build: ${BUILD_NUMBER}"
+                    echo "Server: ${APP_SERVER}"
                     echo "=========================================="
-
+        
                     echo "Checking SSH connection..."
-
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         echo 'Connected to application server'
                     "
-
-                    echo "Checking Docker Compose..."
-
+        
+        
+                    echo "Creating application directory..."
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
-                        docker compose version
+                        mkdir -p ${APP_DIR}
                     "
-
-                    echo "Deploying Docker images..."
-
+        
+        
+                    echo "Copying docker-compose.yml to application server..."
+        
+                    scp -o StrictHostKeyChecking=no \
+                        docker-compose.yml \
+                        ${APP_SERVER}:${APP_DIR}/docker-compose.yml
+        
+        
+                    echo "Checking docker-compose.yml..."
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
-                        set -e
-
                         cd ${APP_DIR}
-
-                        echo 'Pulling Docker images for version ${BUILD_NUMBER}...'
-
-                        IMAGE_TAG=${BUILD_NUMBER} docker compose pull
-
-                        echo 'Starting application services...'
-
-                        IMAGE_TAG=${BUILD_NUMBER} docker compose up -d --remove-orphans
-
-                        echo 'Waiting for services to start...'
-
-                        sleep 15
-
-                        echo 'Application containers:'
-
-                        docker compose ps
-
-                        echo 'Deployment completed.'
+        
+                        echo 'Compose file:'
+                        ls -lh docker-compose.yml
+        
+                        echo 'Validating Compose configuration:'
+        
+                        docker compose config
                     "
+        
+        
+                    echo "Checking application network..."
+        
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
+                        docker network inspect ayurvedaa-app-net > /dev/null
+                    "
+        
+        
+                    echo "Pulling Docker images..."
+        
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
+                        cd ${APP_DIR}
+        
+                        IMAGE_TAG=${BUILD_NUMBER} docker compose pull
+                    "
+        
+        
+                    echo "Starting application services..."
+        
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
+                        cd ${APP_DIR}
+        
+                        IMAGE_TAG=${BUILD_NUMBER} \
+                        docker compose up -d --remove-orphans
+                    "
+        
+        
+                    echo "Waiting for services to start..."
+        
+                    sleep 15
+        
+        
+                    echo "Checking application containers..."
+        
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
+                        cd ${APP_DIR}
+        
+                        docker compose ps
+                    "
+        
+        
+                    echo "=========================================="
+                    echo "Deployment completed successfully"
+                    echo "Build: ${BUILD_NUMBER}"
+                    echo "=========================================="
                 '''
             }
         }
