@@ -1,0 +1,130 @@
+```yaml
+services:
+
+  patient-service:
+    image: sunardock/ayurvedaa-api-patient-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-patient-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8101:8101"
+    networks:
+      - ayurvedaa-app-net
+
+  doctor-service:
+    image: sunardock/ayurvedaa-api-doctor-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-doctor-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8102:8102"
+    networks:
+      - ayurvedaa-app-net
+
+  appointment-service:
+    image: sunardock/ayurvedaa-api-appointment-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-appointment-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8103:8103"
+    networks:
+      - ayurvedaa-app-net
+
+  therapist-service:
+    image: sunardock/ayurvedaa-api-therapist-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-therapist-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8104:8104"
+    networks:
+      - ayurvedaa-app-net
+
+  file-upload-service:
+    image: sunardock/ayurvedaa-api-file-upload-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-file-upload-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8105:8105"
+    networks:
+      - ayurvedaa-app-net
+
+  attendance-service:
+    image: sunardock/ayurvedaa-api-attendance-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-attendance-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8106:8106"
+    networks:
+      - ayurvedaa-app-net
+
+  activity-log-service:
+    image: sunardock/ayurvedaa-api-activity-log-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-activity-log-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8107:8107"
+    networks:
+      - ayurvedaa-app-net
+
+  medicine-service:
+    image: sunardock/ayurvedaa-api-medicine-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-medicine-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8108:8108"
+    networks:
+      - ayurvedaa-app-net
+
+  billing-service:
+    image: sunardock/ayurvedaa-api-billing-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-billing-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8109:8109"
+    networks:
+      - ayurvedaa-app-net
+
+  notification-service:
+    image: sunardock/ayurvedaa-api-notification-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-notification-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8110:8110"
+    networks:
+      - ayurvedaa-app-net
+
+  auth-service:
+    image: sunardock/ayurvedaa-api-auth-service:${IMAGE_TAG:-latest}
+    container_name: ayurvedaa-api-auth-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8111:8111"
+    networks:
+      - ayurvedaa-app-net
+
+
+networks:
+
+  ayurvedaa-app-net:
+    external: true
+```
