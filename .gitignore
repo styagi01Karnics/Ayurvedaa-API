@@ -1,18 +1,41 @@
+# Maven
 target/
-!.mvn/wrapper/maven-wrapper.jar
 .mvn/wrapper/maven-wrapper.jar
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# IntelliJ IDEA
 .idea/
 *.iml
+
+# Eclipse
 .classpath
 .project
 .settings/
+
+# VS Code
 .vscode/
+
+# Logs
 *.log
 *.err
 *-run.log*
 *-service-out.log*
+
+# Java compiled files
 *.class
+
+# macOS
 .DS_Store
+
+# Application uploads
 uploads/
-/.metadata/
+
+# Eclipse metadata
+.metadata/
+
+# Archives
 *.zip
