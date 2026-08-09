@@ -35,6 +35,7 @@ pipeline {
             }
         }
 
+
         stage('Build Application') {
             steps {
                 echo '=========================================='
@@ -51,6 +52,7 @@ pipeline {
             }
         }
 
+
         stage('SonarQube Analysis') {
             steps {
                 echo '=========================================='
@@ -64,10 +66,13 @@ pipeline {
                         mvn sonar:sonar \
                             -Dsonar.projectKey=Ayurvedaa-API \
                             -Dsonar.projectName=Ayurvedaa-API
+
+                        echo "SonarQube analysis completed successfully."
                     '''
                 }
             }
         }
+
 
         stage('Build Docker Images') {
             steps {
@@ -79,22 +84,55 @@ pipeline {
                 sh '''
                     set -e
 
-                    docker build -t ${IMAGE_PREFIX}-patient-service:${BUILD_NUMBER} ./patient-service
-                    docker build -t ${IMAGE_PREFIX}-doctor-service:${BUILD_NUMBER} ./doctor-service
-                    docker build -t ${IMAGE_PREFIX}-appointment-service:${BUILD_NUMBER} ./appointment-service
-                    docker build -t ${IMAGE_PREFIX}-therapist-service:${BUILD_NUMBER} ./therapist-service
-                    docker build -t ${IMAGE_PREFIX}-file-upload-service:${BUILD_NUMBER} ./file-upload-service
-                    docker build -t ${IMAGE_PREFIX}-attendance-service:${BUILD_NUMBER} ./attendance-service
-                    docker build -t ${IMAGE_PREFIX}-activity-log-service:${BUILD_NUMBER} ./activity-log-service
-                    docker build -t ${IMAGE_PREFIX}-medicine-service:${BUILD_NUMBER} ./medicine-service
-                    docker build -t ${IMAGE_PREFIX}-billing-service:${BUILD_NUMBER} ./billing-service
-                    docker build -t ${IMAGE_PREFIX}-notification-service:${BUILD_NUMBER} ./notification-service
-                    docker build -t ${IMAGE_PREFIX}-auth-service:${BUILD_NUMBER} ./auth-service
+                    docker build \
+                        -t ${IMAGE_PREFIX}-patient-service:${BUILD_NUMBER} \
+                        ./patient-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-doctor-service:${BUILD_NUMBER} \
+                        ./doctor-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-appointment-service:${BUILD_NUMBER} \
+                        ./appointment-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-therapist-service:${BUILD_NUMBER} \
+                        ./therapist-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-file-upload-service:${BUILD_NUMBER} \
+                        ./file-upload-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-attendance-service:${BUILD_NUMBER} \
+                        ./attendance-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-activity-log-service:${BUILD_NUMBER} \
+                        ./activity-log-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-medicine-service:${BUILD_NUMBER} \
+                        ./medicine-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-billing-service:${BUILD_NUMBER} \
+                        ./billing-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-notification-service:${BUILD_NUMBER} \
+                        ./notification-service
+
+                    docker build \
+                        -t ${IMAGE_PREFIX}-auth-service:${BUILD_NUMBER} \
+                        ./auth-service
 
                     echo "Docker image build completed successfully."
                 '''
             }
         }
+
 
         stage('Docker Push') {
             steps {
@@ -107,6 +145,7 @@ pipeline {
                     credentialsId: 'dockerhub-creds',
                     url: 'https://index.docker.io/v1/'
                 ) {
+
                     sh '''
                         set -e
 
@@ -128,163 +167,260 @@ pipeline {
             }
         }
 
-        
+
         stage('Deploy') {
             steps {
+
                 echo '=========================================='
                 echo 'Deploying Ayurvedaa Application'
                 echo "Build: ${BUILD_NUMBER}"
-                echo "Server: ${APP_SERVER}"
+                echo "Application Server: ${APP_SERVER}"
                 echo '=========================================='
-        
+
                 sh '''
                     set -e
-        
+
                     echo "Checking SSH connection..."
-        
-                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
+
+                    ssh -o StrictHostKeyChecking=no \
+                        ${APP_SERVER} \
                         "echo 'Connected to application server'"
-        
+
+
                     echo "Creating application directory..."
-        
-                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
+
+                    ssh -o StrictHostKeyChecking=no \
+                        ${APP_SERVER} \
                         "mkdir -p ${APP_DIR}"
-        
+
+
                     echo "Preparing Docker Compose file..."
-        
+
                     rm -f docker-compose-clean.yml
-        
+
                     sed \
                         -e '1{/^```/d;}' \
                         -e '${/^```$/d;}' \
                         ${COMPOSE_FILE} > docker-compose-clean.yml
-        
+
+
                     echo "Copying Docker Compose file..."
-        
+
                     scp -o StrictHostKeyChecking=no \
                         docker-compose-clean.yml \
                         ${APP_SERVER}:${APP_DIR}/${COMPOSE_FILE}
-        
+
+
                     rm -f docker-compose-clean.yml
-        
-                    echo "Validating deployment configuration..."
-        
+
+
+                    echo "Validating application server configuration..."
+
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
-        
+
                         cd ${APP_DIR}
-        
-                        echo 'Compose file:'
-                        ls -lh docker-compose.yml
-        
-                        echo 'Checking environment file...'
-        
+
+                        echo '=========================================='
+                        echo 'Checking Docker Compose file'
+                        echo '=========================================='
+
+                        ls -lh ${COMPOSE_FILE}
+
+
+                        echo '=========================================='
+                        echo 'Checking .env file'
+                        echo '=========================================='
+
                         if [ ! -f .env ]; then
                             echo 'ERROR: ${APP_DIR}/.env does not exist.'
                             exit 1
                         fi
-        
+
                         chmod 600 .env
-        
+
                         echo '.env file exists.'
                         stat -c '%a %n' .env
-        
-                        echo 'Validating Docker Compose configuration...'
-        
+
+
+                        echo '=========================================='
+                        echo 'Validating Docker Compose'
+                        echo '=========================================='
+
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env config --quiet
-        
+
                         echo 'Docker Compose validation successful.'
                     "
-        
+
+
                     echo "Starting deployment..."
-        
+
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
-        
+
                         cd ${APP_DIR}
-        
+
+
                         echo '=========================================='
-                        echo 'Stopping old containers'
+                        echo 'Removing Old Ayurvedaa Containers'
                         echo '=========================================='
-        
-                        docker compose --env-file .env down --remove-orphans
-        
+
+
+                        CONTAINERS='
+                        ayurvedaa-api-patient-service
+                        ayurvedaa-api-doctor-service
+                        ayurvedaa-api-appointment-service
+                        ayurvedaa-api-therapist-service
+                        ayurvedaa-api-file-upload-service
+                        ayurvedaa-api-attendance-service
+                        ayurvedaa-api-activity-log-service
+                        ayurvedaa-api-medicine-service
+                        ayurvedaa-api-billing-service
+                        ayurvedaa-api-notification-service
+                        ayurvedaa-api-auth-service
+                        '
+
+
+                        for CONTAINER in \$CONTAINERS; do
+
+                            if docker ps -a \
+                                --format '{{.Names}}' \
+                                | grep -qx "\$CONTAINER"; then
+
+                                echo "Removing old container: \$CONTAINER"
+
+                                docker rm -f "\$CONTAINER"
+
+                            else
+
+                                echo "Container not found: \$CONTAINER"
+
+                            fi
+
+                        done
+
+
                         echo '=========================================='
-                        echo 'Pulling images for build ${BUILD_NUMBER}'
+                        echo 'Pulling Docker Images'
+                        echo "Build: ${BUILD_NUMBER}"
                         echo '=========================================='
-        
+
+
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env pull
-        
+
+
                         echo '=========================================='
-                        echo 'Starting services'
+                        echo 'Starting New Services'
+                        echo "Build: ${BUILD_NUMBER}"
                         echo '=========================================='
-        
+
+
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env up -d --remove-orphans
-        
+
+
                         echo '=========================================='
-                        echo 'Deployment completed'
+                        echo 'Deployment Completed'
                         echo '=========================================='
-        
-                        docker compose ps
+
+
+                        echo 'Running Containers:'
+
+                        docker compose --env-file .env ps
                     "
-        
+
+
                     echo "Ayurvedaa deployment completed successfully."
                 '''
             }
         }
 
+
         stage('Verify Deployment') {
             steps {
+
                 echo '=========================================='
                 echo 'Verifying Deployment'
                 echo '=========================================='
-        
+
                 sh '''
                     set -e
-        
+
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
-        
+
                         cd ${APP_DIR}
-        
-                        echo 'Container status:'
-        
-                        docker compose ps
-        
-                        echo ''
-                        echo 'Checking running containers...'
-        
-                        RUNNING=\\$(docker compose ps --status running --services | wc -l)
-        
-                        echo \"Running services: \\$RUNNING / 11\"
-        
-                        if [ \\\"\\$RUNNING\\\" -ne 11 ]; then
-                            echo 'ERROR: Not all 11 Ayurvedaa services are running.'
-                            docker compose ps
+
+                        echo '=========================================='
+                        echo 'Container Status'
+                        echo '=========================================='
+
+                        docker compose --env-file .env ps
+
+
+                        echo '=========================================='
+                        echo 'Checking Running Services'
+                        echo '=========================================='
+
+
+                        EXPECTED=11
+
+                        RUNNING=\\$(docker compose \
+                            --env-file .env \
+                            ps --status running --services \
+                            | wc -l)
+
+
+                        echo "Expected services : \$EXPECTED"
+                        echo "Running services  : \$RUNNING"
+
+
+                        if [ \"\$RUNNING\" -ne \"\$EXPECTED\" ]; then
+
+                            echo 'ERROR: Not all Ayurvedaa services are running.'
+
+                            echo ''
+                            echo 'Detailed container status:'
+
+                            docker compose \
+                                --env-file .env \
+                                ps
+
+                            echo ''
+                            echo 'Recent container logs:'
+
+                            docker ps \
+                                --filter 'name=ayurvedaa-api-' \
+                                --format '{{.Names}}' \
+                                | while read CONTAINER; do
+
+                                    echo ''
+                                    echo "========== \$CONTAINER =========="
+
+                                    docker logs \
+                                        --tail 30 \
+                                        \"\$CONTAINER\" 2>&1 || true
+
+                              done
+
                             exit 1
                         fi
-        
-                        echo 'All 11 Ayurvedaa services are running.'
-        
-                        echo ''
-                        echo 'Checking unhealthy/exited containers...'
-        
-                        if docker compose ps --status exited --services | grep -q .; then
-                            echo 'ERROR: One or more services exited.'
-                            docker compose ps
-                            exit 1
-                        fi
-        
-                        echo 'Deployment verification successful.'
+
+
+                        echo '=========================================='
+                        echo 'All 11 Ayurvedaa Services Are Running'
+                        echo '=========================================='
                     "
                 '''
             }
         }
+
+
         stage('Cleanup Old Docker Images') {
             steps {
+
                 echo '=========================================='
                 echo 'Cleaning Old Docker Images'
                 echo '=========================================='
@@ -292,8 +428,13 @@ pipeline {
                 sh '''
                     set +e
 
-                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
-                        "docker image prune -f"
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
+                        echo 'Removing dangling Docker images...'
+
+                        docker image prune -f
+
+                        echo 'Docker cleanup completed.'
+                    "
 
                     echo "Docker cleanup completed."
                 '''
@@ -301,20 +442,27 @@ pipeline {
         }
     }
 
+
     post {
 
         success {
-            echo '=========================================='
-            echo "Ayurvedaa Build ${BUILD_NUMBER} SUCCESS"
-            echo 'Deployment completed successfully.'
-            echo '=========================================='
+            echo '''
+==========================================
+Ayurvedaa Deployment SUCCESSFUL
+==========================================
+The application was successfully deployed.
+==========================================
+'''
         }
 
         failure {
-            echo '=========================================='
-            echo "Ayurvedaa Build ${BUILD_NUMBER} FAILED"
-            echo 'Please check the Jenkins console log.'
-            echo '=========================================='
+            echo '''
+==========================================
+Ayurvedaa Build FAILED
+==========================================
+Please check the Jenkins console log.
+==========================================
+'''
         }
 
         always {
