@@ -151,8 +151,6 @@ pipeline {
 
                     echo "Preparing Docker Compose file..."
 
-                    # Remove accidental Markdown code fences if they exist
-                    # in docker-compose.yml from the repository.
                     rm -f docker-compose-clean.yml
 
                     sed \
@@ -170,60 +168,64 @@ pipeline {
 
                     echo "Checking Docker Compose file..."
 
-                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
 
-                        cd /root/ayurvedaa
+                        cd ${APP_DIR}
 
-                        echo "Compose file:"
+                        echo 'Compose file:'
                         ls -lh docker-compose.yml
 
-                        echo "Checking environment file..."
+                        echo 'Checking environment file...'
 
                         if [ ! -f .env ]; then
-                            echo "ERROR: /root/ayurvedaa/.env does not exist."
+                            echo 'ERROR: ${APP_DIR}/.env does not exist.'
                             exit 1
                         fi
 
                         chmod 600 .env
 
-                        echo ".env file exists."
-                        echo "Environment file permissions:"
-                        stat -c "%a %n" .env
+                        echo '.env file exists.'
+                        echo 'Environment file permissions:'
+                        stat -c '%a %n' .env
 
-                        echo "Validating Docker Compose configuration..."
+                        echo 'Validating Docker Compose configuration...'
 
-                        # IMPORTANT:
-                        # --quiet prevents environment values such as
-                        # DB passwords from being printed.
+                        IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env config --quiet
 
-                        echo "Docker Compose validation successful."
-                    '
+                        echo 'Docker Compose validation successful.'
+                    "
 
                     echo "Starting deployment..."
 
-                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
 
-                        cd /root/ayurvedaa
+                        cd ${APP_DIR}
 
-                        echo "Pulling latest images..."
+                        echo '=========================================='
+                        echo 'Deploying Docker Images'
+                        echo 'IMAGE_TAG=${BUILD_NUMBER}'
+                        echo '=========================================='
+
+                        echo 'Pulling Docker images...'
 
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env pull
 
-                        echo "Starting services..."
+                        echo 'Starting services...'
 
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env up -d
 
-                        echo "Deployment completed."
+                        echo 'Deployment completed.'
 
-                        echo "Running containers:"
+                        echo 'Running containers:'
 
-                        docker compose ps
-                    '
+                        IMAGE_TAG=${BUILD_NUMBER} \
+                        docker compose --env-file .env ps
+                    "
 
                     echo "Ayurvedaa deployment completed successfully."
                 '''
@@ -239,27 +241,32 @@ pipeline {
                 sh '''
                     set -e
 
-                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
 
-                        cd /root/ayurvedaa
+                        cd ${APP_DIR}
 
-                        echo "Container status:"
+                        echo 'Container status:'
 
-                        docker compose ps
+                        IMAGE_TAG=${BUILD_NUMBER} \
+                        docker compose --env-file .env ps
 
-                        echo ""
-                        echo "Checking running containers..."
+                        echo ''
+                        echo 'Checking running containers...'
 
-                        RUNNING=$(docker compose ps --status running --services | wc -l)
+                        RUNNING=\$(IMAGE_TAG=${BUILD_NUMBER} \
+                            docker compose --env-file .env ps \
+                            --status running --services | wc -l)
 
-                        if [ "$RUNNING" -lt 11 ]; then
-                            echo "ERROR: Expected 11 Ayurvedaa services, but only $RUNNING are running."
+                        echo \"Running services: \$RUNNING\"
+
+                        if [ \"\$RUNNING\" -lt 11 ]; then
+                            echo 'ERROR: Expected 11 Ayurvedaa services, but fewer than 11 are running.'
                             exit 1
                         fi
 
-                        echo "All expected Ayurvedaa services are running."
-                    '
+                        echo 'All expected Ayurvedaa services are running.'
+                    "
                 '''
             }
         }
@@ -273,9 +280,8 @@ pipeline {
                 sh '''
                     set +e
 
-                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
-                        docker image prune -f
-                    '
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
+                        "docker image prune -f"
 
                     echo "Docker cleanup completed."
                 '''
@@ -286,19 +292,17 @@ pipeline {
     post {
 
         success {
-            echo '''
-==========================================
-AYURVEDAA DEPLOYMENT SUCCESSFUL
-==========================================
-'''
+            echo '=========================================='
+            echo "Ayurvedaa Build ${BUILD_NUMBER} SUCCESS"
+            echo 'Deployment completed successfully.'
+            echo '=========================================='
         }
 
         failure {
-            echo '''
-==========================================
-AYURVEDAA DEPLOYMENT FAILED
-==========================================
-'''
+            echo '=========================================='
+            echo "Ayurvedaa Build ${BUILD_NUMBER} FAILED"
+            echo 'Please check the Jenkins console log.'
+            echo '=========================================='
         }
 
         always {
