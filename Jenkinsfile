@@ -263,42 +263,12 @@ pipeline {
 
 
                         echo '=========================================='
-                        echo 'Removing Old Ayurvedaa Containers'
+                        echo 'Stopping Old Ayurvedaa Containers'
                         echo '=========================================='
 
 
-                        CONTAINERS='
-                        ayurvedaa-api-patient-service
-                        ayurvedaa-api-doctor-service
-                        ayurvedaa-api-appointment-service
-                        ayurvedaa-api-therapist-service
-                        ayurvedaa-api-file-upload-service
-                        ayurvedaa-api-attendance-service
-                        ayurvedaa-api-activity-log-service
-                        ayurvedaa-api-medicine-service
-                        ayurvedaa-api-billing-service
-                        ayurvedaa-api-notification-service
-                        ayurvedaa-api-auth-service
-                        '
-
-
-                        for CONTAINER in \$CONTAINERS; do
-
-                            if docker ps -a \
-                                --format '{{.Names}}' \
-                                | grep -qx "\$CONTAINER"; then
-
-                                echo "Removing old container: \$CONTAINER"
-
-                                docker rm -f "\$CONTAINER"
-
-                            else
-
-                                echo "Container not found: \$CONTAINER"
-
-                            fi
-
-                        done
+                        IMAGE_TAG=${BUILD_NUMBER} \
+                        docker compose --env-file .env down --remove-orphans
 
 
                         echo '=========================================='
@@ -328,6 +298,7 @@ pipeline {
 
                         echo 'Running Containers:'
 
+                        IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env ps
                     "
 
@@ -336,22 +307,24 @@ pipeline {
                 '''
             }
         }
-       
+
+
         stage('Cleanup Old Docker Images') {
             steps {
+
                 echo '=========================================='
                 echo 'Cleaning Old Docker Images'
                 echo 'Keeping Latest 3 Images Per Service'
                 echo '=========================================='
-        
+
                 sh '''
                     set +e
-        
+
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
                         set +e
-        
+
                         echo "Starting Docker image cleanup..."
-        
+
                         for SERVICE in \
                             patient-service \
                             doctor-service \
@@ -366,10 +339,10 @@ pipeline {
                             auth-service
                         do
                             IMAGE="sunardock/ayurvedaa-api-${SERVICE}"
-        
+
                             echo ""
                             echo "Processing ${IMAGE}..."
-        
+
                             docker images "${IMAGE}" \
                                 --format "{{.Tag}}" \
                                 | grep -E "^[0-9]+$" \
@@ -382,22 +355,27 @@ pipeline {
                                     docker rmi "${IMAGE}:${TAG}" || true
                                 fi
                             done
-        
+
                             echo "Completed ${IMAGE}"
                         done
-        
+
+
                         echo ""
                         echo "Removing dangling images..."
+
                         docker image prune -f
-        
+
+
                         echo ""
                         echo "Docker cleanup completed."
                     '
-        
+
                     echo "Docker cleanup completed successfully."
                 '''
             }
         }
+
+    }
 
 
     post {
@@ -407,15 +385,13 @@ pipeline {
 ==========================================
 Ayurvedaa Deployment SUCCESSFUL
 ==========================================
-The application was successfully deployed.
-==========================================
 '''
         }
 
         failure {
             echo '''
 ==========================================
-Ayurvedaa Build FAILED
+Ayurvedaa Deployment FAILED
 ==========================================
 Please check the Jenkins console log.
 ==========================================
