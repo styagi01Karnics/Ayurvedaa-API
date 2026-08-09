@@ -6,6 +6,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+      
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+
     ports:
       - "8101:8101"
     networks:
@@ -17,6 +23,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8102:8102"
     networks:
@@ -28,6 +40,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8103:8103"
     networks:
@@ -39,6 +57,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8104:8104"
     networks:
@@ -50,6 +74,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8105:8105"
     networks:
@@ -61,6 +91,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8106:8106"
     networks:
@@ -72,6 +108,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8107:8107"
     networks:
@@ -83,6 +125,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8108:8108"
     networks:
@@ -94,6 +142,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8109:8109"
     networks:
@@ -105,6 +159,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8110:8110"
     networks:
@@ -116,6 +176,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
     ports:
       - "8111:8111"
     networks:
