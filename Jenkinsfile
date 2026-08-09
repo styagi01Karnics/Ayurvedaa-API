@@ -340,28 +340,84 @@ pipeline {
 
         stage('Cleanup Old Docker Images') {
             steps {
-
+        
                 echo '=========================================='
                 echo 'Cleaning Old Docker Images'
+                echo 'Keeping Latest 3 Images Per Service'
                 echo '=========================================='
-
+        
                 sh '''
                     set +e
-
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
-                        echo 'Removing dangling Docker images...'
-
+                        set +e
+        
+                        echo '=========================================='
+                        echo 'Docker Image Cleanup'
+                        echo '=========================================='
+        
+                        for SERVICE in \\
+                            patient-service \\
+                            doctor-service \\
+                            appointment-service \\
+                            therapist-service \\
+                            file-upload-service \\
+                            attendance-service \\
+                            activity-log-service \\
+                            medicine-service \\
+                            billing-service \\
+                            notification-service \\
+                            auth-service
+                        do
+        
+                            echo ''
+                            echo 'Processing: ayurvedaa-api-${SERVICE}'
+        
+                            IMAGE_PREFIX='sunardock/ayurvedaa-api-${SERVICE}'
+        
+                            echo 'Images before cleanup:'
+        
+                            docker images \"\\${IMAGE_PREFIX}\" \\
+                                --format '{{.Repository}}:{{.Tag}}' \\
+                                | sort -V -r
+        
+                            echo 'Removing old images...'
+        
+                            docker images \"\\${IMAGE_PREFIX}\" \\
+                                --format '{{.Repository}}:{{.Tag}}' \\
+                                | grep -E ':[0-9]+$' \\
+                                | sort -t: -k2,2nr \\
+                                | tail -n +4 \\
+                                | xargs -r docker rmi 2>/dev/null || true
+        
+                            echo 'Cleanup completed for: ayurvedaa-api-${SERVICE}'
+        
+                        done
+        
+                        echo ''
+                        echo '=========================================='
+                        echo 'Removing dangling images'
+                        echo '=========================================='
+        
                         docker image prune -f
-
-                        echo 'Docker cleanup completed.'
+        
+                        echo ''
+                        echo '=========================================='
+                        echo 'Cleanup Completed'
+                        echo '=========================================='
+        
+                        echo 'Remaining Ayurvedaa images:'
+        
+                        docker images 'sunardock/ayurvedaa-api-*' \\
+                            --format '{{.Repository}}:{{.Tag}}' \\
+                            | sort -V
+        
                     "
-
+        
                     echo "Docker cleanup completed."
                 '''
             }
         }
-    }
-
 
     post {
 
