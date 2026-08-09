@@ -128,6 +128,7 @@ pipeline {
             }
         }
 
+        
         stage('Deploy') {
             steps {
                 echo '=========================================='
@@ -135,98 +136,101 @@ pipeline {
                 echo "Build: ${BUILD_NUMBER}"
                 echo "Server: ${APP_SERVER}"
                 echo '=========================================='
-
+        
                 sh '''
                     set -e
-
+        
                     echo "Checking SSH connection..."
-
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
                         "echo 'Connected to application server'"
-
+        
                     echo "Creating application directory..."
-
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
                         "mkdir -p ${APP_DIR}"
-
+        
                     echo "Preparing Docker Compose file..."
-
+        
                     rm -f docker-compose-clean.yml
-
+        
                     sed \
                         -e '1{/^```/d;}' \
                         -e '${/^```$/d;}' \
                         ${COMPOSE_FILE} > docker-compose-clean.yml
-
+        
                     echo "Copying Docker Compose file..."
-
+        
                     scp -o StrictHostKeyChecking=no \
                         docker-compose-clean.yml \
                         ${APP_SERVER}:${APP_DIR}/${COMPOSE_FILE}
-
+        
                     rm -f docker-compose-clean.yml
-
-                    echo "Checking Docker Compose file..."
-
+        
+                    echo "Validating deployment configuration..."
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
-
+        
                         cd ${APP_DIR}
-
+        
                         echo 'Compose file:'
                         ls -lh docker-compose.yml
-
+        
                         echo 'Checking environment file...'
-
+        
                         if [ ! -f .env ]; then
                             echo 'ERROR: ${APP_DIR}/.env does not exist.'
                             exit 1
                         fi
-
+        
                         chmod 600 .env
-
+        
                         echo '.env file exists.'
-                        echo 'Environment file permissions:'
                         stat -c '%a %n' .env
-
+        
                         echo 'Validating Docker Compose configuration...'
-
+        
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env config --quiet
-
+        
                         echo 'Docker Compose validation successful.'
                     "
-
+        
                     echo "Starting deployment..."
-
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
-
+        
                         cd ${APP_DIR}
-
+        
                         echo '=========================================='
-                        echo 'Deploying Docker Images'
-                        echo 'IMAGE_TAG=${BUILD_NUMBER}'
+                        echo 'Stopping old containers'
                         echo '=========================================='
-
-                        echo 'Pulling Docker images...'
-
+        
+                        docker compose --env-file .env down --remove-orphans
+        
+                        echo '=========================================='
+                        echo 'Pulling images for build ${BUILD_NUMBER}'
+                        echo '=========================================='
+        
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env pull
-
-                        echo 'Starting services...'
-
+        
+                        echo '=========================================='
+                        echo 'Starting services'
+                        echo '=========================================='
+        
                         IMAGE_TAG=${BUILD_NUMBER} \
-                        docker compose --env-file .env up -d
-
-                        echo 'Deployment completed.'
-
-                        echo 'Running containers:'
-
-                        IMAGE_TAG=${BUILD_NUMBER} \
-                        docker compose --env-file .env ps
+                        docker compose --env-file .env up -d --remove-orphans
+        
+                        echo '=========================================='
+                        echo 'Deployment completed'
+                        echo '=========================================='
+        
+                        docker compose ps
                     "
-
+        
                     echo "Ayurvedaa deployment completed successfully."
                 '''
             }
@@ -237,40 +241,48 @@ pipeline {
                 echo '=========================================='
                 echo 'Verifying Deployment'
                 echo '=========================================='
-
+        
                 sh '''
                     set -e
-
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
-
+        
                         cd ${APP_DIR}
-
+        
                         echo 'Container status:'
-
-                        IMAGE_TAG=${BUILD_NUMBER} \
-                        docker compose --env-file .env ps
-
+        
+                        docker compose ps
+        
                         echo ''
                         echo 'Checking running containers...'
-
-                        RUNNING=\$(IMAGE_TAG=${BUILD_NUMBER} \
-                            docker compose --env-file .env ps \
-                            --status running --services | wc -l)
-
-                        echo \"Running services: \$RUNNING\"
-
-                        if [ \"\$RUNNING\" -lt 11 ]; then
-                            echo 'ERROR: Expected 11 Ayurvedaa services, but fewer than 11 are running.'
+        
+                        RUNNING=\\$(docker compose ps --status running --services | wc -l)
+        
+                        echo \"Running services: \\$RUNNING / 11\"
+        
+                        if [ \\\"\\$RUNNING\\\" -ne 11 ]; then
+                            echo 'ERROR: Not all 11 Ayurvedaa services are running.'
+                            docker compose ps
                             exit 1
                         fi
-
-                        echo 'All expected Ayurvedaa services are running.'
+        
+                        echo 'All 11 Ayurvedaa services are running.'
+        
+                        echo ''
+                        echo 'Checking unhealthy/exited containers...'
+        
+                        if docker compose ps --status exited --services | grep -q .; then
+                            echo 'ERROR: One or more services exited.'
+                            docker compose ps
+                            exit 1
+                        fi
+        
+                        echo 'Deployment verification successful.'
                     "
                 '''
             }
         }
-
         stage('Cleanup Old Docker Images') {
             steps {
                 echo '=========================================='
