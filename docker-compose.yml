@@ -1,4 +1,3 @@
-```yaml
 services:
 
   patient-service:
@@ -127,4 +126,3 @@ networks:
 
   ayurvedaa-app-net:
     external: true
-```
