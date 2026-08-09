@@ -12,6 +12,9 @@ pipeline {
         APP_SERVER = 'root@45.195.229.15'
         APP_DIR = '/root/ayurvedaa'
         COMPOSE_FILE = 'docker-compose.yml'
+
+        // Number of images to retain on application server
+        KEEP_IMAGES = '3'
     }
 
     stages {
@@ -129,6 +132,11 @@ pipeline {
                         ./auth-service
 
                     echo "Docker image build completed successfully."
+
+                    echo ""
+                    echo "Images created:"
+                    docker images "${IMAGE_PREFIX}-*" \
+                        --format "table {{.Repository}}:{{.Tag}}\\t{{.Size}}"
                 '''
             }
         }
@@ -137,7 +145,7 @@ pipeline {
         stage('Docker Push') {
             steps {
                 echo '=========================================='
-                echo 'Pushing Docker Images'
+                echo 'Pushing Docker Images to Docker Hub'
                 echo "Build Number: ${BUILD_NUMBER}"
                 echo '=========================================='
 
@@ -161,7 +169,7 @@ pipeline {
                         docker push ${IMAGE_PREFIX}-notification-service:${BUILD_NUMBER}
                         docker push ${IMAGE_PREFIX}-auth-service:${BUILD_NUMBER}
 
-                        echo "Docker images pushed successfully."
+                        echo "Docker images pushed successfully to Docker Hub."
                     '''
                 }
             }
@@ -309,21 +317,21 @@ pipeline {
         }
 
 
-        stage('Cleanup Old Docker Images') {
+        stage('Cleanup Application Server Images') {
             steps {
 
                 echo '=========================================='
-                echo 'Cleaning Old Docker Images'
-                echo 'Keeping Latest 3 Images Per Service'
+                echo 'Cleaning Application Server Images'
+                echo "Keeping Latest ${KEEP_IMAGES} Images Per Service"
                 echo '=========================================='
 
                 sh '''
-                    set +e
+                    set -e
 
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
-                        set +e
+                        set -e
 
-                        echo "Starting Docker image cleanup..."
+                        echo "Starting application server image cleanup..."
 
                         for SERVICE in \
                             patient-service \
@@ -341,36 +349,111 @@ pipeline {
                             IMAGE="sunardock/ayurvedaa-api-${SERVICE}"
 
                             echo ""
-                            echo "Processing ${IMAGE}..."
+                            echo "=========================================="
+                            echo "Processing ${IMAGE}"
+                            echo "=========================================="
 
                             docker images "${IMAGE}" \
                                 --format "{{.Tag}}" \
                                 | grep -E "^[0-9]+$" \
                                 | sort -nr \
-                                | tail -n +4 \
+                                | tail -n +$(( ${KEEP_IMAGES} + 1 )) \
                                 | while read TAG
                             do
                                 if [ -n "$TAG" ]; then
-                                    echo "Removing ${IMAGE}:${TAG}"
+                                    echo "Removing old image: ${IMAGE}:${TAG}"
+
                                     docker rmi "${IMAGE}:${TAG}" || true
                                 fi
                             done
 
-                            echo "Completed ${IMAGE}"
+                            echo "Current retained images:"
+
+                            docker images "${IMAGE}" \
+                                --format "{{.Repository}}:{{.Tag}}\\t{{.Size}}" \
+                                | grep -E ":([0-9]+)[[:space:]]" \
+                                | head -n ${KEEP_IMAGES} || true
+
                         done
 
 
                         echo ""
-                        echo "Removing dangling images..."
+                        echo "=========================================="
+                        echo "Removing dangling images"
+                        echo "=========================================="
 
                         docker image prune -f
 
 
                         echo ""
-                        echo "Docker cleanup completed."
+                        echo "Application server cleanup completed."
                     '
+                '''
+            }
+        }
 
-                    echo "Docker cleanup completed successfully."
+
+        stage('Cleanup Jenkins Docker Images') {
+            steps {
+
+                echo '=========================================='
+                echo 'Cleaning Jenkins Docker Images'
+                echo 'Keeping Current Build Only'
+                echo '=========================================='
+
+                sh '''
+                    set +e
+
+                    echo "Starting Jenkins Docker image cleanup..."
+
+                    for SERVICE in \
+                        patient-service \
+                        doctor-service \
+                        appointment-service \
+                        therapist-service \
+                        file-upload-service \
+                        attendance-service \
+                        activity-log-service \
+                        medicine-service \
+                        billing-service \
+                        notification-service \
+                        auth-service
+                    do
+                        IMAGE="${IMAGE_PREFIX}-${SERVICE}"
+
+                        echo ""
+                        echo "Processing ${IMAGE}..."
+
+                        docker images "${IMAGE}" \
+                            --format "{{.Tag}}" \
+                            | grep -E "^[0-9]+$" \
+                            | grep -v "^${BUILD_NUMBER}$" \
+                            | while read TAG
+                        do
+                            if [ -n "$TAG" ]; then
+                                echo "Removing Jenkins image: ${IMAGE}:${TAG}"
+
+                                docker rmi "${IMAGE}:${TAG}" || true
+                            fi
+                        done
+
+                        echo "Current Jenkins image:"
+
+                        docker images "${IMAGE}" \
+                            --format "{{.Repository}}:{{.Tag}}\\t{{.Size}}" \
+                            | grep ":${BUILD_NUMBER}[[:space:]]" || true
+
+                    done
+
+
+                    echo ""
+                    echo "Removing dangling Docker images from Jenkins..."
+
+                    docker image prune -f
+
+
+                    echo ""
+                    echo "Jenkins Docker image cleanup completed."
                 '''
             }
         }
@@ -383,7 +466,19 @@ pipeline {
         success {
             echo '''
 ==========================================
-Ayurvedaa Deployment SUCCESSFUL
+AYURVEDAA DEPLOYMENT SUCCESSFUL
+==========================================
+
+Docker Hub:
+  All build images retained
+
+Application Server:
+  Latest 3 images per service retained
+
+Jenkins Server:
+  Current build images retained only
+
+Deployment completed successfully.
 ==========================================
 '''
         }
@@ -391,9 +486,15 @@ Ayurvedaa Deployment SUCCESSFUL
         failure {
             echo '''
 ==========================================
-Ayurvedaa Deployment FAILED
+AYURVEDAA DEPLOYMENT FAILED
 ==========================================
+
 Please check the Jenkins console log.
+
+IMPORTANT:
+Docker image cleanup is executed only
+after the deployment stage succeeds.
+
 ==========================================
 '''
         }
