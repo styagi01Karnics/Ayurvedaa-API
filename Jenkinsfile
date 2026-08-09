@@ -104,7 +104,7 @@ pipeline {
                 echo '=========================================='
 
                 withDockerRegistry(
-                    credentialsId: 'dockerhub-credentials',
+                    credentialsId: 'dockerhub-creds',
                     url: 'https://index.docker.io/v1/'
                 ) {
                     sh '''
