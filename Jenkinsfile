@@ -319,20 +319,33 @@ pipeline {
 
         stage('Cleanup Application Server Images') {
             steps {
-
+        
                 echo '=========================================='
-                echo 'Cleaning Application Server Images'
-                echo "Keeping Latest ${KEEP_IMAGES} Images Per Service"
+                echo 'Preparing Application Server Images'
+                echo 'Keeping Latest 3 Images Per Service'
                 echo '=========================================='
-
+        
                 sh '''
                     set -e
-
-                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
+        
+                    ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
                         set -e
-
-                        echo "Starting application server image cleanup..."
-
+        
+                        echo '=========================================='
+                        echo 'Pulling Current Build'
+                        echo "Build: ${BUILD_NUMBER}"
+                        echo '=========================================='
+        
+                        cd ${APP_DIR}
+        
+                        IMAGE_TAG=${BUILD_NUMBER} \
+                        docker compose --env-file .env pull
+        
+        
+                        echo '=========================================='
+                        echo 'Pulling Previous Build Images'
+                        echo '=========================================='
+        
                         for SERVICE in \
                             patient-service \
                             doctor-service \
@@ -346,48 +359,99 @@ pipeline {
                             notification-service \
                             auth-service
                         do
-                            IMAGE="sunardock/ayurvedaa-api-${SERVICE}"
-
+        
+                            IMAGE="sunardock/ayurvedaa-api-\${SERVICE}"
+        
+                            PREVIOUS_1=$(( ${BUILD_NUMBER} - 1 ))
+                            PREVIOUS_2=$(( ${BUILD_NUMBER} - 2 ))
+        
                             echo ""
-                            echo "=========================================="
-                            echo "Processing ${IMAGE}"
-                            echo "=========================================="
-
-                            docker images "${IMAGE}" \
-                                --format "{{.Tag}}" \
-                                | grep -E "^[0-9]+$" \
+                            echo "Processing \${IMAGE}"
+        
+                            if [ \${PREVIOUS_1} -gt 0 ]; then
+                                echo "Pulling \${IMAGE}:\${PREVIOUS_1}"
+                                docker pull \${IMAGE}:\${PREVIOUS_1} || true
+                            fi
+        
+                            if [ \${PREVIOUS_2} -gt 0 ]; then
+                                echo "Pulling \${IMAGE}:\${PREVIOUS_2}"
+                                docker pull \${IMAGE}:\${PREVIOUS_2} || true
+                            fi
+        
+                        done
+        
+        
+                        echo ''
+                        echo '=========================================='
+                        echo 'Application Server Images'
+                        echo '=========================================='
+        
+                        docker images \
+                            --format '{{.Repository}}:{{.Tag}}' \
+                            | grep 'sunardock/ayurvedaa-api-' \
+                            | sort
+        
+        
+                        echo ''
+                        echo '=========================================='
+                        echo 'Removing Images Older Than Latest 3'
+                        echo '=========================================='
+        
+                        for SERVICE in \
+                            patient-service \
+                            doctor-service \
+                            appointment-service \
+                            therapist-service \
+                            file-upload-service \
+                            attendance-service \
+                            activity-log-service \
+                            medicine-service \
+                            billing-service \
+                            notification-service \
+                            auth-service
+                        do
+        
+                            IMAGE="sunardock/ayurvedaa-api-\${SERVICE}"
+        
+                            echo ""
+                            echo "Cleaning \${IMAGE}"
+        
+                            docker images "\${IMAGE}" \
+                                --format '{{.Tag}}' \
+                                | grep -E '^[0-9]+$' \
                                 | sort -nr \
-                                | tail -n +$(( ${KEEP_IMAGES} + 1 )) \
+                                | tail -n +4 \
                                 | while read TAG
                             do
-                                if [ -n "$TAG" ]; then
-                                    echo "Removing old image: ${IMAGE}:${TAG}"
-
-                                    docker rmi "${IMAGE}:${TAG}" || true
+                                if [ -n "\${TAG}" ]; then
+                                    echo "Removing \${IMAGE}:\${TAG}"
+                                    docker rmi "\${IMAGE}:\${TAG}" || true
                                 fi
                             done
-
-                            echo "Current retained images:"
-
-                            docker images "${IMAGE}" \
-                                --format "{{.Repository}}:{{.Tag}}\\t{{.Size}}" \
-                                | grep -E ":([0-9]+)[[:space:]]" \
-                                | head -n ${KEEP_IMAGES} || true
-
+        
                         done
-
-
-                        echo ""
-                        echo "=========================================="
-                        echo "Removing dangling images"
-                        echo "=========================================="
-
+        
+        
+                        echo ''
+                        echo '=========================================='
+                        echo 'Removing Dangling Images'
+                        echo '=========================================='
+        
                         docker image prune -f
-
-
-                        echo ""
-                        echo "Application server cleanup completed."
-                    '
+        
+        
+                        echo ''
+                        echo '=========================================='
+                        echo 'Final Ayurvedaa Images'
+                        echo '=========================================='
+        
+                        docker images \
+                            --format 'table {{.Repository}}:{{.Tag}}\\t{{.Size}}' \
+                            | grep 'sunardock/ayurvedaa-api-' || true
+        
+                        echo ''
+                        echo 'Application server image preparation completed.'
+                    "
                 '''
             }
         }
