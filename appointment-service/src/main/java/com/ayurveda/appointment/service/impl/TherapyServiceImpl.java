@@ -76,6 +76,8 @@ public class TherapyServiceImpl implements TherapyService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
 
+        log.info("Therapy fetched successfully with id : {}", therapyId);
+
         return ApiResponse.success(toEnrichedResponse(therapy));
     }
 
@@ -91,6 +93,8 @@ public class TherapyServiceImpl implements TherapyService {
         List<TherapyResponse> response = therapies.stream()
                 .map(this::toEnrichedResponse)
                 .toList();
+
+        log.info("Fetched {} therapies successfully", response.size());
 
         return ApiResponse.success(response);
     }
@@ -112,6 +116,8 @@ public class TherapyServiceImpl implements TherapyService {
         List<TherapyResponse> response = therapies.stream()
                 .map(this::toEnrichedResponse)
                 .toList();
+
+        log.info("Fetched {} therapies successfully for category : {}", response.size(), categoryId);
 
         return ApiResponse.success(response);
     }
@@ -149,6 +155,8 @@ public class TherapyServiceImpl implements TherapyService {
 
         TherapyMaster savedTherapy = therapyRepository.save(therapy);
 
+        log.info("Therapy updated successfully with id : {}", savedTherapy.getId());
+
         return ApiResponse.success(
                 AppMessages.THERAPY_UPDATED,
                 therapyMapper.toResponse(savedTherapy, category.getCategoryName()));
@@ -157,6 +165,8 @@ public class TherapyServiceImpl implements TherapyService {
     @Override
     public ApiResponse<TherapyResponse> updateTherapyStatus(
             UUID therapyId, UpdateTherapyStatusRequest request) {
+
+        log.info("Updating therapy status : {}", therapyId);
 
         TherapyMaster therapy = therapyRepository.findByIdAndDeletedFalse(therapyId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -172,12 +182,16 @@ public class TherapyServiceImpl implements TherapyService {
 
     @Override
     public ApiResponse<TherapyResponse> deleteTherapy(UUID therapyId) {
+        log.info("Deleting therapy : {}", therapyId);
+
         TherapyMaster therapy = therapyRepository.findByIdAndDeletedFalse(therapyId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         AppMessages.THERAPY_NOT_FOUND_WITH_ID + therapyId));
 
         therapy.setDeleted(true);
         TherapyMaster savedTherapy = therapyRepository.save(therapy);
+
+        log.info("Therapy deleted successfully with id : {}", therapyId);
 
         return ApiResponse.success(AppMessages.THERAPY_DELETED, toEnrichedResponse(savedTherapy));
     }

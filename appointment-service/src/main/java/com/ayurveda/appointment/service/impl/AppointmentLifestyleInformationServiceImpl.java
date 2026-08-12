@@ -78,6 +78,9 @@ public class AppointmentLifestyleInformationServiceImpl
                 appointmentLifestyleInformationMapper
                         .toResponse(savedLifestyleInformation);
 
+        log.info("Lifestyle information saved successfully for patient: {}",
+                request.getPatientId());
+
         return ApiResponse.success(message, response);
     }
 
@@ -99,6 +102,9 @@ public class AppointmentLifestyleInformationServiceImpl
         AppointmentLifestyleInformationResponse response =
                 appointmentLifestyleInformationMapper
                         .toResponse(lifestyleInformation);
+
+        log.info("Lifestyle information fetched successfully for patient: {}",
+                patientId);
 
         return ApiResponse.success(response);
     }

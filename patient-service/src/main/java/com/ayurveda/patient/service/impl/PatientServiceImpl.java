@@ -148,12 +148,7 @@ public class PatientServiceImpl implements PatientService {
             );
         }
 
-        if (patientRepository.existsByMobileNumberAndDeletedFalse(request.getMobileNumber())) {
-
-            throw new DuplicateResourceException(
-                    AppConstants.PATIENT_MOBILE_ALREADY_EXISTS
-            );
-        }
+        // Mobile number may be shared (e.g. parent and child) — do not treat as duplicate.
     }
     
     private void validatePatient(CreatePatientRequest request) {

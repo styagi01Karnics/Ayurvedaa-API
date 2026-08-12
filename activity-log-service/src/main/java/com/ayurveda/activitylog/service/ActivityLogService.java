@@ -10,10 +10,13 @@ import com.ayurveda.common.ApiResponse;
 
 public interface ActivityLogService {
 
+    /** Creates a new activity log entry. */
     ApiResponse<ActivityLogResponse> createActivityLog(CreateActivityLogRequest request);
 
+    /** Returns a single active activity log by ID. */
     ApiResponse<ActivityLogResponse> getActivityLogById(UUID id);
 
+    /** Lists activity logs filtered by page, action, and optional search text. */
     ApiResponse<List<ActivityLogResponse>> getActivityLogs(
             String page, ActivityAction action, String search);
 

@@ -35,6 +35,6 @@ public class CreateAppointmentBookingRequest {
     private UUID assignedDoctorId;
 
     @NotEmpty(message = "At least one consultation type is required")
-    private List<String> consultationTypes;
+    private List<UUID> consultationTypeIds;
 
 }

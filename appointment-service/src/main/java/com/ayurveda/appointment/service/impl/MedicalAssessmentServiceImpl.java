@@ -91,23 +91,31 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
         uploadDocuments(request.getPatientId(), labReports,
                 DocumentType.LAB_REPORT, documents);
 
-        MedicalAssessmentResponse response = MedicalAssessmentResponse.builder()
-                .patientId(request.getPatientId())
-                .ayurvedicAssessment(ayurvedic)
-                .physicalExamination(physical)
-                .medicalHistory(medicalHistory)
-                .lifestyleInformation(lifestyle)
-                .systemicExamination(systemic)
-                .treatmentPlan(treatmentPlan)
-                .documents(documents)
-                .build();
+        MedicalAssessmentResponse.MedicalAssessmentResponseBuilder responseBuilder =
+                MedicalAssessmentResponse.builder()
+                        .patientId(request.getPatientId())
+                        .ayurvedicAssessment(ayurvedic)
+                        .physicalExamination(physical)
+                        .medicalHistory(medicalHistory)
+                        .lifestyleInformation(lifestyle)
+                        .systemicExamination(systemic)
+                        .treatmentPlan(treatmentPlan);
 
-        return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_SAVED, response);
+        // Include documents only when files were uploaded (/with-documents).
+        if (!documents.isEmpty()) {
+            responseBuilder.documents(documents);
+        }
+
+        log.info("Complete medical assessment saved successfully for patient {}", request.getPatientId());
+
+        return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_SAVED, responseBuilder.build());
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<MedicalAssessmentResponse> getMedicalAssessmentByPatientId(UUID patientId) {
+
+        log.info("Fetching complete medical assessment for patient {}", patientId);
 
         MedicalAssessmentResponse response = MedicalAssessmentResponse.builder()
                 .patientId(patientId)
@@ -123,8 +131,9 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
                         systemicExaminationService.getSystemicExaminationByPatientId(patientId).getData())
                 .treatmentPlan(
                         treatmentPlanService.getTreatmentPlanByPatientId(patientId).getData())
-                .documents(Collections.emptyList())
                 .build();
+
+        log.info("Complete medical assessment fetched successfully for patient {}", patientId);
 
         return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_FETCHED, response);
     }

@@ -44,6 +44,8 @@ public class SalesServiceImpl implements SalesService {
 
     @Override
     public ApiResponse<SalesPageResponse> getSales(String serviceType, LocalDate dateCreated) {
+        log.info("Fetching sales with serviceType={}, dateCreated={}", serviceType, dateCreated);
+
         String serviceFilter = StringUtils.hasText(serviceType) ? serviceType.trim() : null;
 
         List<Invoice> invoices = invoiceRepository.searchSales(serviceFilter, dateCreated);
@@ -66,11 +68,15 @@ public class SalesServiceImpl implements SalesService {
                 .sales(sales)
                 .build();
 
+        log.info("Successfully fetched {} sales rows. Revenue this month: {}", sales.size(), revenue);
+
         return ApiResponse.success(BillingMessages.SALES_FETCHED_SUCCESSFULLY, response);
     }
 
     @Override
     public ApiResponse<MonthlyRevenueResponse> getMonthlyRevenue(Integer year, Integer month) {
+        log.info("Fetching monthly revenue for year={}, month={}", year, month);
+
         YearMonth yearMonth = resolveYearMonth(year, month);
         LocalDate from = yearMonth.atDay(1);
         LocalDate to = yearMonth.atEndOfMonth();
@@ -88,11 +94,16 @@ public class SalesServiceImpl implements SalesService {
                 .invoiceCount(invoiceCount)
                 .build();
 
+        log.info("Monthly revenue fetched successfully. Year: {}, Month: {}, Total: {}, Invoices: {}",
+                yearMonth.getYear(), yearMonth.getMonthValue(), totalRevenue, invoiceCount);
+
         return ApiResponse.success(BillingMessages.MONTHLY_REVENUE_FETCHED_SUCCESSFULLY, response);
     }
 
     @Override
     public ApiResponse<DashboardBillingSummaryResponse> getDashboardBillingSummary(BillingPeriod period) {
+        log.info("Fetching dashboard billing summary for period={}", period);
+
         BillingPeriod selectedPeriod = period != null ? period : BillingPeriod.MONTHLY;
         LocalDate[] range = resolvePeriodRange(selectedPeriod);
         LocalDate from = range[0];
@@ -107,6 +118,9 @@ public class SalesServiceImpl implements SalesService {
                 .pendingPayments(InvoiceCalculationUtil.money(invoiceRepository.sumLeftAmountBetween(from, to)))
                 .collectedPayments(InvoiceCalculationUtil.money(invoiceRepository.sumPaidAmountBetween(from, to)))
                 .build();
+
+        log.info("Dashboard billing summary fetched successfully. Period: {}, Total revenue: {}, Bills: {}",
+                selectedPeriod, response.getTotalRevenue(), response.getTotalBillsGenerated());
 
         return ApiResponse.success(BillingMessages.DASHBOARD_BILLING_SUMMARY_FETCHED, response);
     }

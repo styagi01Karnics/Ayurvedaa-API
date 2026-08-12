@@ -16,12 +16,9 @@ import lombok.Setter;
 public class TherapistSummaryResponse {
 
     private UUID id;
+    private String name;
     private String therapistName;
     private String therapistCode;
-    private String specialization;
-    private String mobileNumber;
-    private String email;
-    private String qualification;
-    private String therapyRoom;
+    private String status;
 
 }

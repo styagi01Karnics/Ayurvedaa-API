@@ -19,7 +19,7 @@ public class AppointmentDocumentResponse {
 
     private UUID id;
 
-    private UUID bookingId;
+    private UUID patientId;
 
     private DocumentType documentType;
 

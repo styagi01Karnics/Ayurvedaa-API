@@ -9,8 +9,8 @@ import java.util.UUID;
 
 public interface AppointmentDocumentRepository extends JpaRepository<AppointmentDocument, UUID> {
 
-    List<AppointmentDocument> findByBookingId(UUID bookingId);
+    List<AppointmentDocument> findByPatientId(UUID patientId);
 
-    List<AppointmentDocument> findByBookingIdAndDocumentType(UUID bookingId, DocumentType documentType);
+    List<AppointmentDocument> findByPatientIdAndDocumentType(UUID patientId, DocumentType documentType);
 
 }

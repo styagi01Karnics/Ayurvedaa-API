@@ -8,9 +8,11 @@ import com.ayurveda.appointment.dto.response.AppointmentLifestyleInformationResp
 
 public interface AppointmentLifestyleInformationService {
 
+    /** Creates or updates lifestyle information for a patient. */
     ApiResponse<AppointmentLifestyleInformationResponse> saveLifestyleInformation(
             CreateAppointmentLifestyleInformationRequest request);
 
+    /** Fetches lifestyle information by patient ID. */
     ApiResponse<AppointmentLifestyleInformationResponse> getLifestyleInformationByPatientId(
             UUID patientId);
 

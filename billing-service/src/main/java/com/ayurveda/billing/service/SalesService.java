@@ -10,8 +10,10 @@ import java.time.LocalDate;
 
 public interface SalesService {
 
+    /** Sales page list with optional service type and date filters. */
     ApiResponse<SalesPageResponse> getSales(String serviceType, LocalDate dateCreated);
 
+    /** Monthly revenue for the given year/month (defaults to current when null). */
     ApiResponse<MonthlyRevenueResponse> getMonthlyRevenue(Integer year, Integer month);
 
     /** Dashboard page – Billing card summary. */

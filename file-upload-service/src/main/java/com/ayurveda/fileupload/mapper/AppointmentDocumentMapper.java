@@ -14,7 +14,7 @@ public class AppointmentDocumentMapper {
 
         return AppointmentDocumentResponse.builder()
                 .id(entity.getId())
-                .bookingId(entity.getBookingId())
+                .patientId(entity.getPatientId())
                 .documentType(entity.getDocumentType())
                 .fileName(entity.getFileName())
                 .fileType(entity.getFileType())

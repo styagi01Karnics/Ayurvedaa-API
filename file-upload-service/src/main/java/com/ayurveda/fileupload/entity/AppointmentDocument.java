@@ -26,8 +26,8 @@ import java.util.UUID;
 @Table(name = "appointment_documents")
 public class AppointmentDocument extends BaseEntity {
 
-    @Column(nullable = false)
-    private UUID bookingId;
+    @Column(name = "patient_id", nullable = false)
+    private UUID patientId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

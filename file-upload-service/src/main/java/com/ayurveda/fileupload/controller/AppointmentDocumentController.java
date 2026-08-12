@@ -5,6 +5,7 @@ import com.ayurveda.fileupload.dto.request.UploadAppointmentDocumentRequest;
 import com.ayurveda.fileupload.dto.response.AppointmentDocumentResponse;
 import com.ayurveda.fileupload.enums.DocumentType;
 import com.ayurveda.fileupload.service.AppointmentDocumentService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -22,7 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "Documents", description = "Appointment document upload APIs")
+@Tag(name = "Documents", description = "Patient document upload APIs")
 @RestController
 @RequestMapping("/api/v1/documents")
 @RequiredArgsConstructor
@@ -31,14 +32,15 @@ public class AppointmentDocumentController {
 
     private final AppointmentDocumentService appointmentDocumentService;
 
+    @Operation(summary = "Upload a patient document")
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<AppointmentDocumentResponse>> uploadDocument(
-            @RequestParam UUID bookingId,
+            @RequestParam UUID patientId,
             @RequestParam DocumentType documentType,
             @RequestParam MultipartFile file) {
 
         UploadAppointmentDocumentRequest request = UploadAppointmentDocumentRequest.builder()
-                .bookingId(bookingId)
+                .patientId(patientId)
                 .documentType(documentType)
                 .file(file)
                 .build();
@@ -49,21 +51,24 @@ public class AppointmentDocumentController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{bookingId}")
-    public ResponseEntity<ApiResponse<List<AppointmentDocumentResponse>>> getDocumentsByBookingId(
-            @PathVariable UUID bookingId) {
+    @Operation(summary = "List documents for a patient")
+    @GetMapping("/{patientId}")
+    public ResponseEntity<ApiResponse<List<AppointmentDocumentResponse>>> getDocumentsByPatientId(
+            @PathVariable UUID patientId) {
 
         ApiResponse<List<AppointmentDocumentResponse>> response =
-                appointmentDocumentService.getDocumentsByBookingId(bookingId);
+                appointmentDocumentService.getDocumentsByPatientId(patientId);
 
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Download a document")
     @GetMapping("/{documentId}/download")
     public ResponseEntity<Resource> downloadDocument(@PathVariable UUID documentId) {
         return appointmentDocumentService.downloadDocument(documentId);
     }
 
+    @Operation(summary = "Delete a document")
     @DeleteMapping("/{documentId}")
     public ResponseEntity<ApiResponse<String>> deleteDocument(@PathVariable UUID documentId) {
         ApiResponse<String> response = appointmentDocumentService.deleteDocument(documentId);

@@ -40,4 +40,26 @@ public final class BillingMessages {
     public static final String INSUFFICIENT_STOCK_AVAILABLE_SUFFIX = "'. Available: ";
     public static final String INSUFFICIENT_STOCK_REQUESTED_SUFFIX = ", requested: ";
 
+    public static final String PATIENT_PACKAGE_CREATED =
+            "Patient package created successfully.";
+    public static final String PATIENT_PACKAGE_UPDATED =
+            "Patient package updated successfully.";
+    public static final String PATIENT_PACKAGES_FETCHED =
+            "Patient packages fetched successfully.";
+    public static final String PATIENT_PACKAGE_STATUS_UPDATED =
+            "Patient package status updated successfully.";
+    public static final String PATIENT_PACKAGE_NOT_FOUND_WITH_ID =
+            "Patient package not found with id: ";
+
+    public static final String PACKAGE_MASTER_CREATED =
+            "Package master created successfully.";
+    public static final String PACKAGE_MASTER_FETCHED =
+            "Package master fetched successfully.";
+    public static final String PACKAGE_MASTERS_FETCHED =
+            "Package masters fetched successfully.";
+    public static final String PACKAGE_MASTER_NOT_FOUND =
+            "Package master not found.";
+    public static final String PACKAGE_MASTER_ALREADY_EXISTS_WITH_NAME =
+            "Package master already exists with name: ";
+
 }

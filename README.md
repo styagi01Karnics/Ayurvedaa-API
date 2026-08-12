@@ -143,7 +143,10 @@ All endpoints are prefixed with `/api/v1`.
 | Medical history | `/medical-histories` |
 | Lifestyle information | `/lifestyle-information` |
 | Systemic examination | `/systemic-examinations` |
-| Treatment plan | `/treatment-plans` |
+| Treatment plan (assessment) | `/treatment-plans` |
+| Treatment plan master | `/treatment-plan-masters` |
+| Treatments (patient plans) | `/treatments` |
+| Consultation type master | `/consultation-types` |
 | Treatment categories | `/treatment-categories` |
 | Therapies (master) | `/therapies` |
 | Appointment therapies | `/appointment-therapies` |
@@ -172,6 +175,8 @@ All endpoints are prefixed with `/api/v1`.
 
 Sample JSON payloads are in the [`curl-samples/`](curl-samples/) folder.
 
+Latest master/mapping API changes (consultation type, treatment plan, package + price, shared mobile): see [`docs/LATEST_CHANGES.md`](docs/LATEST_CHANGES.md).
+
 ### Example: create a doctor
 
 ```bash
@@ -188,7 +193,7 @@ curl -X POST http://localhost:8082/api/v1/appointments \
   -d @curl-samples/03-appointment-booking.json
 ```
 
-> **Note:** `consultationTypes` must be `CONSULTATION` or `THERAPY` (not `OPD`).
+> **Note:** `consultationTypeIds` is a list of UUIDs from consultation type master (`GET /api/v1/consultation-types`).
 
 ## Project structure
 

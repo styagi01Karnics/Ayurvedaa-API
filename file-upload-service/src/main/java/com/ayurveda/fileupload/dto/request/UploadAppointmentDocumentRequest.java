@@ -18,8 +18,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UploadAppointmentDocumentRequest {
 
-    @NotNull(message = "Booking Id is required")
-    private UUID bookingId;
+    @NotNull(message = "Patient Id is required")
+    private UUID patientId;
 
     @NotNull(message = "Document Type is required")
     private DocumentType documentType;

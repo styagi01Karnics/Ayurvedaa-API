@@ -2,6 +2,9 @@ package com.ayurveda.common;
 
 import lombok.*;
 
+/**
+ * Standard API envelope returned by all services.
+ */
 @Getter
 @Setter
 @Builder

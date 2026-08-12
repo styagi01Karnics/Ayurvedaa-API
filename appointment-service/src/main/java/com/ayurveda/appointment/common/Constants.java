@@ -42,6 +42,8 @@ public final class Constants {
     public static final String APPOINTMENT_THERAPY_CREATED = "Appointment therapy created successfully.";
     public static final String APPOINTMENT_THERAPY_UPDATED = "Appointment therapy updated successfully.";
     public static final String APPOINTMENT_THERAPY_FETCHED = "Appointment therapy fetched successfully.";
+    public static final String APPOINTMENT_THERAPY_NO_RECORDS =
+            "No therapy records available for this patient.";
     public static final String APPOINTMENT_THERAPY_NOT_FOUND = "Therapy details not found for patient: ";
 
     // ==========================
@@ -149,6 +151,34 @@ public final class Constants {
 	public static final String DOSHAS_FETCHED = "Doshas fetched successfully.";
 	public static final String DOSHA_NOT_FOUND = "Dosha not found.";
 	public static final String DOSHA_ALREADY_EXISTS_WITH_NAME = "Dosha already exists with name: ";
+
+	// ==========================
+	// Consultation Type
+	// ==========================
+
+	public static final String CONSULTATION_TYPE_CREATED = "Consultation type created successfully.";
+	public static final String CONSULTATION_TYPE_FETCHED = "Consultation type fetched successfully.";
+	public static final String CONSULTATION_TYPES_FETCHED = "Consultation types fetched successfully.";
+	public static final String CONSULTATION_TYPE_NOT_FOUND = "Consultation type not found.";
+	public static final String CONSULTATION_TYPE_ALREADY_EXISTS_WITH_NAME =
+	        "Consultation type already exists with name: ";
+	public static final String INVALID_CONSULTATION_TYPE_IDS =
+	        "One or more consultation type ids are invalid.";
+
+	// ==========================
+	// Treatment Plan Master
+	// ==========================
+
+	public static final String TREATMENT_PLAN_MASTER_CREATED =
+	        "Treatment plan created successfully.";
+	public static final String TREATMENT_PLAN_MASTER_FETCHED =
+	        "Treatment plan fetched successfully.";
+	public static final String TREATMENT_PLAN_MASTERS_FETCHED =
+	        "Treatment plans fetched successfully.";
+	public static final String TREATMENT_PLAN_MASTER_NOT_FOUND =
+	        "Treatment plan not found.";
+	public static final String TREATMENT_PLAN_MASTER_ALREADY_EXISTS_WITH_NAME =
+	        "Treatment plan already exists with name: ";
 
 	// ==========================
 	// Appointment Therapy extras

@@ -29,6 +29,7 @@ public class AdmsLegacyAliasController {
 
     private final AdmsDeviceService admsDeviceService;
 
+    /** Handles legacy GET /cdata handshake from eSSL devices. */
     @GetMapping(value = {"/cdata.aspx", "/cdata"}, produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> cdataGet(
             @RequestParam(value = "SN", required = false) String serialNumber) {
@@ -42,6 +43,7 @@ public class AdmsLegacyAliasController {
         return ResponseEntity.ok(admsDeviceService.buildOptionsResponse(serialNumber));
     }
 
+    /** Handles legacy POST /cdata punch uploads from eSSL devices. */
     @PostMapping(
             value = {"/cdata.aspx", "/cdata"},
             consumes = MediaType.ALL_VALUE,
@@ -61,6 +63,7 @@ public class AdmsLegacyAliasController {
         return ResponseEntity.ok(OK);
     }
 
+    /** Acknowledges legacy GET /getrequest polls from eSSL devices. */
     @GetMapping(value = {"/getrequest.aspx", "/getrequest"}, produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> getRequest(
             @RequestParam(value = "SN", required = false) String serialNumber) {

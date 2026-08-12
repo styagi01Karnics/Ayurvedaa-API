@@ -62,6 +62,9 @@ public class AppointmentAyurvedicAssessmentServiceImpl
         AppointmentAyurvedicAssessment savedAssessment =
                 appointmentAyurvedicAssessmentRepository.save(assessment);
 
+        log.info("Ayurvedic assessment saved successfully for patient: {}",
+                request.getPatientId());
+
         return ApiResponse.success(message,
                 appointmentAyurvedicAssessmentMapper.toResponse(savedAssessment, dosha));
     }
@@ -79,6 +82,8 @@ public class AppointmentAyurvedicAssessmentServiceImpl
                         Constants.AYURVEDIC_ASSESSMENT_NOT_FOUND + patientId));
 
         DoshaResponse dosha = getDosha(assessment.getDoshaId());
+
+        log.info("Ayurvedic assessment fetched successfully for patient: {}", patientId);
 
         return ApiResponse.success(Constants.AYURVEDIC_ASSESSMENT_FETCHED,
                 appointmentAyurvedicAssessmentMapper.toResponse(assessment, dosha));

@@ -18,7 +18,6 @@ import com.ayurveda.appointment.dto.response.AppointmentStatsResponse;
 import com.ayurveda.appointment.dto.response.DoctorTodayScheduleResponse;
 import com.ayurveda.appointment.dto.response.PatientAppointmentListItemResponse;
 import com.ayurveda.appointment.enums.BookingStatus;
-import com.ayurveda.appointment.enums.ConsultationType;
 import com.ayurveda.appointment.enums.PatientListTab;
 import com.ayurveda.appointment.service.AppointmentBookingService;
 
@@ -36,6 +35,9 @@ public class AppointmentBookingController {
 
     private final AppointmentBookingService appointmentBookingService;
 
+    @Operation(
+            summary = "Create appointment",
+            description = "Creates a new appointment booking for a patient.")
     @PostMapping
     public ResponseEntity<ApiResponse<AppointmentBookingResponse>> createAppointment(
             @Valid @RequestBody CreateAppointmentBookingRequest request) {
@@ -68,12 +70,12 @@ public class AppointmentBookingController {
             @RequestParam PatientListTab statusTab,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) BookingStatus bookingStatus,
-            @RequestParam(required = false) ConsultationType consultationType,
+            @RequestParam(required = false) UUID consultationTypeId,
             @RequestParam(required = false) UUID doshaId,
             @RequestParam(required = false) UUID doctorId) {
 
         return ResponseEntity.ok(appointmentBookingService.getPatientList(
-                statusTab, search, bookingStatus, consultationType, doshaId, doctorId));
+                statusTab, search, bookingStatus, consultationTypeId, doshaId, doctorId));
     }
 
     @Operation(
@@ -86,14 +88,28 @@ public class AppointmentBookingController {
     }
 
     @Operation(
+            summary = "Get today's appointments",
+            description = """
+                    Returns all today's appointments across doctors (cancelled excluded),
+                    ordered ascending by slot time.
+                    Same response shape as doctor's today API; doctorId is null.
+                    Each appointment includes assignedDoctorId.
+                    """)
+    @GetMapping("/today")
+    public ResponseEntity<ApiResponse<DoctorTodayScheduleResponse>> getTodayAppointments() {
+
+        return ResponseEntity.ok(appointmentBookingService.getTodayAppointments());
+    }
+
+    @Operation(
             summary = "Get today's appointments by consultation type",
-            description = "Returns today's non-cancelled appointments for CONSULTATION or THERAPY, with patient details.")
-    @GetMapping("/today/{consultationType}")
+            description = "Returns today's non-cancelled appointments for the given consultation type id, with patient details.")
+    @GetMapping("/today/consultation-type/{consultationTypeId}")
     public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getTodayAppointmentsByConsultationType(
-            @PathVariable ConsultationType consultationType) {
+            @PathVariable UUID consultationTypeId) {
 
         return ResponseEntity.ok(
-                appointmentBookingService.getTodayAppointmentsByConsultationType(consultationType));
+                appointmentBookingService.getTodayAppointmentsByConsultationType(consultationTypeId));
     }
 
     @Operation(
@@ -110,6 +126,9 @@ public class AppointmentBookingController {
         return ResponseEntity.ok(appointmentBookingService.getDoctorTodaySchedule(doctorId));
     }
 
+    @Operation(
+            summary = "Get appointment by ID",
+            description = "Returns a non-deleted appointment booking by its ID.")
     @GetMapping("/{bookingId}")
     public ResponseEntity<ApiResponse<AppointmentBookingResponse>> getAppointmentById(
             @PathVariable UUID bookingId) {
@@ -120,6 +139,9 @@ public class AppointmentBookingController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "Get appointments by patient ID",
+            description = "Returns all appointments for the given patient.")
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getAppointmentsByPatientId(
             @PathVariable UUID patientId) {
@@ -130,13 +152,29 @@ public class AppointmentBookingController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Get appointments by booking status")
+    @Operation(
+            summary = "Get appointments by booking status",
+            description = """
+                    Returns non-deleted appointments for the given bookingStatus.
+                    Use ALL for no status filter (all appointments).
+                    Order: today first, then tomorrow, day after tomorrow, then later;
+                    past dates after that.
+                    """)
     @GetMapping("/status/{bookingStatus}")
     public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getAppointmentsByBookingStatus(
-            @PathVariable BookingStatus bookingStatus) {
+            @PathVariable String bookingStatus) {
 
+        BookingStatus status = resolveBookingStatusFilter(bookingStatus);
         return ResponseEntity.ok(
-                appointmentBookingService.getAppointmentsByBookingStatus(bookingStatus));
+                appointmentBookingService.getAppointmentsByBookingStatus(status));
+    }
+
+    private BookingStatus resolveBookingStatusFilter(String bookingStatus) {
+        if (bookingStatus == null || bookingStatus.isBlank()
+                || "ALL".equalsIgnoreCase(bookingStatus.trim())) {
+            return null;
+        }
+        return BookingStatus.valueOf(bookingStatus.trim().toUpperCase());
     }
 
     @Operation(summary = "Get appointments by registration date")
@@ -150,7 +188,12 @@ public class AppointmentBookingController {
 
     @Operation(
             summary = "Reschedule appointment",
-            description = "Same fields as create, but uses existing patientId. Sets status to RESCHEDULED.")
+            description = """
+                    Same fields as create, but uses existing patientId.
+                    Works for SCHEDULED, RESCHEDULED, and CANCELLED appointments.
+                    Sets booking status to RESCHEDULED (active again; cancelled tag cleared).
+                    Not allowed for COMPLETED or IN_CONSULTATION.
+                    """)
     @PutMapping("/{bookingId}/reschedule")
     public ResponseEntity<ApiResponse<AppointmentBookingResponse>> rescheduleAppointment(
             @PathVariable UUID bookingId,

@@ -7,6 +7,7 @@ import com.ayurveda.attendance.dto.response.AttendanceResponse;
 import com.ayurveda.attendance.service.AttendanceService;
 import com.ayurveda.common.ApiResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,12 +36,14 @@ public class AttendanceController {
 
     private final AttendanceService attendanceService;
 
+    @Operation(summary = "Check in employee")
     @PostMapping("/check-in")
     public ResponseEntity<ApiResponse<AttendanceResponse>> checkIn(
             @Valid @RequestBody CreateAttendanceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(attendanceService.checkIn(request));
     }
 
+    @Operation(summary = "Check out employee")
     @PutMapping("/{attendanceId}/check-out")
     public ResponseEntity<ApiResponse<AttendanceResponse>> checkOut(
             @PathVariable UUID attendanceId,
@@ -49,6 +52,7 @@ public class AttendanceController {
                 request != null ? request : new CheckOutRequest()));
     }
 
+    @Operation(summary = "Update attendance status")
     @PutMapping("/{attendanceId}/status")
     public ResponseEntity<ApiResponse<AttendanceResponse>> updateStatus(
             @PathVariable UUID attendanceId,
@@ -56,23 +60,27 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.updateStatus(attendanceId, request));
     }
 
+    @Operation(summary = "Get attendance by ID")
     @GetMapping("/{attendanceId}")
     public ResponseEntity<ApiResponse<AttendanceResponse>> getAttendanceById(
             @PathVariable UUID attendanceId) {
         return ResponseEntity.ok(attendanceService.getAttendanceById(attendanceId));
     }
 
+    @Operation(summary = "List all attendances")
     @GetMapping
     public ResponseEntity<ApiResponse<List<AttendanceResponse>>> getAllAttendances() {
         return ResponseEntity.ok(attendanceService.getAllAttendances());
     }
 
+    @Operation(summary = "List attendances by employee ID")
     @GetMapping("/employee/{empId}")
     public ResponseEntity<ApiResponse<List<AttendanceResponse>>> getAttendancesByEmpId(
             @PathVariable String empId) {
         return ResponseEntity.ok(attendanceService.getAttendancesByEmpId(empId));
     }
 
+    @Operation(summary = "Delete attendance")
     @DeleteMapping("/{attendanceId}")
     public ResponseEntity<ApiResponse<Void>> deleteAttendance(@PathVariable UUID attendanceId) {
         return ResponseEntity.ok(attendanceService.deleteAttendance(attendanceId));

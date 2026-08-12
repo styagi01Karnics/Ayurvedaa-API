@@ -17,24 +17,34 @@ import com.ayurveda.common.ApiResponse;
 
 public interface AuthService {
 
+    /** Registers a new tenant and its admin user. */
     ApiResponse<TenantResponse> registerTenant(RegisterTenantRequest request);
 
+    /** Authenticates a user and returns a JWT access token. */
     ApiResponse<AuthTokenResponse> login(LoginRequest request);
 
+    /** Self-registers a receptionist under an existing tenant and returns a JWT. */
     ApiResponse<AuthTokenResponse> signUp(SignUpRequest request);
 
+    /** Issues a password-reset token when the account exists. */
     ApiResponse<ForgotPasswordResponse> forgotPassword(ForgotPasswordRequest request);
 
+    /** Resets the user's password using a valid reset token. */
     ApiResponse<Void> resetPassword(ResetPasswordRequest request);
 
+    /** Registers a user under the current tenant (admin only). */
     ApiResponse<UserResponse> registerUser(RegisterUserRequest request);
 
+    /** Returns the currently authenticated user. */
     ApiResponse<UserResponse> getCurrentUser();
 
+    /** Lists all users for the current tenant (admin only). */
     ApiResponse<List<UserResponse>> getUsersForCurrentTenant();
 
+    /** Returns the tenant of the currently authenticated user. */
     ApiResponse<TenantResponse> getCurrentTenant();
 
+    /** Validates a Bearer JWT and returns principal claims when valid. */
     ApiResponse<TokenValidationResponse> validateToken(String authorizationHeader);
 
 }

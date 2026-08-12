@@ -36,7 +36,7 @@ public class PatientAppointmentListItemResponse {
     private UUID assignedDoctorId;
     private String doctorName;
 
-    private List<String> consultationTypes;
+    private List<ConsultationTypeItemResponse> consultationTypes;
     private LocalDate appointmentDate;
     private LocalTime slotTime;
     private LocalDateTime bookingTime;

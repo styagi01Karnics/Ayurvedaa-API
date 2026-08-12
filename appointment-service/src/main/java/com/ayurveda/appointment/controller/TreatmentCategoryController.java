@@ -13,6 +13,7 @@ import com.ayurveda.appointment.dto.request.CreateTreatmentCategoryRequest;
 import com.ayurveda.appointment.dto.response.TreatmentCategoryResponse;
 import com.ayurveda.appointment.service.TreatmentCategoryService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class TreatmentCategoryController {
 
     private final TreatmentCategoryService treatmentCategoryService;
 
+    @Operation(summary = "Create treatment category", description = "Creates a new treatment category with a generated category code.")
     @PostMapping
     public ResponseEntity<ApiResponse<TreatmentCategoryResponse>> createTreatmentCategory(
             @Valid @RequestBody CreateTreatmentCategoryRequest request) {
@@ -36,6 +38,7 @@ public class TreatmentCategoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(summary = "Get treatment category by ID", description = "Returns a treatment category by its ID.")
     @GetMapping("/{categoryId}")
     public ResponseEntity<ApiResponse<TreatmentCategoryResponse>> getTreatmentCategoryById(
             @PathVariable UUID categoryId) {
@@ -46,6 +49,7 @@ public class TreatmentCategoryController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "List all treatment categories", description = "Returns all treatment categories.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<TreatmentCategoryResponse>>> getAllTreatmentCategories() {
 

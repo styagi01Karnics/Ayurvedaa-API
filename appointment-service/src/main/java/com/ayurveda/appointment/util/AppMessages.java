@@ -51,6 +51,9 @@ public final class AppMessages {
     public static final String DOCTOR_TODAY_APPOINTMENTS_FETCHED =
             "Doctor today's appointments fetched successfully.";
 
+    public static final String TODAY_APPOINTMENTS_FETCHED =
+            "Today's appointments fetched successfully.";
+
     public static final String DASHBOARD_TODAY_SCHEDULE_FETCHED =
             "Dashboard today's schedule fetched successfully.";
 
@@ -88,6 +91,12 @@ public final class AppMessages {
     public static final String NO_APPOINTMENTS_FOR_PATIENT =
             "No appointments found for patient id: ";
 
+    public static final String APPOINTMENTS_FETCHED =
+            "Appointments fetched successfully.";
+
+    public static final String NO_APPOINTMENTS_AVAILABLE =
+            "No appointments available.";
+
     public static final String NO_APPOINTMENTS_FOR_STATUS =
             "No appointments found for status: ";
 
@@ -99,6 +108,9 @@ public final class AppMessages {
 
     public static final String PATIENT_ID_MISMATCH =
             "Patient id does not match this appointment.";
+
+    public static final String PATIENT_NOT_FOUND_WITH_ID =
+            "Patient not found with id: ";
 
     public static final String APPOINTMENT_IN_CONSULTATION_INVALID_STATUS =
             "Appointment can move to IN_CONSULTATION only from SCHEDULED or RESCHEDULED. Current status: ";
@@ -136,6 +148,65 @@ public final class AppMessages {
 
     public static final String THERAPY_NOT_FOUND_WITH_ID =
             "Therapy not found with id: ";
+
+    public static final String THERAPIST_NOT_FOUND_WITH_ID =
+            "Therapist not found with id: ";
+
+    /* ==========================
+       Follow-up
+       ========================== */
+
+    public static final String FOLLOW_UP_CREATED =
+            "Follow-up created successfully.";
+
+    public static final String FOLLOW_UPS_FETCHED =
+            "Follow-ups fetched successfully.";
+
+    public static final String FOLLOW_UP_STATUS_UPDATED =
+            "Follow-up status updated successfully.";
+
+    public static final String FOLLOW_UP_CANCELLED =
+            "Follow-up cancelled successfully.";
+
+    public static final String FOLLOW_UP_ALREADY_CANCELLED =
+            "Follow-up is already cancelled.";
+
+    public static final String FOLLOW_UP_NOT_FOUND_WITH_ID =
+            "Follow-up not found with id: ";
+
+    public static final String DOCTOR_NOT_FOUND_WITH_ID =
+            "Doctor not found with id: ";
+
+    /* ==========================
+       Treatment
+       ========================== */
+
+    public static final String TREATMENT_CREATED =
+            "Treatment created successfully.";
+
+    public static final String TREATMENT_UPDATED =
+            "Treatment updated successfully.";
+
+    public static final String TREATMENT_FETCHED =
+            "Treatment fetched successfully.";
+
+    public static final String TREATMENTS_FETCHED =
+            "Treatments fetched successfully.";
+
+    public static final String TREATMENT_STATUS_UPDATED =
+            "Treatment status updated successfully.";
+
+    public static final String TREATMENT_NOT_FOUND =
+            "Treatment not found.";
+
+    public static final String TREATMENT_NOT_FOUND_WITH_ID =
+            "Treatment not found with id: ";
+
+    public static final String TREATMENT_END_DATE_BEFORE_START =
+            "End date cannot be before start date.";
+
+    public static final String TREATMENT_COMPLETED_SESSIONS_EXCEED_TOTAL =
+            "Completed sessions cannot exceed total sessions.";
 
     /* ==========================
        Documents

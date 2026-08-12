@@ -11,12 +11,16 @@ import java.util.UUID;
 
 public interface AppointmentDocumentService {
 
+    /** Uploads a document and associates it with a patient. */
     ApiResponse<AppointmentDocumentResponse> uploadDocument(UploadAppointmentDocumentRequest request);
 
-    ApiResponse<List<AppointmentDocumentResponse>> getDocumentsByBookingId(UUID bookingId);
+    /** Lists all documents linked to a patient. */
+    ApiResponse<List<AppointmentDocumentResponse>> getDocumentsByPatientId(UUID patientId);
 
+    /** Downloads a document by ID as a binary attachment. */
     ResponseEntity<Resource> downloadDocument(UUID documentId);
 
+    /** Permanently deletes a document by ID. */
     ApiResponse<String> deleteDocument(UUID documentId);
 
 }

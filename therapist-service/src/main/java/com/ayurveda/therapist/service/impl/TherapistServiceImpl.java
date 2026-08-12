@@ -42,6 +42,8 @@ public class TherapistServiceImpl implements TherapistService {
     @Override
     @Transactional
     public ApiResponse<TherapistResponse> createTherapist(CreateTherapistRequest request) {
+        log.info("Creating therapist: {}", request.getName());
+
         TherapistStatus status = request.getStatus() != null ? request.getStatus() : TherapistStatus.ACTIVE;
 
         List<UUID> therapyIds = normalizeAndValidateTherapyIds(request.getAssignedTherapyIds());
@@ -54,6 +56,9 @@ public class TherapistServiceImpl implements TherapistService {
                 .build();
 
         Therapist savedTherapist = therapistRepository.save(therapist);
+
+        log.info("Therapist created successfully. Therapist ID: {}", savedTherapist.getId());
+
         return ApiResponse.success(
                 AppConstants.THERAPIST_CREATED_SUCCESSFULLY, toResponse(savedTherapist));
     }
@@ -62,6 +67,7 @@ public class TherapistServiceImpl implements TherapistService {
     @Transactional
     public ApiResponse<TherapistResponse> updateTherapist(
             UUID therapistId, UpdateTherapistRequest request) {
+        log.info("Updating therapist. Therapist ID: {}", therapistId);
 
         Therapist therapist = therapistRepository.findByIdAndDeletedFalse(therapistId)
                 .orElseThrow(() -> new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND));
@@ -75,6 +81,9 @@ public class TherapistServiceImpl implements TherapistService {
         therapist.setAssignedTherapyIds(new ArrayList<>(therapyIds));
 
         Therapist savedTherapist = therapistRepository.save(therapist);
+
+        log.info("Therapist updated successfully. Therapist ID: {}", therapistId);
+
         return ApiResponse.success(
                 AppConstants.THERAPIST_UPDATED_SUCCESSFULLY, toResponse(savedTherapist));
     }
@@ -82,8 +91,13 @@ public class TherapistServiceImpl implements TherapistService {
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<TherapistResponse> getTherapistById(UUID therapistId) {
+        log.info("Fetching therapist by ID: {}", therapistId);
+
         Therapist therapist = therapistRepository.findByIdAndDeletedFalse(therapistId)
                 .orElseThrow(() -> new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND));
+
+        log.info("Therapist fetched successfully. Therapist ID: {}", therapistId);
+
         return ApiResponse.success(
                 AppConstants.THERAPIST_FETCHED_SUCCESSFULLY, toResponse(therapist));
     }
@@ -91,12 +105,17 @@ public class TherapistServiceImpl implements TherapistService {
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<TherapistResponse>> getAllTherapists() {
+        log.info("Fetching all therapists");
+
         Map<UUID, String> therapyNames = loadTherapyNameMap();
         List<TherapistResponse> therapists = therapistRepository.findAllByDeletedFalse().stream()
                 .map(therapist -> TherapistMapper.toResponse(
                         therapist,
                         resolveAssignedTherapies(therapist.getAssignedTherapyIds(), therapyNames)))
                 .toList();
+
+        log.info("Successfully fetched {} therapists", therapists.size());
+
         return ApiResponse.success(AppConstants.THERAPISTS_FETCHED_SUCCESSFULLY, therapists);
     }
 
@@ -119,6 +138,8 @@ public class TherapistServiceImpl implements TherapistService {
                         resolveAssignedTherapies(therapist.getAssignedTherapyIds(), therapyNames)))
                 .toList();
 
+        log.info("Successfully fetched {} therapists for therapy ids {}", therapists.size(), distinctIds);
+
         return ApiResponse.success(
                 AppConstants.THERAPISTS_BY_THERAPIES_FETCHED_SUCCESSFULLY, therapists);
     }
@@ -127,11 +148,15 @@ public class TherapistServiceImpl implements TherapistService {
     @Transactional
     public ApiResponse<TherapistResponse> updateTherapistStatus(
             UUID therapistId, UpdateTherapistStatusRequest request) {
+        log.info("Updating therapist status. Therapist ID: {}, Status: {}", therapistId, request.getStatus());
+
         Therapist therapist = therapistRepository.findByIdAndDeletedFalse(therapistId)
                 .orElseThrow(() -> new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND));
 
         therapist.setStatus(request.getStatus());
         Therapist savedTherapist = therapistRepository.save(therapist);
+
+        log.info("Therapist status updated successfully. Therapist ID: {}", therapistId);
 
         return ApiResponse.success(
                 AppConstants.THERAPIST_STATUS_UPDATED_SUCCESSFULLY, toResponse(savedTherapist));
@@ -140,11 +165,15 @@ public class TherapistServiceImpl implements TherapistService {
     @Override
     @Transactional
     public ApiResponse<Void> deleteTherapist(UUID therapistId) {
+        log.info("Deleting therapist. Therapist ID: {}", therapistId);
+
         Therapist therapist = therapistRepository.findByIdAndDeletedFalse(therapistId)
                 .orElseThrow(() -> new ResourceNotFoundException(AppConstants.THERAPIST_NOT_FOUND));
 
         therapist.setDeleted(true);
         therapistRepository.save(therapist);
+
+        log.info("Therapist deleted successfully. Therapist ID: {}", therapistId);
 
         return ApiResponse.success(AppConstants.THERAPIST_DELETED_SUCCESSFULLY, null);
     }

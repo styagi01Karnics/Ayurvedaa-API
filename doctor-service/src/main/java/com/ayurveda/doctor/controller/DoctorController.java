@@ -40,6 +40,12 @@ public class DoctorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(doctorService.createDoctor(request));
     }
 
+    @Operation(summary = "List active doctors only")
+    @GetMapping("/active")
+    public ResponseEntity<ApiResponse<List<DoctorResponse>>> getActiveDoctors() {
+        return ResponseEntity.ok(doctorService.getActiveDoctors());
+    }
+
     @Operation(summary = "Get doctor by ID")
     @GetMapping("/{doctorId}")
     public ResponseEntity<ApiResponse<DoctorResponse>> getDoctorById(@PathVariable UUID doctorId) {
