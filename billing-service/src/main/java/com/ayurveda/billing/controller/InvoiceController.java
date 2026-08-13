@@ -70,6 +70,17 @@ public class InvoiceController {
         return ResponseEntity.ok(invoiceService.getInvoices(patientId, status));
     }
 
+    @Operation(
+            summary = "List invoices by patient id",
+            description = "Fetches all invoices for the given patient UUID. Optional status filter: UNPAID, ONGOING, COMPLETED.")
+    @GetMapping("/patient/{patientId}")
+    public ResponseEntity<ApiResponse<List<InvoiceListResponse>>> getInvoicesByPatientId(
+            @PathVariable UUID patientId,
+            @RequestParam(required = false) InvoiceStatus status) {
+
+        return ResponseEntity.ok(invoiceService.getInvoicesByPatientId(patientId, status));
+    }
+
     @Operation(summary = "Get invoice by id")
     @GetMapping("/{invoiceId}")
     public ResponseEntity<ApiResponse<InvoiceResponse>> getInvoiceById(@PathVariable UUID invoiceId) {

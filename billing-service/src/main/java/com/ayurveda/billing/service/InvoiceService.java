@@ -21,6 +21,10 @@ public interface InvoiceService {
     /** Lists invoices filtered by patient (UUID or search text) and optional status. */
     ApiResponse<List<InvoiceListResponse>> getInvoices(String patientId, InvoiceStatus status);
 
+    /** Lists invoices for a patient UUID, with optional status filter. */
+    ApiResponse<List<InvoiceListResponse>> getInvoicesByPatientId(
+            UUID patientId, InvoiceStatus status);
+
     /** Records a part payment against an unpaid or partially paid invoice. */
     ApiResponse<InvoiceResponse> recordPartPayment(UUID invoiceId, PartPaymentRequest request);
 

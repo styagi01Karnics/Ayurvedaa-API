@@ -156,6 +156,23 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<List<InvoiceListResponse>> getInvoicesByPatientId(
+            UUID patientId, InvoiceStatus status) {
+        log.info("Fetching invoices for patientId={}, status={}", patientId, status);
+
+        List<InvoiceListResponse> invoices = invoiceRepository
+                .search(patientId, null, status)
+                .stream()
+                .map(invoiceMapper::toListResponse)
+                .toList();
+
+        log.info("Successfully fetched {} invoices for patientId={}.", invoices.size(), patientId);
+
+        return ApiResponse.success(BillingMessages.INVOICES_FETCHED_SUCCESSFULLY, invoices);
+    }
+
+    @Override
     public ApiResponse<InvoiceResponse> recordPartPayment(UUID invoiceId, PartPaymentRequest request) {
         log.info("Recording part payment for invoiceId: {}, amount: {}", invoiceId, request.getAmountPaid());
 
