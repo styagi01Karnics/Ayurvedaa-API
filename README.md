@@ -175,7 +175,7 @@ All endpoints are prefixed with `/api/v1`.
 
 Sample JSON payloads are in the [`curl-samples/`](curl-samples/) folder.
 
-Latest master/mapping API changes (consultation type, treatment plan, package + price, shared mobile): see [`docs/LATEST_CHANGES.md`](docs/LATEST_CHANGES.md).
+Latest API changes (billing drafts, prescriptions, active patients, masters): see [`docs/LATEST_CHANGES.md`](docs/LATEST_CHANGES.md).
 
 ### Example: create a doctor
 
