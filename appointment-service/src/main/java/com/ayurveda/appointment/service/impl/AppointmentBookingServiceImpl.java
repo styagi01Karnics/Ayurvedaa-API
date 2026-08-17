@@ -53,6 +53,7 @@ import com.ayurveda.appointment.repository.AppointmentConsultationTypeRepository
 import com.ayurveda.appointment.repository.AppointmentTherapyRepository;
 import com.ayurveda.appointment.repository.ConsultationTypeMasterRepository;
 import com.ayurveda.appointment.repository.DoshaMasterRepository;
+import com.ayurveda.appointment.repository.FollowUpRepository;
 import com.ayurveda.appointment.repository.TreatmentCategoryRepository;
 import com.ayurveda.appointment.service.AppointmentBookingService;
 import com.ayurveda.appointment.util.AppMessages;
@@ -80,6 +81,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     private final TreatmentCategoryRepository treatmentCategoryRepository;
     private final AppointmentAyurvedicAssessmentRepository appointmentAyurvedicAssessmentRepository;
     private final DoshaMasterRepository doshaMasterRepository;
+    private final FollowUpRepository followUpRepository;
     private final PatientServiceClient patientServiceClient;
     private final DoctorServiceClient doctorServiceClient;
 
@@ -174,6 +176,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         List<AppointmentBooking> bookings = appointmentBookingRepository.findPatientList(
                 statuses, doctorId, consultationTypeId, doshaId);
 
+        bookings = filterByFollowUpForPatientListTab(statusTab, bookings);
+
         if (bookings.isEmpty()) {
             return ApiResponse.success(AppMessages.PATIENT_LIST_FETCHED, List.of());
         }
@@ -226,7 +230,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     private Set<BookingStatus> resolvePatientListStatuses(
             PatientListTab statusTab, BookingStatus bookingStatus) {
 
-        Set<BookingStatus> tabStatuses = statusTab.getBookingStatuses();
+        Set<BookingStatus> tabStatuses = statusTab.getQueryStatuses();
         if (bookingStatus == null) {
             return tabStatuses;
         }
@@ -234,6 +238,43 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
             throw new BadRequestException(AppMessages.INVALID_PATIENT_LIST_STATUS);
         }
         return EnumSet.of(bookingStatus);
+    }
+
+    /**
+     * ACTIVE: open statuses, or closed (CANCELLED/COMPLETED) with a follow-up on this booking.
+     * INACTIVE: closed statuses with no follow-up on this booking.
+     */
+    private List<AppointmentBooking> filterByFollowUpForPatientListTab(
+            PatientListTab statusTab, List<AppointmentBooking> bookings) {
+
+        if (bookings.isEmpty()) {
+            return bookings;
+        }
+
+        Set<UUID> bookingIds = bookings.stream()
+                .map(AppointmentBooking::getId)
+                .collect(Collectors.toSet());
+
+        Set<UUID> bookingIdsWithFollowUp = new HashSet<>(
+                followUpRepository.findSourceBookingIdsWithFollowUp(bookingIds));
+
+        return bookings.stream()
+                .filter(booking -> matchesPatientListTab(statusTab, booking, bookingIdsWithFollowUp))
+                .toList();
+    }
+
+    private boolean matchesPatientListTab(
+            PatientListTab statusTab,
+            AppointmentBooking booking,
+            Set<UUID> bookingIdsWithFollowUp) {
+
+        boolean closed = PatientListTab.closedStatuses().contains(booking.getBookingStatus());
+        boolean hasFollowUp = bookingIdsWithFollowUp.contains(booking.getId());
+
+        if (statusTab == PatientListTab.ACTIVE) {
+            return !closed || hasFollowUp;
+        }
+        return closed && !hasFollowUp;
     }
 
     private Map<UUID, List<ConsultationTypeItemResponse>> loadConsultationTypes(

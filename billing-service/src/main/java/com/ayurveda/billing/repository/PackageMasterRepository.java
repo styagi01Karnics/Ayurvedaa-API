@@ -1,5 +1,6 @@
 package com.ayurveda.billing.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,5 +51,12 @@ public interface PackageMasterRepository extends JpaRepository<PackageMaster, UU
               AND COALESCE(p.deleted, false) = false
             """)
     boolean existsByNameIgnoreCaseAndDeletedFalse(@Param("name") String name);
+
+    @Query("""
+            SELECT p FROM PackageMaster p
+            WHERE p.id IN :ids
+              AND COALESCE(p.deleted, false) = false
+            """)
+    List<PackageMaster> findByIdInAndDeletedFalse(@Param("ids") Collection<UUID> ids);
 
 }

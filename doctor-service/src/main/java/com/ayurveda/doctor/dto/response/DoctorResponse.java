@@ -15,6 +15,8 @@ public class DoctorResponse {
     private UUID id;
     private String name;
     private String specialization;
+    private String qualification;
+    private String mobileNumber;
     private DoctorStatus status;
     private BigDecimal consultationFees;
     private BigDecimal followUpFees;

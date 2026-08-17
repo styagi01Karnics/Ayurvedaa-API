@@ -178,6 +178,28 @@ public final class AppMessages {
             "Doctor not found with id: ";
 
     /* ==========================
+       Prescription
+       ========================== */
+
+    public static final String PRESCRIPTION_CREATED =
+            "Prescription generated successfully.";
+
+    public static final String PRESCRIPTION_FETCHED =
+            "Prescription fetched successfully.";
+
+    public static final String PRESCRIPTIONS_FETCHED =
+            "Prescriptions fetched successfully.";
+
+    public static final String PRESCRIPTION_NOT_FOUND_WITH_ID =
+            "Prescription not found with id: ";
+
+    public static final String PRESCRIPTION_MEDICINE_OR_THERAPY_REQUIRED =
+            "Prescription must include at least one medicine or therapy suggestion.";
+
+    public static final String PRESCRIPTION_THERAPY_IDS_REQUIRED =
+            "At least one recommended therapy is required for each therapy suggestion.";
+
+    /* ==========================
        Treatment
        ========================== */
 
