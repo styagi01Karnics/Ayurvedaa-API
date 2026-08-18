@@ -64,7 +64,6 @@ public class CreatePatientDetailsRequest {
             message = "City should contain only alphabets")
     private String city;
 
-    @NotBlank(message = "Address is required")
     @Size(max = 500, message = "Address must not exceed 500 characters")
     private String address;
 

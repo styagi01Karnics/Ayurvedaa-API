@@ -22,9 +22,9 @@ server:
 
 services:
   medicine:
-    url: http://103.174.103.250:8108
+    url: http://45.195.229.15:8108
   appointment:
-    url: http://103.174.103.250:8103
+    url: http://45.195.229.15:8103
 
 billing:
   default-cgst-percent: 3

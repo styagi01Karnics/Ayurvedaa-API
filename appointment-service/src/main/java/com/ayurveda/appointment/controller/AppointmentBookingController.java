@@ -61,8 +61,9 @@ public class AppointmentBookingController {
             summary = "Active / Inactive patients list",
             description = """
                     Returns appointment rows for the patients screen.
-                    ACTIVE = SCHEDULED, RESCHEDULED.
-                    INACTIVE = COMPLETED, CANCELLED.
+                    ACTIVE = all booking statuses except CANCELLED/COMPLETED,
+                    plus CANCELLED/COMPLETED that have a follow-up (sourceBookingId).
+                    INACTIVE = CANCELLED/COMPLETED with no follow-up for that booking.
                     Optional filters: search (patient id/code/name/mobile), status, visit type, dosha, doctor.
                     """)
     @GetMapping("/patients")

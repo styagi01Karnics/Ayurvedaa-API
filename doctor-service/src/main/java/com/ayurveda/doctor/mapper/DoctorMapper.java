@@ -13,6 +13,8 @@ public final class DoctorMapper {
                 .id(doctor.getId())
                 .name(doctor.getDoctorName())
                 .specialization(doctor.getSpecialization())
+                .qualification(doctor.getQualification())
+                .mobileNumber(doctor.getMobileNumber())
                 .status(doctor.getStatus())
                 .consultationFees(doctor.getConsultationFees())
                 .followUpFees(doctor.getFollowUpFees())

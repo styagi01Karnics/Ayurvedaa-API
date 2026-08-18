@@ -22,7 +22,9 @@ public final class BillSectionResolver {
     public static List<BillSection> resolveFromRequest(CreateInvoiceRequest request) {
         List<BillSection> sections = new ArrayList<>();
 
-        if (moneyPositive(request.getServiceFees()) || moneyPositive(request.getPackageCharges())) {
+        if (moneyPositive(request.getServiceFees())
+                || moneyPositive(request.getPackageCharges())
+                || request.getPackageMasterId() != null) {
             sections.add(BillSection.SERVICE);
         }
         if (!CollectionUtils.isEmpty(request.getMedicines())) {

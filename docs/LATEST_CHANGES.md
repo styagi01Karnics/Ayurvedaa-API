@@ -1,226 +1,252 @@
 # Latest API Changes
 
-Documentation for masters and mapping updates on branch `fixes-development` (commit `d97cdd6` and related work).
-
-## Summary
-
-| Area | Change |
-|------|--------|
-| Consultation type | Enum removed → master table + booking list of IDs |
-| Treatment plan name | Free text removed → master table + `treatmentPlanId` |
-| Package name | Free text removed → master table with **price** + `packageMasterId` |
-| Patient mobile | Duplicate mobile check removed (parent/child may share a number) |
+Branch: `fixes-development`  
+Latest feature commit: `d7074f7` (billing drafts, prescriptions, active patient follow-up rules).  
+Earlier masters work: `d97cdd6` and related.
 
 ---
 
-## 1. Consultation Type Master (appointment-service)
+## Summary (newest)
 
-**Table:** `mst_consultation_type`  
-**Base path:** `/api/v1/consultation-types`
+| Area | Change |
+|------|--------|
+| Doctor billing draft | New `billings` table — PENDING → COMPLETED; receptionist generates invoice |
+| Invoice from billing | Same body as `POST /invoices` (medicine / therapy / discount / GST) |
+| Prescription | New prescription APIs (medicines, therapy suggestions, next follow-up) |
+| Active / Inactive patients | ACTIVE = non-closed bookings **or** closed with follow-up; INACTIVE = closed without follow-up |
+| Doctor response | Adds `qualification`, `mobileNumber` |
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/consultation-types` | Create |
-| `GET` | `/api/v1/consultation-types` | All (ACTIVE + INACTIVE) |
-| `GET` | `/api/v1/consultation-types/active` | ACTIVE only |
-| `GET` | `/api/v1/consultation-types/{id}` | By id |
+Older masters (consultation type, treatment plan, package + price, shared mobile) remain documented below.
 
-### Create body
+---
+
+## A. Doctor billing drafts (billing-service)
+
+**Tables:** `billings`, `billing_service_items`  
+**Statuses:** `PENDING` \| `COMPLETED`  
+**Base path:** `/api/v1/billings`  
+**Port:** `8109`
+
+Doctor saves **section 3 screenshot data only** (services + optional package master).  
+No medicine, therapy, discount, or GST on billing.
+
+### APIs
+
+| Method | Path | Who | Description |
+|--------|------|-----|-------------|
+| `POST` | `/api/v1/billings` | Doctor | Create PENDING billing |
+| `GET` | `/api/v1/billings` | Both | List (`?status=PENDING\|COMPLETED`) |
+| `GET` | `/api/v1/billings/{billingId}` | Both | Detail + services (joins `mst_package`) |
+| `GET` | `/api/v1/billings/patient/{patientId}` | Both | By patient |
+| `POST` | `/api/v1/billings/{billingId}/generate-invoice` | Reception | Create invoice; mark billing COMPLETED |
+
+### Create billing body (doctor)
 
 ```json
 {
-  "name": "CONSULTATION",
-  "status": "ACTIVE"
-}
-```
-
-`status` is optional (defaults to `ACTIVE`). Values: `ACTIVE` | `INACTIVE`.
-
-### Seed data
-
-On startup, `CONSULTATION` and `THERAPY` are seeded if missing.
-
-### Booking mapping
-
-Table `appointment_consultation_types`: one row per type per booking (`bookingId` + `consultationTypeId`).
-
-**Create / reschedule appointment** — send IDs (not enum names):
-
-```json
-{
-  "patient": { },
-  "registrationDate": "2026-08-06",
-  "slotTime": "10:00:00",
-  "assignedDoctorId": "uuid",
-  "consultationTypeIds": [
-    "uuid-consultation",
-    "uuid-therapy"
+  "patientId": "uuid",
+  "patientName": "Khushi Shroff",
+  "contactNumber": "9876543210",
+  "billingDate": "2026-10-15",
+  "services": [
+    {
+      "serviceType": "Consultation",
+      "serviceFees": 800,
+      "packageMasterId": null,
+      "packageType": null,
+      "packageCharges": null
+    }
   ]
 }
 ```
 
-**Response** includes:
+No `patientDisplayId` / `patientCode` / `visitType` on billings.  
+Package vs consultation is only from `services[]` — package fields optional (null for consultation-only).  
+If `packageMasterId` is set, name/price can fill from `mst_package` when type/charges omitted.  
+Invoice keeps existing `visitType` (unchanged for frontend).
+
+### Generate invoice from billing (receptionist)
+
+**Same body as** `POST /api/v1/invoices`.
 
 ```json
-"consultationTypes": [
-  { "id": "uuid", "name": "CONSULTATION" },
-  { "id": "uuid", "name": "THERAPY" }
-]
+{
+  "patientId": "uuid",
+  "patientDisplayId": "#PT458652",
+  "patientCode": "GAN2025-0129",
+  "patientName": "Khushi Shroff",
+  "contactNumber": "9876543210",
+  "invoiceDate": "2026-10-15",
+  "visitType": "CONSULTATION",
+  "serviceFees": 800,
+  "packageMasterId": "uuid-from-mst_package",
+  "packageType": "Basic Package",
+  "packageCharges": 800,
+  "medicines": [
+    { "medicineId": "uuid", "quantity": 2, "unitPrice": 200 }
+  ],
+  "therapies": [
+    {
+      "itemName": "Panchakarma",
+      "quantity": 1,
+      "unitPrice": 800
+    }
+  ],
+  "discount": 100,
+  "taxEnabled": true,
+  "cgstPercent": 3,
+  "sgstPercent": 3,
+  "amountPaid": 0
+}
 ```
 
-### Related endpoint changes
+- Patient / service can be omitted or partial — filled from PENDING billing when missing.  
+- `packageMasterId` optional (same as billing); copied from billing when generating invoice if omitted.  
+- Medicine / therapy / discount / GST belong on **invoice**, not billing.  
+- Creates `INV-xxxx`, sets billing `COMPLETED`, saves `invoiceId` / `invoiceNumber`.  
+- `amountPaid` omitted or `0` → invoice status **`UNPAID`**. If `amountPaid` > 0, amount is saved and status becomes ONGOING/COMPLETED.
 
-| Old | New |
-|-----|-----|
-| Filter `consultationType=CONSULTATION` | `consultationTypeId={uuid}` |
-| `GET .../appointments/today/{CONSULTATION\|THERAPY}` | `GET .../appointments/today/consultation-type/{consultationTypeId}` |
-| Follow-up `visitType`: enum | `visitTypeId`: UUID; response also has `visitTypeName` |
+### Normal invoice (unchanged)
+
+`POST /api/v1/invoices` — same body; creates invoice immediately (no billing draft).
+
+Discount / GST appear on:
+
+- `GET /api/v1/invoices/{invoiceId}`
+- Response of generate-invoice / create invoice
+
+Patient billing aggregate (existing):
+
+- `GET /api/v1/billing/patient/{patientId}`
+- `GET /api/v1/invoices/patient/{patientId}`
+
+Section 1 patient packages (`/api/v1/packages`) — **unchanged**.
 
 ---
 
-## 2. Treatment Plan Master (appointment-service)
+## B. Prescriptions (appointment-service)
 
-**Table:** `mst_treatment_plan`  
-**Base path:** `/api/v1/treatment-plan-masters`  
-*(Not `/api/v1/treatment-plans` — that path is used by appointment medical-assessment treatment plans.)*
+**Tables:** `prescriptions`, `prescription_medicines`, `prescription_therapy_suggestions`, `prescription_therapy_suggestion_items`  
+**Base path:** `/api/v1/prescriptions`  
+**Port:** `8103`
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/v1/treatment-plan-masters` | Create |
-| `GET` | `/api/v1/treatment-plan-masters` | All |
-| `GET` | `/api/v1/treatment-plan-masters/active` | ACTIVE only |
-| `GET` | `/api/v1/treatment-plan-masters/{id}` | By id |
+| `POST` | `/api/v1/prescriptions` | Generate prescription |
+| `GET` | `/api/v1/prescriptions/{prescriptionId}` | By id (print-view enriched) |
+| `GET` | `/api/v1/prescriptions/patient/{patientId}` | All for patient |
 
 ### Create body
 
 ```json
 {
-  "name": "Panchakarma Detox",
-  "status": "ACTIVE"
-}
-```
-
-### Treatment mapping
-
-`Treatment` stores `treatmentPlanId` instead of `treatmentPlanName`.
-
-**Create treatment:**
-
-```json
-{
   "patientId": "uuid",
-  "treatmentPlanId": "uuid",
-  "startDate": "2026-08-01",
-  "endDate": "2026-08-30",
-  "totalSessions": 10,
-  "completedSessions": 0,
-  "assignedTherapistId": "uuid",
-  "treatmentStatus": "SCHEDULED"
+  "appointmentBookingId": "uuid",
+  "assignedDoctorId": "uuid",
+  "medicines": [
+    {
+      "medicineId": "uuid",
+      "medicineName": "Tab OCRIS 200",
+      "dosage": "2 tablets",
+      "frequency": "twice a week",
+      "duration": "5 days",
+      "notes": "After food"
+    }
+  ],
+  "therapySuggestions": [
+    {
+      "therapyCategoryId": "uuid",
+      "recommendedTherapyIds": ["uuid", "uuid"]
+    }
+  ],
+  "nextFollowUp": {
+    "setUpRequired": true,
+    "schedulingOption": "7_DAYS",
+    "suggestions": "optional text"
+  },
+  "diagnosis": "Mental health issue, Migraine",
+  "notes": "optional free text"
 }
 ```
 
-**Response** includes both `treatmentPlanId` and resolved `treatmentPlanName`.
+Needs at least one medicine **or** one therapy suggestion.
 
-Patient treatment APIs (unchanged paths):
+### GET response (enriched)
 
-| Method | Path |
-|--------|------|
-| `POST` | `/api/v1/treatments` |
-| `GET` | `/api/v1/treatments` |
-| `GET` | `/api/v1/treatments/patient/{patientId}` |
-| `PUT` | `/api/v1/treatments/{treatmentId}` |
-| `PUT` | `/api/v1/treatments/{treatmentId}/status` |
+Includes nested:
 
----
+- `patient` — display id, name, age, gender, weight, height, dietType  
+- `treatment` — consultation types, consultation/next appointment datetime, visit display  
+- `consultant` — name, specialization, qualification, contactNumber  
+- `diagnosis`, `notes`  
+- `medicines` (with `instruction` = notes)  
+- `therapySuggestions`, `nextFollowUp`
 
-## 3. Package Master (billing-service)
-
-**Table:** `mst_package`  
-**Base path:** `/api/v1/package-masters`
-
-Fields: `name`, `packagePrice`, `status`.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/package-masters` | Create |
-| `GET` | `/api/v1/package-masters` | All |
-| `GET` | `/api/v1/package-masters/active` | ACTIVE only |
-| `GET` | `/api/v1/package-masters/{id}` | By id |
-
-### Create body
-
-```json
-{
-  "name": "Gold Membership",
-  "packagePrice": 15000.00,
-  "status": "ACTIVE"
-}
-```
-
-### Patient package mapping
-
-`PatientPackage` stores `packageMasterId` instead of `packageName`.
-
-**Create patient package** (`POST /api/v1/packages`):
-
-```json
-{
-  "patientId": "uuid",
-  "packageMasterId": "uuid",
-  "validity": "2027-08-06",
-  "status": "SCHEDULED",
-  "discountApplied": 500.00
-}
-```
-
-**Response** includes `packageMasterId`, `packageName`, `packagePrice` (from master), plus validity / discount / status.
-
-| Method | Path |
-|--------|------|
-| `POST` | `/api/v1/packages` |
-| `GET` | `/api/v1/packages` |
-| `GET` | `/api/v1/packages/patient/{patientId}` |
-| `PUT` | `/api/v1/packages/{packageId}` |
-| `PUT` | `/api/v1/packages/{packageId}/status` |
+Doctor Feign/summary now exposes `qualification` and `mobileNumber` (doctor-service + appointment DTO).
 
 ---
 
-## 4. Patient mobile — no duplicate check (patient-service)
+## C. Active / Inactive patient list (appointment-service)
 
-Creating a patient (including via appointment booking) **no longer fails** when the mobile number already exists.
+**Endpoint:** `GET /api/v1/appointments/patients?statusTab=ACTIVE|INACTIVE`  
+(Still appointment **bookings**, not full patient table.)
 
-Email uniqueness is unchanged.
+| Tab | Rule |
+|-----|------|
+| **ACTIVE** | Booking status is **not** `CANCELLED` / `COMPLETED` (`SCHEDULED`, `RESCHEDULED`, `IN_CONSULTATION`), **or** cancelled/completed **with** a follow-up linked via `sourceBookingId` |
+| **INACTIVE** | `CANCELLED` or `COMPLETED` **with no** follow-up for that booking |
 
-Use case: child appointments using the parent’s phone number.
+Optional filters unchanged: `search`, `bookingStatus`, `consultationTypeId`, `doshaId`, `doctorId`.
 
 ---
 
-## Frontend migration checklist
+## D. Earlier masters (still in effect)
 
-1. Load masters before booking / treatment / package screens:
-   - `GET /api/v1/consultation-types/active`
-   - `GET /api/v1/treatment-plan-masters/active`
-   - `GET /api/v1/package-masters/active`
-2. Replace string enums / free-text names with UUID fields:
-   - `consultationTypes: string[]` → `consultationTypeIds: uuid[]`
-   - `treatmentPlanName` → `treatmentPlanId`
-   - `packageName` → `packageMasterId`
-   - Follow-up `visitType` → `visitTypeId`
-3. Update filters and “today by type” URL to use consultation type UUID.
-4. Display names/prices from response fields (`consultationTypes[].name`, `treatmentPlanName`, `packageName`, `packagePrice`).
+### Consultation type master
+
+**Path:** `/api/v1/consultation-types`  
+Booking uses `consultationTypeIds: uuid[]`; response `consultationTypes: [{ id, name }]`.
+
+### Treatment plan master
+
+**Path:** `/api/v1/treatment-plan-masters`  
+*(Not `/api/v1/treatment-plans` — that is medical-assessment free-text plans.)*  
+Treatment uses `treatmentPlanId`.
+
+### Package master
+
+**Path:** `/api/v1/package-masters`  
+Fields: `name`, `packagePrice`, `status`.  
+Patient package uses `packageMasterId`.
+
+### Patient mobile
+
+Duplicate mobile check removed (parent/child may share). Email uniqueness kept.
+
+---
+
+## Frontend checklist (new)
+
+1. Doctor Billing Details → `POST /api/v1/billings` (services + optional `packageMasterId`).  
+2. Billing list Status = Pending → `GET /api/v1/billings?status=PENDING`.  
+3. Receptionist Start Invoice → `POST /api/v1/billings/{id}/generate-invoice` with full invoice body (medicine/therapy/discount/GST).  
+4. Direct Generate Invoice button can still use `POST /api/v1/invoices`.  
+5. Prescription step → `POST /api/v1/prescriptions`; print view → GET by prescription id.  
+6. Patients Active/Inactive tabs → same `/appointments/patients` with new ACTIVE/INACTIVE meaning.
 
 ---
 
 ## DB notes
 
-With Hibernate `ddl-auto=update`, new tables/columns are added automatically. Existing rows that still store old enum strings or free-text names will **not** auto-migrate to UUIDs — clear or re-create those rows after deploy if needed.
+With `ddl-auto=update`, new tables/columns are created on startup:
 
-| New / changed | Detail |
-|---------------|--------|
-| `mst_consultation_type` | Master |
-| `appointment_consultation_types.consultation_type_id` | UUID (was enum string) |
-| `mst_treatment_plan` | Master |
-| `treatments.treatment_plan_id` | UUID (was `treatment_plan_name`) |
-| `mst_package` | Master (`name` + `package_price`) |
-| `patient_packages.package_master_id` | UUID (was `package_name`) |
-| `follow_ups.visit_type_id` | UUID (was enum `visit_type`) |
+| Table / column | Purpose |
+|----------------|---------|
+| `billings` | Doctor PENDING/COMPLETED draft |
+| `billing_service_items` | Service + package lines (`package_master_id`) |
+| `prescriptions` | Prescription header + follow-up fields + diagnosis/notes |
+| `prescription_medicines` | Rx medicine lines |
+| `prescription_therapy_suggestions` | Therapy suggestion rows |
+| `prescription_therapy_suggestion_items` | Recommended therapy IDs |
+
+Do **not** commit local `application.yml` DB overrides.

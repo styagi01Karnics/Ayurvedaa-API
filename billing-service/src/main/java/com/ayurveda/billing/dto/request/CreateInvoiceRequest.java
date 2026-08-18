@@ -50,6 +50,12 @@ public class CreateInvoiceRequest {
     @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal serviceFees;
 
+    /**
+     * Optional. Null when consultation/service only (no package).
+     * Same as billing service item packageMasterId.
+     */
+    private UUID packageMasterId;
+
     @Size(max = 100)
     private String packageType;
 

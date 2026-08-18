@@ -53,7 +53,6 @@ public class CreatePatientRequest {
     @Pattern(regexp = ValidationPatterns.PLACE_NAME_OPTIONAL, message = "City contains invalid characters")
     private String city;
 
-    @NotBlank(message = "Permanent address is required")
     @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 

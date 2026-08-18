@@ -35,6 +35,8 @@ public class InvoiceResponse {
     private LocalDate invoiceDate;
     private VisitType visitType;
     private BigDecimal serviceFees;
+    private UUID packageMasterId;
+    private String packageName;
     private String packageType;
     private BigDecimal packageCharges;
     private BigDecimal subtotal;

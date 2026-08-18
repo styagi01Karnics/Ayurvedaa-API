@@ -12,6 +12,27 @@ public final class BillingMessages {
             "Dashboard billing summary fetched successfully.";
     public static final String INVOICE_GENERATED_SUCCESSFULLY = "Invoice generated successfully.";
     public static final String INVOICES_FETCHED_SUCCESSFULLY = "Invoices fetched successfully.";
+    public static final String PATIENT_BILLING_FETCHED_SUCCESSFULLY =
+            "Patient billing data fetched successfully.";
+
+    public static final String BILLING_CREATED =
+            "Billing created successfully.";
+
+    public static final String BILLING_FETCHED =
+            "Billing fetched successfully.";
+
+    public static final String BILLINGS_FETCHED =
+            "Billings fetched successfully.";
+
+    public static final String BILLING_NOT_FOUND_WITH_ID =
+            "Billing not found with id: ";
+
+    public static final String BILLING_ALREADY_COMPLETED =
+            "Invoice already generated for this billing.";
+
+    public static final String BILLING_INVOICE_GENERATED =
+            "Invoice generated from billing successfully.";
+
     public static final String PART_PAYMENT_RECORDED_SUCCESSFULLY =
             "Part payment recorded successfully.";
     public static final String INVOICE_DELETED_SUCCESSFULLY = "Invoice deleted successfully.";
