@@ -22,7 +22,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "invoice_payments")
+@Table(name = "billing_invoice_payments")
 public class InvoicePayment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

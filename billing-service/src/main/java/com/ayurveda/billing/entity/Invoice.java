@@ -29,7 +29,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "invoices")
+@Table(name = "billing_invoices")
 public class Invoice extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 50)
