@@ -137,7 +137,7 @@ public class PatientPackageServiceImpl implements PatientPackageService {
         PackageMaster packageMaster = null;
         try {
             packageMaster = fetchPackageMaster(patientPackage.getPackageMasterId());
-        } catch (ResourceNotFoundException ex) {
+        } catch (Exception ex) {
             log.warn("Package master not found for patient package {}: {}",
                     patientPackage.getId(), patientPackage.getPackageMasterId());
         }

@@ -72,8 +72,6 @@ Invoice keeps existing `visitType` (unchanged for frontend).
 ```json
 {
   "patientId": "uuid",
-  "patientDisplayId": "#PT458652",
-  "patientCode": "GAN2025-0129",
   "patientName": "Khushi Shroff",
   "contactNumber": "9876543210",
   "invoiceDate": "2026-10-15",

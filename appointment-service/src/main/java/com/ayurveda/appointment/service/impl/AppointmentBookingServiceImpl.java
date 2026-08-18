@@ -456,12 +456,12 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
             throw new ResourceNotFoundException(AppMessages.NO_APPOINTMENTS_FOR_PATIENT + patientId);
         }
 
-        PatientSummaryResponse patient = fetchPatient(patientId);
+        PatientSummaryResponse patient = fetchPatientQuietly(patientId);
 
         List<AppointmentBookingResponse> responses = appointments.stream().map(appointment -> {
 
             DoctorSummaryResponse doctor =
-                    fetchDoctor(appointment.getAssignedDoctorId());
+                    fetchDoctorQuietly(appointment.getAssignedDoctorId());
 
             AppointmentBookingResponse response =
                     appointmentBookingMapper.toResponse(appointment, patient, doctor);
@@ -641,7 +641,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         List<DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse> appointments =
                 appointmentsList.stream()
                 .map(appointment -> {
-                    PatientSummaryResponse patient = fetchPatient(appointment.getPatientId());
+                    PatientSummaryResponse patient = fetchPatientQuietly(appointment.getPatientId());
 
                     List<ConsultationTypeItemResponse> consultationTypes =
                             resolveConsultationTypes(appointment.getId());
@@ -653,8 +653,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                             .bookingTime(resolveBookingDateTime(appointment))
                             .bookingStatus(appointment.getBookingStatus())
                             .patientId(appointment.getPatientId())
-                            .patientName(patient.getFullName())
-                            .patientMobileNumber(patient.getMobileNumber())
+                            .patientName(patient != null ? patient.getFullName() : null)
+                            .patientMobileNumber(patient != null ? patient.getMobileNumber() : null)
                             .consultationTypes(consultationTypes)
                             .build();
                 })
@@ -682,7 +682,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         List<DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse> appointments =
                 appointmentsList.stream()
                 .map(appointment -> {
-                    PatientSummaryResponse patient = fetchPatient(appointment.getPatientId());
+                    PatientSummaryResponse patient = fetchPatientQuietly(appointment.getPatientId());
 
                     List<ConsultationTypeItemResponse> consultationTypes =
                             resolveConsultationTypes(appointment.getId());
@@ -694,8 +694,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                             .bookingTime(resolveBookingDateTime(appointment))
                             .bookingStatus(appointment.getBookingStatus())
                             .patientId(appointment.getPatientId())
-                            .patientName(patient.getFullName())
-                            .patientMobileNumber(patient.getMobileNumber())
+                            .patientName(patient != null ? patient.getFullName() : null)
+                            .patientMobileNumber(patient != null ? patient.getMobileNumber() : null)
                             .consultationTypes(consultationTypes)
                             .build();
                 })
@@ -756,11 +756,11 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     }
 
     private DashboardTodaysScheduleResponse.ScheduleItemResponse toScheduleItem(AppointmentBooking appointment) {
-        PatientSummaryResponse patient = fetchPatient(appointment.getPatientId());
+        PatientSummaryResponse patient = fetchPatientQuietly(appointment.getPatientId());
         return DashboardTodaysScheduleResponse.ScheduleItemResponse.builder()
                 .bookingId(appointment.getId())
                 .patientId(appointment.getPatientId())
-                .patientName(patient.getFullName())
+                .patientName(patient != null ? patient.getFullName() : null)
                 .serviceType(resolveServiceType(appointment))
                 .bookingStatus(appointment.getBookingStatus())
                 .build();
@@ -951,8 +951,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     }
 
     private AppointmentBookingResponse toResponse(AppointmentBooking appointment) {
-        PatientSummaryResponse patient = fetchPatient(appointment.getPatientId());
-        DoctorSummaryResponse doctor = fetchDoctor(appointment.getAssignedDoctorId());
+        PatientSummaryResponse patient = fetchPatientQuietly(appointment.getPatientId());
+        DoctorSummaryResponse doctor = fetchDoctorQuietly(appointment.getAssignedDoctorId());
 
         AppointmentBookingResponse response =
                 appointmentBookingMapper.toResponse(appointment, patient, doctor);
@@ -987,19 +987,31 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     }
 
     private PatientSummaryResponse fetchPatient(UUID patientId) {
-        ApiResponse<PatientSummaryResponse> patientResponse = patientServiceClient.getPatientById(patientId);
-        if (patientResponse == null || !patientResponse.isSuccess() || patientResponse.getData() == null) {
+        try {
+            ApiResponse<PatientSummaryResponse> patientResponse = patientServiceClient.getPatientById(patientId);
+            if (patientResponse == null || !patientResponse.isSuccess() || patientResponse.getData() == null) {
+                throw new ResourceNotFoundException(AppConstants.PATIENT_NOT_FOUND_WITH_ID + patientId);
+            }
+            return patientResponse.getData();
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (feign.FeignException.NotFound ex) {
             throw new ResourceNotFoundException(AppConstants.PATIENT_NOT_FOUND_WITH_ID + patientId);
         }
-        return patientResponse.getData();
     }
 
     private DoctorSummaryResponse fetchDoctor(UUID doctorId) {
-        ApiResponse<DoctorSummaryResponse> doctorResponse = doctorServiceClient.getDoctorById(doctorId);
-        if (doctorResponse == null || !doctorResponse.isSuccess() || doctorResponse.getData() == null) {
+        try {
+            ApiResponse<DoctorSummaryResponse> doctorResponse = doctorServiceClient.getDoctorById(doctorId);
+            if (doctorResponse == null || !doctorResponse.isSuccess() || doctorResponse.getData() == null) {
+                throw new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND_WITH_ID + doctorId);
+            }
+            return doctorResponse.getData();
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (feign.FeignException.NotFound ex) {
             throw new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND_WITH_ID + doctorId);
         }
-        return doctorResponse.getData();
     }
 
 }

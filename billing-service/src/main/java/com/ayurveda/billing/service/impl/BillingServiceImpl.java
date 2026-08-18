@@ -205,8 +205,6 @@ public class BillingServiceImpl implements BillingService {
 
         return CreateInvoiceRequest.builder()
                 .patientId(request.getPatientId() != null ? request.getPatientId() : billing.getPatientId())
-                .patientDisplayId(trimToNull(request.getPatientDisplayId()))
-                .patientCode(trimToNull(request.getPatientCode()))
                 .patientName(firstText(request.getPatientName(), billing.getPatientName()))
                 .contactNumber(firstText(request.getContactNumber(), billing.getContactNumber()))
                 .invoiceDate(request.getInvoiceDate() != null

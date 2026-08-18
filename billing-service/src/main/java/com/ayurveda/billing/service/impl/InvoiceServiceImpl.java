@@ -82,8 +82,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice invoice = Invoice.builder()
                 .invoiceNumber(invoiceNumberGenerator.generate())
                 .patientId(request.getPatientId())
-                .patientDisplayId(normalizeDisplayId(request.getPatientDisplayId()))
-                .patientCode(request.getPatientCode())
                 .patientName(request.getPatientName().trim())
                 .contactNumber(request.getContactNumber())
                 .invoiceDate(request.getInvoiceDate())
@@ -560,21 +558,12 @@ public class InvoiceServiceImpl implements InvoiceService {
         return BillingMessages.INSUFFICIENT_STOCK_FOR_MEDICINE_FALLBACK + medicineName + "'.";
     }
 
-    private String normalizeDisplayId(String patientDisplayId) {
-        if (!StringUtils.hasText(patientDisplayId)) {
-            return null;
-        }
-        String trimmed = patientDisplayId.trim();
-        return trimmed.startsWith("#") ? trimmed.substring(1) : trimmed;
-    }
-
     private PackageMaster resolvePackageMaster(UUID packageMasterId) {
         if (packageMasterId == null) {
             return null;
         }
         return packageMasterRepository.findByIdAndDeletedFalse(packageMasterId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        BillingMessages.PACKAGE_MASTER_NOT_FOUND));
+                .orElse(null);
     }
 
     private String trimToNull(String value) {

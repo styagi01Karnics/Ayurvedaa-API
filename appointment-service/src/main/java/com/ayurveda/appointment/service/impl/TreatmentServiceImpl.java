@@ -94,8 +94,7 @@ public class TreatmentServiceImpl implements TreatmentService {
     public ApiResponse<List<TreatmentResponse>> getTreatmentsByPatientId(UUID patientId) {
         log.info("Fetching treatments for patient: {}", patientId);
 
-        validatePatient(patientId);
-
+        // Patient soft-delete must not block reading existing treatment rows.
         List<TreatmentResponse> responses = treatmentRepository
                 .findAllByPatientIdAndDeletedFalseOrderByStartDateDesc(patientId)
                 .stream()
@@ -161,20 +160,32 @@ public class TreatmentServiceImpl implements TreatmentService {
     }
 
     private void validatePatient(UUID patientId) {
-        if (patientServiceClient.getPatientById(patientId).getData() == null) {
+        try {
+            if (patientServiceClient.getPatientById(patientId).getData() == null) {
+                throw new ResourceNotFoundException(AppMessages.PATIENT_NOT_FOUND_WITH_ID + patientId);
+            }
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (feign.FeignException.NotFound ex) {
             throw new ResourceNotFoundException(AppMessages.PATIENT_NOT_FOUND_WITH_ID + patientId);
         }
     }
 
     private TherapistSummaryResponse fetchTherapist(UUID therapistId) {
-        TherapistSummaryResponse therapist = therapistServiceClient
-                .getTherapistById(therapistId)
-                .getData();
+        try {
+            TherapistSummaryResponse therapist = therapistServiceClient
+                    .getTherapistById(therapistId)
+                    .getData();
 
-        if (therapist == null) {
+            if (therapist == null) {
+                throw new ResourceNotFoundException(AppMessages.THERAPIST_NOT_FOUND_WITH_ID + therapistId);
+            }
+            return therapist;
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (feign.FeignException.NotFound ex) {
             throw new ResourceNotFoundException(AppMessages.THERAPIST_NOT_FOUND_WITH_ID + therapistId);
         }
-        return therapist;
     }
 
     private void validateDates(java.time.LocalDate startDate, java.time.LocalDate endDate) {
@@ -195,15 +206,16 @@ public class TreatmentServiceImpl implements TreatmentService {
         TreatmentPlanMaster treatmentPlan = null;
         try {
             therapist = fetchTherapist(treatment.getAssignedTherapistId());
-        } catch (ResourceNotFoundException ex) {
-            log.warn("Therapist not found for treatment {}: {}",
-                    treatment.getId(), treatment.getAssignedTherapistId());
+        } catch (Exception ex) {
+            // Soft-deleted / missing therapist must not fail treatment GET.
+            log.warn("Therapist unavailable for treatment {}: {} ({})",
+                    treatment.getId(), treatment.getAssignedTherapistId(), ex.getMessage());
         }
         try {
             treatmentPlan = fetchTreatmentPlan(treatment.getTreatmentPlanId());
-        } catch (ResourceNotFoundException ex) {
-            log.warn("Treatment plan not found for treatment {}: {}",
-                    treatment.getId(), treatment.getTreatmentPlanId());
+        } catch (Exception ex) {
+            log.warn("Treatment plan unavailable for treatment {}: {} ({})",
+                    treatment.getId(), treatment.getTreatmentPlanId(), ex.getMessage());
         }
         return toResponse(treatment, therapist, treatmentPlan);
     }

@@ -38,12 +38,6 @@ public class Invoice extends BaseEntity {
     @Column(nullable = false)
     private UUID patientId;
 
-    @Column(length = 20)
-    private String patientDisplayId;
-
-    @Column(length = 50)
-    private String patientCode;
-
     @Column(nullable = false, length = 150)
     private String patientName;
 

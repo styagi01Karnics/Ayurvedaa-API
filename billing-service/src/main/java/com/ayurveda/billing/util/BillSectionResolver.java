@@ -54,7 +54,14 @@ public final class BillSectionResolver {
         return Arrays.stream(value.split(","))
                 .map(String::trim)
                 .filter(StringUtils::hasText)
-                .map(BillSection::valueOf)
+                .map(section -> {
+                    try {
+                        return BillSection.valueOf(section);
+                    } catch (IllegalArgumentException ex) {
+                        return null;
+                    }
+                })
+                .filter(section -> section != null)
                 .toList();
     }
 

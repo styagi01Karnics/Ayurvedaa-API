@@ -24,9 +24,6 @@ public class InvoiceListResponse {
     private UUID id;
     private String invoiceId;
     private UUID patientId;
-    private String patientDisplayId;
-    private String formattedPatientId;
-    private String patientCode;
     private String patientName;
     private LocalDate invoiceDate;
     private BigDecimal totalAmount;

@@ -29,12 +29,6 @@ public class CreateInvoiceRequest {
     @NotNull(message = "Patient id is required")
     private UUID patientId;
 
-    @Size(max = 20)
-    private String patientDisplayId;
-
-    @Size(max = 50)
-    private String patientCode;
-
     @NotBlank(message = "Patient name is required")
     @Size(max = 150)
     private String patientName;

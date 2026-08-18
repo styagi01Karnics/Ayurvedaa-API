@@ -30,8 +30,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
                   )
               AND (
                     :patientSearch IS NULL OR :patientSearch = ''
-                    OR LOWER(COALESCE(i.patientCode, '')) LIKE LOWER(CONCAT('%', :patientSearch, '%'))
-                    OR LOWER(COALESCE(i.patientDisplayId, '')) LIKE LOWER(CONCAT('%', :patientSearch, '%'))
                     OR LOWER(i.patientName) LIKE LOWER(CONCAT('%', :patientSearch, '%'))
                     OR LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :patientSearch, '%'))
                   )

@@ -81,7 +81,13 @@ public class AppointmentAyurvedicAssessmentServiceImpl
                 .orElseThrow(() -> new ResourceNotFoundException(
                         Constants.AYURVEDIC_ASSESSMENT_NOT_FOUND + patientId));
 
-        DoshaResponse dosha = getDosha(assessment.getDoshaId());
+        DoshaResponse dosha = null;
+        try {
+            dosha = getDosha(assessment.getDoshaId());
+        } catch (Exception ex) {
+            log.warn("Dosha unavailable for ayurvedic assessment patient {}: {}",
+                    patientId, ex.getMessage());
+        }
 
         log.info("Ayurvedic assessment fetched successfully for patient: {}", patientId);
 
@@ -91,6 +97,9 @@ public class AppointmentAyurvedicAssessmentServiceImpl
 
     private DoshaResponse getDosha(UUID doshaId) {
         ApiResponse<DoshaResponse> response = doshaMasterService.getDoshaById(doshaId);
+        if (response == null || response.getData() == null) {
+            throw new ResourceNotFoundException(Constants.DOSHA_NOT_FOUND);
+        }
         return response.getData();
     }
 

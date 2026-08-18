@@ -92,8 +92,7 @@ public class FollowUpServiceImpl implements FollowUpService {
     public ApiResponse<List<FollowUpResponse>> getFollowUpsByPatientId(UUID patientId) {
         log.info("Fetching follow-ups for patient: {}", patientId);
 
-        fetchPatient(patientId);
-
+        // Soft-deleted patient must not block reading existing follow-up rows.
         List<FollowUpResponse> responses = followUpRepository
                 .findAllByPatientIdAndDeletedFalseOrderByAppointmentDateAsc(patientId)
                 .stream()
@@ -142,19 +141,31 @@ public class FollowUpServiceImpl implements FollowUpService {
     }
 
     private PatientSummaryResponse fetchPatient(UUID patientId) {
-        PatientSummaryResponse patient = patientServiceClient.getPatientById(patientId).getData();
-        if (patient == null) {
+        try {
+            PatientSummaryResponse patient = patientServiceClient.getPatientById(patientId).getData();
+            if (patient == null) {
+                throw new ResourceNotFoundException(AppMessages.PATIENT_NOT_FOUND_WITH_ID + patientId);
+            }
+            return patient;
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (feign.FeignException.NotFound ex) {
             throw new ResourceNotFoundException(AppMessages.PATIENT_NOT_FOUND_WITH_ID + patientId);
         }
-        return patient;
     }
 
     private DoctorSummaryResponse fetchDoctor(UUID doctorId) {
-        DoctorSummaryResponse doctor = doctorServiceClient.getDoctorById(doctorId).getData();
-        if (doctor == null) {
+        try {
+            DoctorSummaryResponse doctor = doctorServiceClient.getDoctorById(doctorId).getData();
+            if (doctor == null) {
+                throw new ResourceNotFoundException(AppMessages.DOCTOR_NOT_FOUND_WITH_ID + doctorId);
+            }
+            return doctor;
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (feign.FeignException.NotFound ex) {
             throw new ResourceNotFoundException(AppMessages.DOCTOR_NOT_FOUND_WITH_ID + doctorId);
         }
-        return doctor;
     }
 
     private ConsultationTypeMaster fetchConsultationType(UUID visitTypeId) {
@@ -168,17 +179,17 @@ public class FollowUpServiceImpl implements FollowUpService {
         ConsultationTypeMaster visitType = null;
         try {
             patient = fetchPatient(followUp.getPatientId());
-        } catch (ResourceNotFoundException ex) {
+        } catch (Exception ex) {
             log.warn("Patient not found for follow-up {}: {}", followUp.getId(), followUp.getPatientId());
         }
         try {
             doctor = fetchDoctor(followUp.getAssignedDoctorId());
-        } catch (ResourceNotFoundException ex) {
+        } catch (Exception ex) {
             log.warn("Doctor not found for follow-up {}: {}", followUp.getId(), followUp.getAssignedDoctorId());
         }
         try {
             visitType = fetchConsultationType(followUp.getVisitTypeId());
-        } catch (ResourceNotFoundException ex) {
+        } catch (Exception ex) {
             log.warn("Visit type not found for follow-up {}: {}", followUp.getId(), followUp.getVisitTypeId());
         }
         return toResponse(followUp, patient, doctor, visitType);

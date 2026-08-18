@@ -27,9 +27,6 @@ public class InvoiceMapper {
                 .id(invoice.getId())
                 .invoiceId(invoice.getInvoiceNumber())
                 .patientId(invoice.getPatientId())
-                .patientDisplayId(invoice.getPatientDisplayId())
-                .formattedPatientId(formatPatientId(invoice.getPatientDisplayId()))
-                .patientCode(invoice.getPatientCode())
                 .patientName(invoice.getPatientName())
                 .invoiceDate(invoice.getInvoiceDate())
                 .totalAmount(invoice.getTotalAmount())
@@ -50,9 +47,6 @@ public class InvoiceMapper {
                 .id(invoice.getId())
                 .invoiceId(invoice.getInvoiceNumber())
                 .patientId(invoice.getPatientId())
-                .patientDisplayId(invoice.getPatientDisplayId())
-                .formattedPatientId(formatPatientId(invoice.getPatientDisplayId()))
-                .patientCode(invoice.getPatientCode())
                 .patientName(invoice.getPatientName())
                 .contactNumber(invoice.getContactNumber())
                 .invoiceDate(invoice.getInvoiceDate())
@@ -122,13 +116,6 @@ public class InvoiceMapper {
                         .remarks(payment.getRemarks())
                         .build())
                 .toList();
-    }
-
-    private String formatPatientId(String patientDisplayId) {
-        if (patientDisplayId == null || patientDisplayId.isBlank()) {
-            return null;
-        }
-        return patientDisplayId.startsWith("#") ? patientDisplayId : "#" + patientDisplayId;
     }
 
 }

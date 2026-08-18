@@ -2,6 +2,7 @@ package com.ayurveda.appointment.service.impl;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -129,15 +130,24 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                     Constants.APPOINTMENT_THERAPY_NO_RECORDS, List.of());
         }
 
-        PatientSummaryResponse patient = patientServiceClient
-                .getPatientById(patientId)
-                .getData();
+        PatientSummaryResponse loadedPatient = null;
+        try {
+            loadedPatient = patientServiceClient.getPatientById(patientId).getData();
+        } catch (Exception ex) {
+            log.warn("Patient unavailable for appointment therapy list {}: {}", patientId, ex.getMessage());
+        }
+        final PatientSummaryResponse patient = loadedPatient;
 
         List<AppointmentTherapyResponse> responses = appointmentTherapies.stream()
                 .map(therapy -> {
 
-                    TherapistSummaryResponse therapist =
-                            fetchTherapist(therapy.getAssignedTherapistId());
+                    TherapistSummaryResponse therapist = null;
+                    try {
+                        therapist = fetchTherapist(therapy.getAssignedTherapistId());
+                    } catch (Exception ex) {
+                        log.warn("Therapist unavailable for appointment therapy {}: {} ({})",
+                                therapy.getId(), therapy.getAssignedTherapistId(), ex.getMessage());
+                    }
 
                     AppointmentTherapyResponse response =
                             appointmentTherapyMapper.toResponse(therapy, therapist);
@@ -149,9 +159,8 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                                     .findByAppointmentTherapyId(therapy.getId())
                                     .stream()
                                     .map(AppointmentTherapyRecommendation::getTherapyMasterId)
-                                    .map(id -> therapyRepository.findById(id)
-                                            .orElseThrow(() -> new ResourceNotFoundException(
-                                                    "Therapy not found: " + id)))
+                                    .map(id -> therapyRepository.findById(id).orElse(null))
+                                    .filter(Objects::nonNull)
                                     .map(this::mapTherapy)
                                     .toList();
 
@@ -160,10 +169,11 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                     TreatmentCategoryMaster category =
                             treatmentCategoryRepository
                                     .findById(therapy.getTreatmentCategoryId())
-                                    .orElseThrow(() -> new ResourceNotFoundException(
-                                            "Treatment category not found"));
+                                    .orElse(null);
 
-                    response.setTreatmentCategory(mapTreatmentCategory(category));
+                    if (category != null) {
+                        response.setTreatmentCategory(mapTreatmentCategory(category));
+                    }
 
                     return response;
                 })
@@ -189,9 +199,15 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
 
         List<TherapistTodayScheduleResponse.TherapistTodaySlotResponse> slots = therapies.stream()
                 .map(therapy -> {
-                    PatientSummaryResponse patient = patientServiceClient
-                            .getPatientById(therapy.getPatientId())
-                            .getData();
+                    PatientSummaryResponse patient = null;
+                    try {
+                        patient = patientServiceClient
+                                .getPatientById(therapy.getPatientId())
+                                .getData();
+                    } catch (Exception ex) {
+                        log.warn("Patient unavailable for therapist schedule therapy {}: {}",
+                                therapy.getId(), ex.getMessage());
+                    }
 
                     List<String> therapyNames =
                             appointmentTherapyRecommendationRepository
@@ -200,7 +216,8 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
                                     .map(AppointmentTherapyRecommendation::getTherapyMasterId)
                                     .map(id -> therapyRepository.findById(id)
                                             .map(TherapyMaster::getTherapyName)
-                                            .orElse("Unknown"))
+                                            .orElse(null))
+                                    .filter(Objects::nonNull)
                                     .toList();
 
                     String categoryName = treatmentCategoryRepository
@@ -257,22 +274,28 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
     }
     
     private TherapistSummaryResponse fetchTherapist(UUID therapistId) {
-        TherapistSummaryResponse therapist = therapistServiceClient
-                .getTherapistById(therapistId)
-                .getData();
+        try {
+            TherapistSummaryResponse therapist = therapistServiceClient
+                    .getTherapistById(therapistId)
+                    .getData();
 
-        if (therapist == null) {
+            if (therapist == null) {
+                throw new ResourceNotFoundException(AppMessages.THERAPIST_NOT_FOUND_WITH_ID + therapistId);
+            }
+
+            // Return only fields aligned with current therapist master (no legacy nulls).
+            return TherapistSummaryResponse.builder()
+                    .id(therapist.getId())
+                    .name(therapist.getName() != null ? therapist.getName() : therapist.getTherapistName())
+                    .therapistName(therapist.getTherapistName())
+                    .therapistCode(therapist.getTherapistCode())
+                    .status(therapist.getStatus())
+                    .build();
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (feign.FeignException.NotFound ex) {
             throw new ResourceNotFoundException(AppMessages.THERAPIST_NOT_FOUND_WITH_ID + therapistId);
         }
-
-        // Return only fields aligned with current therapist master (no legacy nulls).
-        return TherapistSummaryResponse.builder()
-                .id(therapist.getId())
-                .name(therapist.getName() != null ? therapist.getName() : therapist.getTherapistName())
-                .therapistName(therapist.getTherapistName())
-                .therapistCode(therapist.getTherapistCode())
-                .status(therapist.getStatus())
-                .build();
     }
     
     private TreatmentCategoryResponse mapTreatmentCategory(TreatmentCategoryMaster category) {

@@ -119,23 +119,38 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
 
         MedicalAssessmentResponse response = MedicalAssessmentResponse.builder()
                 .patientId(patientId)
-                .ayurvedicAssessment(
-                        ayurvedicAssessmentService.getAyurvedicAssessmentByPatientId(patientId).getData())
-                .physicalExamination(
-                        physicalExaminationService.getPhysicalExaminationByPatientId(patientId).getData())
-                .medicalHistory(
-                        medicalHistoryService.getMedicalHistoryByPatientId(patientId).getData())
-                .lifestyleInformation(
-                        lifestyleInformationService.getLifestyleInformationByPatientId(patientId).getData())
-                .systemicExamination(
-                        systemicExaminationService.getSystemicExaminationByPatientId(patientId).getData())
-                .treatmentPlan(
-                        treatmentPlanService.getTreatmentPlanByPatientId(patientId).getData())
+                .ayurvedicAssessment(loadQuietly(
+                        () -> ayurvedicAssessmentService.getAyurvedicAssessmentByPatientId(patientId).getData(),
+                        "ayurvedic assessment", patientId))
+                .physicalExamination(loadQuietly(
+                        () -> physicalExaminationService.getPhysicalExaminationByPatientId(patientId).getData(),
+                        "physical examination", patientId))
+                .medicalHistory(loadQuietly(
+                        () -> medicalHistoryService.getMedicalHistoryByPatientId(patientId).getData(),
+                        "medical history", patientId))
+                .lifestyleInformation(loadQuietly(
+                        () -> lifestyleInformationService.getLifestyleInformationByPatientId(patientId).getData(),
+                        "lifestyle information", patientId))
+                .systemicExamination(loadQuietly(
+                        () -> systemicExaminationService.getSystemicExaminationByPatientId(patientId).getData(),
+                        "systemic examination", patientId))
+                .treatmentPlan(loadQuietly(
+                        () -> treatmentPlanService.getTreatmentPlanByPatientId(patientId).getData(),
+                        "treatment plan", patientId))
                 .build();
 
         log.info("Complete medical assessment fetched successfully for patient {}", patientId);
 
         return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_FETCHED, response);
+    }
+
+    private <T> T loadQuietly(java.util.function.Supplier<T> loader, String section, UUID patientId) {
+        try {
+            return loader.get();
+        } catch (Exception ex) {
+            log.warn("Unable to load {} for patient {}: {}", section, patientId, ex.getMessage());
+            return null;
+        }
     }
 
     private void applyPatientId(CreateMedicalAssessmentRequest request) {
