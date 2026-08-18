@@ -3,16 +3,24 @@ package com.ayurveda.billing.mapper;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import com.ayurveda.billing.dto.response.InvoiceListResponse;
 import com.ayurveda.billing.dto.response.InvoiceResponse;
 import com.ayurveda.billing.entity.Invoice;
 import com.ayurveda.billing.entity.InvoiceItem;
 import com.ayurveda.billing.entity.InvoicePayment;
+import com.ayurveda.billing.entity.PackageMaster;
+import com.ayurveda.billing.repository.PackageMasterRepository;
 import com.ayurveda.billing.util.BillSectionResolver;
 
+import lombok.RequiredArgsConstructor;
+
 @Component
+@RequiredArgsConstructor
 public class InvoiceMapper {
+
+    private final PackageMasterRepository packageMasterRepository;
 
     public InvoiceListResponse toListResponse(Invoice invoice) {
         return InvoiceListResponse.builder()
@@ -33,6 +41,11 @@ public class InvoiceMapper {
     }
 
     public InvoiceResponse toResponse(Invoice invoice) {
+        PackageMaster packageMaster = resolvePackageMaster(invoice.getPackageMasterId());
+        String packageName = packageMaster != null
+                ? packageMaster.getName()
+                : invoice.getPackageType();
+
         return InvoiceResponse.builder()
                 .id(invoice.getId())
                 .invoiceId(invoice.getInvoiceNumber())
@@ -45,6 +58,8 @@ public class InvoiceMapper {
                 .invoiceDate(invoice.getInvoiceDate())
                 .visitType(invoice.getVisitType())
                 .serviceFees(invoice.getServiceFees())
+                .packageMasterId(invoice.getPackageMasterId())
+                .packageName(StringUtils.hasText(packageName) ? packageName : null)
                 .packageType(invoice.getPackageType())
                 .packageCharges(invoice.getPackageCharges())
                 .subtotal(invoice.getSubtotal())
@@ -62,6 +77,13 @@ public class InvoiceMapper {
                 .items(mapItems(invoice.getItems()))
                 .payments(mapPayments(invoice.getPayments()))
                 .build();
+    }
+
+    private PackageMaster resolvePackageMaster(java.util.UUID packageMasterId) {
+        if (packageMasterId == null) {
+            return null;
+        }
+        return packageMasterRepository.findByIdAndDeletedFalse(packageMasterId).orElse(null);
     }
 
     private List<InvoiceResponse.InvoiceItemResponse> mapItems(List<InvoiceItem> items) {

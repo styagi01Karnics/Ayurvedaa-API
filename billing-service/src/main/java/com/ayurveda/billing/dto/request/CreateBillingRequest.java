@@ -5,8 +5,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import com.ayurveda.billing.enums.VisitType;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -30,12 +28,6 @@ public class CreateBillingRequest {
     @NotNull(message = "Patient id is required")
     private UUID patientId;
 
-    @Size(max = 20)
-    private String patientDisplayId;
-
-    @Size(max = 50)
-    private String patientCode;
-
     @NotBlank(message = "Patient name is required")
     @Size(max = 150)
     private String patientName;
@@ -45,8 +37,6 @@ public class CreateBillingRequest {
 
     @NotNull(message = "Billing date is required")
     private LocalDate billingDate;
-
-    private VisitType visitType;
 
     @NotEmpty(message = "At least one service item is required")
     @Valid
@@ -59,13 +49,19 @@ public class CreateBillingRequest {
     @AllArgsConstructor
     public static class BillingServiceItemRequest {
 
+        /** e.g. Consultation — required even when no package. */
+        @NotBlank(message = "Service type is required")
         @Size(max = 100)
         private String serviceType;
 
+        @NotNull(message = "Service fees are required")
         @DecimalMin(value = "0.0", inclusive = true)
         private BigDecimal serviceFees;
 
-        /** Package master id from mst_package (Package Type dropdown). */
+        /**
+         * Optional. Null when patient comes for consultation/service only
+         * (no package selected).
+         */
         private UUID packageMasterId;
 
         @Size(max = 100)

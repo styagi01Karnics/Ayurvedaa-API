@@ -60,6 +60,9 @@ public class Invoice extends BaseEntity {
     @Column(precision = 12, scale = 2)
     private BigDecimal serviceFees;
 
+    /** FK to mst_package (optional) — same as billing service items. */
+    private UUID packageMasterId;
+
     @Column(length = 100)
     private String packageType;
 

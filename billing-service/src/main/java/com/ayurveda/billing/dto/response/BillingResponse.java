@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 import com.ayurveda.billing.enums.BillingStatus;
-import com.ayurveda.billing.enums.VisitType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,12 +23,9 @@ public class BillingResponse {
 
     private UUID id;
     private UUID patientId;
-    private String patientDisplayId;
-    private String patientCode;
     private String patientName;
     private String contactNumber;
     private LocalDate billingDate;
-    private VisitType visitType;
     private BillingStatus status;
     private UUID invoiceId;
     private String invoiceNumber;

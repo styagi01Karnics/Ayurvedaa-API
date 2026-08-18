@@ -57,12 +57,9 @@ public class BillingServiceImpl implements BillingService {
 
         Billing billing = Billing.builder()
                 .patientId(request.getPatientId())
-                .patientDisplayId(normalizeDisplayId(request.getPatientDisplayId()))
-                .patientCode(trimToNull(request.getPatientCode()))
                 .patientName(request.getPatientName().trim())
                 .contactNumber(trimToNull(request.getContactNumber()))
                 .billingDate(request.getBillingDate())
-                .visitType(request.getVisitType())
                 .status(BillingStatus.PENDING)
                 .build();
 
@@ -95,11 +92,8 @@ public class BillingServiceImpl implements BillingService {
                     return BillingListResponse.builder()
                             .id(billing.getId())
                             .patientId(billing.getPatientId())
-                            .patientDisplayId(billing.getPatientDisplayId())
-                            .patientCode(billing.getPatientCode())
                             .patientName(billing.getPatientName())
                             .billingDate(billing.getBillingDate())
-                            .visitType(billing.getVisitType())
                             .status(billing.getStatus())
                             .invoiceId(billing.getInvoiceId())
                             .invoiceNumber(billing.getInvoiceNumber())
@@ -198,23 +192,35 @@ public class BillingServiceImpl implements BillingService {
 
         String billingPackageType = packageTypes.isEmpty() ? null : String.join(", ", packageTypes);
 
+        UUID billingPackageMasterId = items.stream()
+                .map(BillingServiceItem::getPackageMasterId)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+
+        // When billing had no package, package charges stay 0 / null on invoice unless receptionist sets them.
+        BigDecimal mergedPackageCharges = request.getPackageCharges() != null
+                ? request.getPackageCharges()
+                : (billingPackageCharges.compareTo(BigDecimal.ZERO) > 0 ? billingPackageCharges : null);
+
         return CreateInvoiceRequest.builder()
                 .patientId(request.getPatientId() != null ? request.getPatientId() : billing.getPatientId())
-                .patientDisplayId(firstText(request.getPatientDisplayId(), billing.getPatientDisplayId()))
-                .patientCode(firstText(request.getPatientCode(), billing.getPatientCode()))
+                .patientDisplayId(trimToNull(request.getPatientDisplayId()))
+                .patientCode(trimToNull(request.getPatientCode()))
                 .patientName(firstText(request.getPatientName(), billing.getPatientName()))
                 .contactNumber(firstText(request.getContactNumber(), billing.getContactNumber()))
                 .invoiceDate(request.getInvoiceDate() != null
                         ? request.getInvoiceDate()
                         : billing.getBillingDate())
-                .visitType(request.getVisitType() != null ? request.getVisitType() : billing.getVisitType())
+                .visitType(request.getVisitType())
                 .serviceFees(request.getServiceFees() != null
                         ? request.getServiceFees()
                         : billingServiceFees)
+                .packageMasterId(request.getPackageMasterId() != null
+                        ? request.getPackageMasterId()
+                        : billingPackageMasterId)
                 .packageType(firstText(request.getPackageType(), billingPackageType))
-                .packageCharges(request.getPackageCharges() != null
-                        ? request.getPackageCharges()
-                        : billingPackageCharges)
+                .packageCharges(mergedPackageCharges)
                 .medicines(request.getMedicines())
                 .therapies(request.getTherapies())
                 .discount(request.getDiscount())
@@ -232,6 +238,7 @@ public class BillingServiceImpl implements BillingService {
 
         List<BillingServiceItem> entities = new ArrayList<>();
         for (BillingServiceItemRequest request : requests) {
+            // Consultation/service only → package fields stay null.
             PackageMaster packageMaster = null;
             if (request.getPackageMasterId() != null) {
                 packageMaster = packageMasterRepository
@@ -240,23 +247,32 @@ public class BillingServiceImpl implements BillingService {
                                 BillingMessages.PACKAGE_MASTER_NOT_FOUND));
             }
 
-            String packageType = trimToNull(request.getPackageType());
-            if (packageType == null && packageMaster != null) {
-                packageType = packageMaster.getName();
-            }
+            String packageType = null;
+            BigDecimal packageCharges = null;
+            UUID packageMasterId = null;
 
-            BigDecimal packageCharges = request.getPackageCharges();
-            if (packageCharges == null && packageMaster != null) {
-                packageCharges = packageMaster.getPackagePrice();
+            if (packageMaster != null) {
+                packageMasterId = packageMaster.getId();
+                packageType = firstText(request.getPackageType(), packageMaster.getName());
+                packageCharges = request.getPackageCharges() != null
+                        ? request.getPackageCharges()
+                        : packageMaster.getPackagePrice();
+            } else if (StringUtils.hasText(request.getPackageType())
+                    || request.getPackageCharges() != null) {
+                // Free-text package without master id still allowed if UI sends it.
+                packageType = trimToNull(request.getPackageType());
+                packageCharges = request.getPackageCharges();
             }
 
             entities.add(BillingServiceItem.builder()
                     .billingId(billingId)
-                    .serviceType(trimToNull(request.getServiceType()))
+                    .serviceType(request.getServiceType().trim())
                     .serviceFees(InvoiceCalculationUtil.money(request.getServiceFees()))
-                    .packageMasterId(request.getPackageMasterId())
+                    .packageMasterId(packageMasterId)
                     .packageType(packageType)
-                    .packageCharges(InvoiceCalculationUtil.money(packageCharges))
+                    .packageCharges(packageCharges != null
+                            ? InvoiceCalculationUtil.money(packageCharges)
+                            : null)
                     .build());
         }
         return billingServiceItemRepository.saveAll(entities);
@@ -297,12 +313,9 @@ public class BillingServiceImpl implements BillingService {
         return BillingResponse.builder()
                 .id(billing.getId())
                 .patientId(billing.getPatientId())
-                .patientDisplayId(billing.getPatientDisplayId())
-                .patientCode(billing.getPatientCode())
                 .patientName(billing.getPatientName())
                 .contactNumber(billing.getContactNumber())
                 .billingDate(billing.getBillingDate())
-                .visitType(billing.getVisitType())
                 .status(billing.getStatus())
                 .invoiceId(billing.getInvoiceId())
                 .invoiceNumber(billing.getInvoiceNumber())
@@ -346,14 +359,6 @@ public class BillingServiceImpl implements BillingService {
             return preferred.trim();
         }
         return trimToNull(fallback);
-    }
-
-    private String normalizeDisplayId(String displayId) {
-        if (!StringUtils.hasText(displayId)) {
-            return null;
-        }
-        String trimmed = displayId.trim();
-        return trimmed.startsWith("#") ? trimmed : "#" + trimmed;
     }
 
     private String trimToNull(String value) {

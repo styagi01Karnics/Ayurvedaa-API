@@ -45,25 +45,25 @@ No medicine, therapy, discount, or GST on billing.
 ```json
 {
   "patientId": "uuid",
-  "patientDisplayId": "#PT458652",
-  "patientCode": "GAN2025-0129",
   "patientName": "Khushi Shroff",
   "contactNumber": "9876543210",
   "billingDate": "2026-10-15",
-  "visitType": "CONSULTATION",
   "services": [
     {
       "serviceType": "Consultation",
       "serviceFees": 800,
-      "packageMasterId": "uuid-from-mst_package",
-      "packageCharges": 800
+      "packageMasterId": null,
+      "packageType": null,
+      "packageCharges": null
     }
   ]
 }
 ```
 
-`packageMasterId` optional. If set, name/price can fill from `mst_package` when charges/type omitted.  
-GET services include: `packageMasterId`, `packageName`, `packageType`, `packageCharges` (no `packagePrice` field).
+No `patientDisplayId` / `patientCode` / `visitType` on billings.  
+Package vs consultation is only from `services[]` — package fields optional (null for consultation-only).  
+If `packageMasterId` is set, name/price can fill from `mst_package` when type/charges omitted.  
+Invoice keeps existing `visitType` (unchanged for frontend).
 
 ### Generate invoice from billing (receptionist)
 
@@ -79,6 +79,7 @@ GET services include: `packageMasterId`, `packageName`, `packageType`, `packageC
   "invoiceDate": "2026-10-15",
   "visitType": "CONSULTATION",
   "serviceFees": 800,
+  "packageMasterId": "uuid-from-mst_package",
   "packageType": "Basic Package",
   "packageCharges": 800,
   "medicines": [
@@ -100,6 +101,7 @@ GET services include: `packageMasterId`, `packageName`, `packageType`, `packageC
 ```
 
 - Patient / service can be omitted or partial — filled from PENDING billing when missing.  
+- `packageMasterId` optional (same as billing); copied from billing when generating invoice if omitted.  
 - Medicine / therapy / discount / GST belong on **invoice**, not billing.  
 - Creates `INV-xxxx`, sets billing `COMPLETED`, saves `invoiceId` / `invoiceNumber`.  
 - `amountPaid` omitted or `0` → invoice status **`UNPAID`**. If `amountPaid` > 0, amount is saved and status becomes ONGOING/COMPLETED.

@@ -24,11 +24,13 @@ import com.ayurveda.billing.dto.response.InvoiceResponse;
 import com.ayurveda.billing.entity.Invoice;
 import com.ayurveda.billing.entity.InvoiceItem;
 import com.ayurveda.billing.entity.InvoicePayment;
+import com.ayurveda.billing.entity.PackageMaster;
 import com.ayurveda.billing.enums.BillSection;
 import com.ayurveda.billing.enums.InvoiceItemType;
 import com.ayurveda.billing.enums.InvoiceStatus;
 import com.ayurveda.billing.mapper.InvoiceMapper;
 import com.ayurveda.billing.repository.InvoiceRepository;
+import com.ayurveda.billing.repository.PackageMasterRepository;
 import com.ayurveda.billing.service.InvoiceService;
 import com.ayurveda.billing.util.BillSectionResolver;
 import com.ayurveda.billing.util.InvoiceCalculationUtil;
@@ -48,6 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 public class InvoiceServiceImpl implements InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
+    private final PackageMasterRepository packageMasterRepository;
     private final InvoiceMapper invoiceMapper;
     private final InvoiceNumberGenerator invoiceNumberGenerator;
     private final MedicineServiceClient medicineServiceClient;
@@ -63,6 +66,18 @@ public class InvoiceServiceImpl implements InvoiceService {
         log.info("Creating invoice for patient {}", request.getPatientId());
 
         List<BillSection> sections = BillSectionResolver.resolveFromRequest(request);
+        PackageMaster packageMaster = resolvePackageMaster(request.getPackageMasterId());
+
+        String packageType = trimToNull(request.getPackageType());
+        BigDecimal packageCharges = request.getPackageCharges();
+        if (packageMaster != null) {
+            if (packageType == null) {
+                packageType = packageMaster.getName();
+            }
+            if (packageCharges == null) {
+                packageCharges = packageMaster.getPackagePrice();
+            }
+        }
 
         Invoice invoice = Invoice.builder()
                 .invoiceNumber(invoiceNumberGenerator.generate())
@@ -74,8 +89,11 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .invoiceDate(request.getInvoiceDate())
                 .visitType(request.getVisitType())
                 .serviceFees(InvoiceCalculationUtil.money(request.getServiceFees()))
-                .packageType(request.getPackageType())
-                .packageCharges(InvoiceCalculationUtil.money(request.getPackageCharges()))
+                .packageMasterId(packageMaster != null ? packageMaster.getId() : null)
+                .packageType(packageType)
+                .packageCharges(packageCharges != null
+                        ? InvoiceCalculationUtil.money(packageCharges)
+                        : InvoiceCalculationUtil.money(null))
                 .discount(InvoiceCalculationUtil.money(request.getDiscount()))
                 .taxEnabled(Boolean.TRUE.equals(request.getTaxEnabled()))
                 .billSections(BillSectionResolver.toStorage(sections))
@@ -235,10 +253,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                     null));
         }
 
-        BigDecimal packageCharges = InvoiceCalculationUtil.money(request.getPackageCharges());
+        BigDecimal packageCharges = InvoiceCalculationUtil.money(invoice.getPackageCharges());
         if (packageCharges.compareTo(BigDecimal.ZERO) > 0) {
-            String packageName = StringUtils.hasText(request.getPackageType())
-                    ? request.getPackageType()
+            String packageName = StringUtils.hasText(invoice.getPackageType())
+                    ? invoice.getPackageType()
                     : "Package Charges";
             invoice.getItems().add(buildItem(
                     invoice,
@@ -548,6 +566,22 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
         String trimmed = patientDisplayId.trim();
         return trimmed.startsWith("#") ? trimmed.substring(1) : trimmed;
+    }
+
+    private PackageMaster resolvePackageMaster(UUID packageMasterId) {
+        if (packageMasterId == null) {
+            return null;
+        }
+        return packageMasterRepository.findByIdAndDeletedFalse(packageMasterId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        BillingMessages.PACKAGE_MASTER_NOT_FOUND));
+    }
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 
 }
