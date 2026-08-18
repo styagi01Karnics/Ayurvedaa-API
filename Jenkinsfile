@@ -266,194 +266,197 @@ pipeline {
         stage('Deploy') {
 
             steps {
-
+        
                 echo '=========================================='
                 echo 'Deploying Ayurvedaa Application'
                 echo "Build: ${BUILD_NUMBER}"
                 echo "Application Server: ${APP_SERVER}"
                 echo '=========================================='
-
-
+        
+        
                 sh '''
                     set -e
-
-
-                    // --------------------------------------------------
-                    // Check SSH connection
-                    // --------------------------------------------------
-
+        
+        
+                    # --------------------------------------------------
+                    # Check SSH connection
+                    # --------------------------------------------------
+        
                     echo "Checking SSH connection..."
-
-
+        
+        
                     ssh -o StrictHostKeyChecking=no \
                         ${APP_SERVER} \
                         "echo 'Connected to application server'"
-
-
-                    // --------------------------------------------------
-                    // Create application directory
-                    // --------------------------------------------------
-
+        
+        
+                    # --------------------------------------------------
+                    # Create application directory
+                    # --------------------------------------------------
+        
                     echo "Creating application directory..."
-
-
+        
+        
                     ssh -o StrictHostKeyChecking=no \
                         ${APP_SERVER} \
                         "mkdir -p ${APP_DIR}"
-
-
-                    // --------------------------------------------------
-                    // Prepare Docker Compose file
-                    // --------------------------------------------------
-
+        
+        
+                    # --------------------------------------------------
+                    # Prepare Docker Compose file
+                    # --------------------------------------------------
+        
                     echo "Preparing Docker Compose file..."
-
-
+        
+        
                     rm -f docker-compose-clean.yml
-
-
+        
+        
                     sed \
                         -e '1{/^```/d;}' \
                         -e '${/^```$/d;}' \
                         ${COMPOSE_FILE} > docker-compose-clean.yml
-
-
-                    // --------------------------------------------------
-                    // Copy Docker Compose file
-                    // --------------------------------------------------
-
+        
+        
+                    # --------------------------------------------------
+                    # Copy Docker Compose file
+                    # --------------------------------------------------
+        
                     echo "Copying Docker Compose file..."
-
-
+        
+        
                     scp -o StrictHostKeyChecking=no \
                         docker-compose-clean.yml \
                         ${APP_SERVER}:${APP_DIR}/${COMPOSE_FILE}
-
-
+        
+        
                     rm -f docker-compose-clean.yml
-
-
-                    // --------------------------------------------------
-                    // Validate application server
-                    // --------------------------------------------------
-
+        
+        
+                    # --------------------------------------------------
+                    # Validate application server configuration
+                    # --------------------------------------------------
+        
                     echo "Validating application server configuration..."
-
-
+        
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
-
+        
                         set -e
-
+        
                         cd ${APP_DIR}
-
-
+        
+        
                         echo '=========================================='
                         echo 'Checking Docker Compose file'
                         echo '=========================================='
-
-
+        
+        
                         ls -lh ${COMPOSE_FILE}
-
-
+        
+        
                         echo '=========================================='
                         echo 'Checking .env file'
                         echo '=========================================='
-
-
+        
+        
                         if [ ! -f .env ]; then
-
+        
                             echo 'ERROR: ${APP_DIR}/.env does not exist.'
-
+        
                             exit 1
-
+        
                         fi
-
-
+        
+        
                         chmod 600 .env
-
-
+        
+        
                         echo '.env file exists.'
-
-
+        
+        
                         stat -c '%a %n' .env
-
-
+        
+        
                         echo '=========================================='
                         echo 'Validating Docker Compose'
                         echo '=========================================='
-
-
+        
+        
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env config --quiet
-
-
+        
+        
                         echo 'Docker Compose validation successful.'
+        
                     "
-
-
-                    // --------------------------------------------------
-                    // Deploy application
-                    // --------------------------------------------------
-
+        
+        
+                    # --------------------------------------------------
+                    # Deploy application
+                    # --------------------------------------------------
+        
                     echo "Starting deployment..."
-
-
+        
+        
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
-
+        
                         set -e
-
-
+        
+        
                         cd ${APP_DIR}
-
-
+        
+        
                         echo '=========================================='
                         echo 'Stopping Old Ayurvedaa Containers'
                         echo '=========================================='
-
-
+        
+        
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env down --remove-orphans
-
-
+        
+        
                         echo '=========================================='
                         echo 'Pulling Current Docker Images'
-                        echo "Build: ${BUILD_NUMBER}"
+                        echo 'Build: ${BUILD_NUMBER}'
                         echo '=========================================='
-
-
+        
+        
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env pull
-
-
+        
+        
                         echo '=========================================='
                         echo 'Starting New Services'
-                        echo "Build: ${BUILD_NUMBER}"
+                        echo 'Build: ${BUILD_NUMBER}'
                         echo '=========================================='
-
-
+        
+        
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env up -d --remove-orphans
-
-
+        
+        
                         echo '=========================================='
                         echo 'Deployment Completed'
                         echo '=========================================='
-
-
+        
+        
                         echo 'Running Containers:'
-
-
+        
+        
                         IMAGE_TAG=${BUILD_NUMBER} \
                         docker compose --env-file .env ps
+        
                     "
-
-
+        
+        
                     echo "Ayurvedaa deployment completed successfully."
+        
                 '''
             }
         }
 
-
+        
         // ==========================================================
         // APPLICATION SERVER CLEANUP
         // KEEP LATEST 3
