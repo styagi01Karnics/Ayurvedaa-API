@@ -25,6 +25,7 @@ import com.ayurveda.appointment.dto.request.CreatePrescriptionRequest;
 import com.ayurveda.appointment.dto.request.CreatePrescriptionRequest.PrescriptionMedicineItemRequest;
 import com.ayurveda.appointment.dto.request.CreatePrescriptionRequest.PrescriptionNextFollowUpRequest;
 import com.ayurveda.appointment.dto.request.CreatePrescriptionRequest.PrescriptionTherapySuggestionRequest;
+import com.ayurveda.appointment.dto.request.UpdatePrescriptionRequest;
 import com.ayurveda.appointment.dto.response.DoctorSummaryResponse;
 import com.ayurveda.appointment.dto.response.PatientSummaryResponse;
 import com.ayurveda.appointment.dto.response.PrescriptionResponse;
@@ -140,6 +141,61 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         return ApiResponse.success(
                 AppMessages.PRESCRIPTION_CREATED,
                 toEnrichedResponse(saved, savedMedicines, savedSuggestions, patient));
+    }
+
+    @Override
+    public ApiResponse<PrescriptionResponse> updatePrescription(
+            UUID prescriptionId, UpdatePrescriptionRequest request) {
+
+        log.info("Updating prescription: {}", prescriptionId);
+
+        Prescription prescription = prescriptionRepository.findByIdAndDeletedFalse(prescriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        AppMessages.PRESCRIPTION_NOT_FOUND_WITH_ID + prescriptionId));
+
+        List<PrescriptionMedicineItemRequest> medicines =
+                request.getMedicines() != null ? request.getMedicines() : List.of();
+        List<PrescriptionTherapySuggestionRequest> therapySuggestions =
+                request.getTherapySuggestions() != null ? request.getTherapySuggestions() : List.of();
+
+        if (medicines.isEmpty() && therapySuggestions.isEmpty()) {
+            throw new BadRequestException(AppMessages.PRESCRIPTION_MEDICINE_OR_THERAPY_REQUIRED);
+        }
+
+        validateTherapySuggestions(therapySuggestions);
+
+        PrescriptionNextFollowUpRequest nextFollowUp = request.getNextFollowUp();
+        boolean followUpRequired = nextFollowUp != null
+                && Boolean.TRUE.equals(nextFollowUp.getSetUpRequired());
+
+        prescription.setAppointmentBookingId(request.getAppointmentBookingId());
+        prescription.setAssignedDoctorId(request.getAssignedDoctorId());
+        prescription.setFollowUpRequired(followUpRequired);
+        prescription.setFollowUpSchedulingOption(nextFollowUp != null
+                ? trimToNull(nextFollowUp.getSchedulingOption())
+                : null);
+        prescription.setFollowUpSuggestions(nextFollowUp != null
+                ? trimToNull(nextFollowUp.getSuggestions())
+                : null);
+        prescription.setDiagnosis(trimToNull(request.getDiagnosis()));
+        prescription.setNotes(trimToNull(request.getNotes()));
+
+        Prescription saved = prescriptionRepository.save(prescription);
+
+        softDeleteExistingChildren(prescriptionId);
+        List<PrescriptionMedicine> savedMedicines = saveMedicines(saved.getId(), medicines);
+        List<PrescriptionTherapySuggestion> savedSuggestions =
+                saveTherapySuggestions(saved.getId(), therapySuggestions);
+
+        log.info("Prescription updated successfully. Prescription ID: {}", prescriptionId);
+
+        return ApiResponse.success(
+                AppMessages.PRESCRIPTION_UPDATED,
+                toEnrichedResponse(
+                        saved,
+                        savedMedicines,
+                        savedSuggestions,
+                        fetchPatientQuietly(saved.getPatientId())));
     }
 
     @Override
@@ -523,6 +579,35 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         } catch (Exception ex) {
             log.warn("Doctor details unavailable for {}: {}", doctorId, ex.getMessage());
             return null;
+        }
+    }
+
+    private void softDeleteExistingChildren(UUID prescriptionId) {
+        List<PrescriptionMedicine> existingMedicines =
+                prescriptionMedicineRepository.findAllByPrescriptionIdAndDeletedFalse(prescriptionId);
+        for (PrescriptionMedicine medicine : existingMedicines) {
+            medicine.setDeleted(true);
+        }
+        prescriptionMedicineRepository.saveAll(existingMedicines);
+
+        List<PrescriptionTherapySuggestion> existingSuggestions =
+                therapySuggestionRepository.findAllByPrescriptionIdAndDeletedFalse(prescriptionId);
+        if (!existingSuggestions.isEmpty()) {
+            List<UUID> suggestionIds = existingSuggestions.stream()
+                    .map(PrescriptionTherapySuggestion::getId)
+                    .toList();
+            List<PrescriptionTherapySuggestionItem> existingItems =
+                    therapySuggestionItemRepository
+                            .findAllByTherapySuggestionIdInAndDeletedFalse(suggestionIds);
+            for (PrescriptionTherapySuggestionItem item : existingItems) {
+                item.setDeleted(true);
+            }
+            therapySuggestionItemRepository.saveAll(existingItems);
+
+            for (PrescriptionTherapySuggestion suggestion : existingSuggestions) {
+                suggestion.setDeleted(true);
+            }
+            therapySuggestionRepository.saveAll(existingSuggestions);
         }
     }
 

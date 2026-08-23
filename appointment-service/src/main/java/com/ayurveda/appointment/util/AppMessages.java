@@ -184,6 +184,9 @@ public final class AppMessages {
     public static final String PRESCRIPTION_CREATED =
             "Prescription generated successfully.";
 
+    public static final String PRESCRIPTION_UPDATED =
+            "Prescription updated successfully.";
+
     public static final String PRESCRIPTION_FETCHED =
             "Prescription fetched successfully.";
 
