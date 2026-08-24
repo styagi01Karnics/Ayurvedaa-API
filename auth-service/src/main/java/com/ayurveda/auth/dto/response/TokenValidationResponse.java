@@ -1,5 +1,6 @@
 package com.ayurveda.auth.dto.response;
 
+import java.util.List;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -19,7 +20,10 @@ public class TokenValidationResponse {
     private UUID userId;
     private UUID tenantId;
     private String tenantCode;
+    private String schemaName;
     private String email;
     private String role;
+    private UUID tenantRoleId;
+    private List<String> pageCodes;
 
 }

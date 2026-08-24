@@ -1,7 +1,10 @@
 package com.ayurveda.auth.dto.request;
 
+import com.ayurveda.auth.constant.AuthValidation;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,14 +41,11 @@ public class RegisterTenantRequest {
     @Size(max = 100)
     private String adminFullName;
 
-    @NotBlank(message = "Admin username is required")
-    @Size(min = 3, max = 50)
-    private String adminUsername;
-
-    @NotBlank(message = "Admin email is required")
-    @Email
+    /** Gmail address used as admin username (also stored as email). */
+    @NotBlank(message = "Admin username (Gmail) is required")
     @Size(max = 150)
-    private String adminEmail;
+    @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)
+    private String adminUsername;
 
     @NotBlank(message = "Admin password is required")
     @Size(min = 8, max = 100)

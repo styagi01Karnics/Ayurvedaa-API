@@ -22,6 +22,8 @@ import com.ayurveda.appointment.repository.TreatmentRepository;
 import com.ayurveda.appointment.service.TreatmentService;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 
@@ -38,6 +40,7 @@ public class TreatmentServiceImpl implements TreatmentService {
     private final TreatmentPlanMasterRepository treatmentPlanMasterRepository;
     private final PatientServiceClient patientServiceClient;
     private final TherapistServiceClient therapistServiceClient;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Override
     public ApiResponse<TreatmentResponse> createTreatment(CreateTreatmentRequest request) {
@@ -69,6 +72,11 @@ public class TreatmentServiceImpl implements TreatmentService {
 
         Treatment saved = treatmentRepository.save(treatment);
         log.info("Treatment created successfully. Treatment ID: {}", saved.getId());
+
+        activityLogPublisher.record(
+                "Treatments",
+                ActivityActionType.CREATED,
+                "Treatment " + saved.getId());
 
         return ApiResponse.success(
                 AppMessages.TREATMENT_CREATED, toResponse(saved, therapist, treatmentPlan));

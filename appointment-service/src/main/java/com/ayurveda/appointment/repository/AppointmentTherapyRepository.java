@@ -2,8 +2,11 @@ package com.ayurveda.appointment.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +21,8 @@ public interface AppointmentTherapyRepository
 
     List<AppointmentTherapy> findAllByPatientId(UUID patientId);
 
+    Optional<AppointmentTherapy> findByIdAndDeletedFalse(UUID id);
+
     @Query("""
             SELECT t FROM AppointmentTherapy t
             WHERE t.assignedTherapistId = :therapistId
@@ -30,5 +35,19 @@ public interface AppointmentTherapyRepository
             @Param("therapistId") UUID therapistId,
             @Param("date") LocalDate date,
             @Param("cancelled") TherapyStatus cancelled);
+
+    @Query("""
+            SELECT t FROM AppointmentTherapy t
+            WHERE t.assignedTherapistId = :therapistId
+              AND t.scheduleDate = :date
+              AND t.deleted = false
+              AND t.therapyStatus <> :cancelled
+            ORDER BY t.scheduleTime ASC
+            """)
+    Page<AppointmentTherapy> findByTherapistAndDateExcludingCancelled(
+            @Param("therapistId") UUID therapistId,
+            @Param("date") LocalDate date,
+            @Param("cancelled") TherapyStatus cancelled,
+            Pageable pageable);
 
 }

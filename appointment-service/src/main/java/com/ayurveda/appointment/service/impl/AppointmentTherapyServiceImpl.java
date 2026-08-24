@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +15,7 @@ import com.ayurveda.appointment.client.TherapistServiceClient;
 import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.appointment.dto.request.CreateAppointmentTherapyRequest;
+import com.ayurveda.appointment.dto.request.UpdateAppointmentTherapyStatusRequest;
 import com.ayurveda.appointment.dto.response.AppointmentTherapyResponse;
 import com.ayurveda.appointment.dto.response.PatientSummaryResponse;
 import com.ayurveda.appointment.dto.response.TherapistSummaryResponse;
@@ -32,6 +35,8 @@ import com.ayurveda.appointment.repository.TherapyRepository;
 import com.ayurveda.appointment.repository.TreatmentCategoryRepository;
 import com.ayurveda.appointment.service.AppointmentTherapyService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -51,6 +56,7 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
     private final TherapistServiceClient therapistServiceClient;
     private final AppointmentTherapyMapper appointmentTherapyMapper;
     private final PatientServiceClient patientServiceClient;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Override
     public ApiResponse<AppointmentTherapyResponse> createAppointmentTherapy(
@@ -112,7 +118,42 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
 
         log.info("Appointment therapy created successfully with id: {}", savedTherapy.getId());
 
+        activityLogPublisher.record(
+                "Treatments",
+                ActivityActionType.CREATED,
+                "Appointment therapy " + savedTherapy.getId());
+
         return ApiResponse.success(Constants.APPOINTMENT_THERAPY_CREATED, response);
+    }
+
+    @Override
+    public ApiResponse<AppointmentTherapyResponse> updateAppointmentTherapyStatus(
+            UUID appointmentTherapyId, UpdateAppointmentTherapyStatusRequest request) {
+
+        log.info("Updating appointment therapy {} status to {}",
+                appointmentTherapyId, request.getTherapyStatus());
+
+        AppointmentTherapy therapy = appointmentTherapyRepository
+                .findByIdAndDeletedFalse(appointmentTherapyId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        Constants.APPOINTMENT_THERAPY_NOT_FOUND_WITH_ID + appointmentTherapyId));
+
+        therapy.setTherapyStatus(request.getTherapyStatus());
+        AppointmentTherapy saved = appointmentTherapyRepository.save(therapy);
+
+        log.info("Appointment therapy {} status updated to {}",
+                appointmentTherapyId, saved.getTherapyStatus());
+
+        activityLogPublisher.record(
+                "Treatments",
+                ActivityActionType.UPDATED,
+                "Appointment therapy " + appointmentTherapyId,
+                null,
+                String.valueOf(saved.getTherapyStatus()));
+
+        return ApiResponse.success(
+                Constants.APPOINTMENT_THERAPY_STATUS_UPDATED,
+                toEnrichedResponse(saved));
     }
 
     @Override
@@ -187,17 +228,24 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<TherapistTodayScheduleResponse> getTherapistTodaySchedule(UUID therapistId) {
+    public ApiResponse<TherapistTodayScheduleResponse> getTherapistTodaySchedule(
+            UUID therapistId, int page, int size) {
         LocalDate today = LocalDate.now();
-        log.info("Fetching today's schedule for therapist {} on {}", therapistId, today);
+        log.info("Fetching today's schedule for therapist {} on {} (page={}, size={})",
+                therapistId, today, page, size);
 
         fetchTherapist(therapistId);
 
-        List<AppointmentTherapy> therapies =
-                appointmentTherapyRepository.findByTherapistAndDateExcludingCancelled(
-                        therapistId, today, TherapyStatus.CANCELLED);
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
+        PageRequest pageable = PageRequest.of(safePage, safeSize);
 
-        List<TherapistTodayScheduleResponse.TherapistTodaySlotResponse> slots = therapies.stream()
+        Page<AppointmentTherapy> therapiesPage =
+                appointmentTherapyRepository.findByTherapistAndDateExcludingCancelled(
+                        therapistId, today, TherapyStatus.CANCELLED, pageable);
+
+        List<TherapistTodayScheduleResponse.TherapistTodaySlotResponse> slots =
+                therapiesPage.getContent().stream()
                 .map(therapy -> {
                     PatientSummaryResponse patient = null;
                     try {
@@ -242,14 +290,51 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
         TherapistTodayScheduleResponse response = TherapistTodayScheduleResponse.builder()
                 .therapistId(therapistId)
                 .date(today)
-                .totalSlots(slots.size())
+                .totalSlots(therapiesPage.getTotalElements())
+                .page(therapiesPage.getNumber())
+                .size(therapiesPage.getSize())
+                .totalPages(therapiesPage.getTotalPages())
                 .slots(slots)
                 .build();
 
-        log.info("Therapist today's schedule fetched successfully for therapist {} (slots: {})",
-                therapistId, slots.size());
+        log.info("Therapist today's schedule fetched for therapist {} (slots page {}/{}, total {})",
+                therapistId, response.getPage() + 1, response.getTotalPages(), response.getTotalSlots());
 
         return ApiResponse.success(Constants.THERAPIST_TODAY_SCHEDULE_FETCHED, response);
+    }
+
+    private AppointmentTherapyResponse toEnrichedResponse(AppointmentTherapy therapy) {
+        TherapistSummaryResponse therapist = null;
+        try {
+            therapist = fetchTherapist(therapy.getAssignedTherapistId());
+        } catch (Exception ex) {
+            log.warn("Therapist unavailable for appointment therapy {}: {} ({})",
+                    therapy.getId(), therapy.getAssignedTherapistId(), ex.getMessage());
+        }
+
+        AppointmentTherapyResponse response = appointmentTherapyMapper.toResponse(therapy, therapist);
+
+        try {
+            response.setPatient(patientServiceClient.getPatientById(therapy.getPatientId()).getData());
+        } catch (Exception ex) {
+            log.warn("Patient unavailable for appointment therapy {}: {}",
+                    therapy.getId(), ex.getMessage());
+        }
+
+        List<TherapyResponse> therapies = appointmentTherapyRecommendationRepository
+                .findByAppointmentTherapyId(therapy.getId())
+                .stream()
+                .map(AppointmentTherapyRecommendation::getTherapyMasterId)
+                .map(id -> therapyRepository.findById(id).orElse(null))
+                .filter(Objects::nonNull)
+                .map(this::mapTherapy)
+                .toList();
+        response.setTherapies(therapies);
+
+        treatmentCategoryRepository.findById(therapy.getTreatmentCategoryId())
+                .ifPresent(category -> response.setTreatmentCategory(mapTreatmentCategory(category)));
+
+        return response;
     }
 
     private TherapyResponse mapTherapy(TherapyMaster therapy) {

@@ -1,6 +1,8 @@
 package com.ayurveda.therapist.service.impl;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
@@ -38,6 +40,7 @@ public class TherapistServiceImpl implements TherapistService {
     private final TherapistRepository therapistRepository;
     private final TherapistCodeGenerator therapistCodeGenerator;
     private final AppointmentServiceClient appointmentServiceClient;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Override
     @Transactional
@@ -58,6 +61,11 @@ public class TherapistServiceImpl implements TherapistService {
         Therapist savedTherapist = therapistRepository.save(therapist);
 
         log.info("Therapist created successfully. Therapist ID: {}", savedTherapist.getId());
+
+        activityLogPublisher.record(
+                "Doctors",
+                ActivityActionType.CREATED,
+                "Therapist " + savedTherapist.getTherapistName());
 
         return ApiResponse.success(
                 AppConstants.THERAPIST_CREATED_SUCCESSFULLY, toResponse(savedTherapist));
@@ -174,6 +182,11 @@ public class TherapistServiceImpl implements TherapistService {
         therapistRepository.save(therapist);
 
         log.info("Therapist deleted successfully. Therapist ID: {}", therapistId);
+
+        activityLogPublisher.record(
+                "Doctors",
+                ActivityActionType.DELETED,
+                "Therapist " + therapist.getTherapistName());
 
         return ApiResponse.success(AppConstants.THERAPIST_DELETED_SUCCESSFULLY, null);
     }

@@ -37,8 +37,23 @@ public class Tenant extends BaseEntity {
     @Column(length = 255)
     private String address;
 
+    /**
+     * Postgres schema for this hospital (e.g. hosp_gan).
+     * Platform tenant uses {@code public}.
+     */
+    @Column(nullable = false, unique = true, length = 63)
+    private String schemaName;
+
+    /** True only for the development-company platform tenant. */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean platform = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TenantStatus status;
+
+    @Column(length = 500)
+    private String provisionMessage;
 
 }

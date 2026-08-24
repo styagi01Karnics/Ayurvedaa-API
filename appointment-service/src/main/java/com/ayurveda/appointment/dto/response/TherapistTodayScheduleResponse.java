@@ -24,7 +24,14 @@ public class TherapistTodayScheduleResponse {
 
     private LocalDate date;
 
+    /** Total matching slots today (before paging). */
     private long totalSlots;
+
+    private int page;
+
+    private int size;
+
+    private int totalPages;
 
     private List<TherapistTodaySlotResponse> slots;
 

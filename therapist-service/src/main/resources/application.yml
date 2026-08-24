@@ -25,6 +25,9 @@ services:
   # Do not use localhost inside Docker — that is the therapist container itself.
   appointment:
     url: http://45.195.229.15:8103
+  activity-log:
+    url: http://45.195.229.15:8107
+    enabled: true
 
 springdoc:
   api-docs:

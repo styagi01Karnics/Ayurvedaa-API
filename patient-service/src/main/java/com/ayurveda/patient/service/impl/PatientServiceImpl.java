@@ -1,6 +1,8 @@
 package com.ayurveda.patient.service.impl;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.DuplicateResourceException;
@@ -34,6 +36,7 @@ public class PatientServiceImpl implements PatientService {
 
     private final PatientRepository patientRepository;
     private final PatientCodeGenerator patientCodeGenerator;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Override
     @Transactional
@@ -80,6 +83,11 @@ public class PatientServiceImpl implements PatientService {
                 savedPatient.getId(),
                 savedPatient.getPatientDisplayId(),
                 savedPatient.getPatientCode());
+
+        activityLogPublisher.record(
+                "Patients",
+                ActivityActionType.CREATED,
+                "Patient " + savedPatient.getPatientDisplayId());
 
         return ResponseUtil.success(
                 AppConstants.PATIENT_CREATED_SUCCESSFULLY,
@@ -243,6 +251,11 @@ public class PatientServiceImpl implements PatientService {
         patientRepository.save(patient);
 
         log.info("Patient deleted successfully. Patient ID: {}", patientId);
+
+        activityLogPublisher.record(
+                "Patients",
+                ActivityActionType.DELETED,
+                "Patient " + patient.getPatientDisplayId());
 
         return ResponseUtil.success(
                 AppConstants.PATIENT_DELETED_SUCCESSFULLY

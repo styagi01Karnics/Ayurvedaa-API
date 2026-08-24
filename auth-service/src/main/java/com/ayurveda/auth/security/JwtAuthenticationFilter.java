@@ -1,10 +1,12 @@
 package com.ayurveda.auth.security;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -37,14 +39,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String token = header.substring(7);
                     AuthPrincipal principal = jwtService.parseToken(token);
 
+                    List<GrantedAuthority> authorities = new ArrayList<>();
+                    if (principal.getRole() != null && !principal.getRole().isBlank()) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + principal.getRole()));
+                    }
+                    if (principal.getPageCodes() != null) {
+                        for (String pageCode : principal.getPageCodes()) {
+                            if (pageCode != null && !pageCode.isBlank()) {
+                                authorities.add(new SimpleGrantedAuthority("PAGE_" + pageCode.trim().toUpperCase()));
+                            }
+                        }
+                    }
+
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    principal,
-                                    null,
-                                    List.of(new SimpleGrantedAuthority("ROLE_" + principal.getRole())));
+                            new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    TenantContext.set(principal.getTenantId(), principal.getTenantCode());
+                    TenantContext.set(
+                            principal.getTenantId(),
+                            principal.getTenantCode(),
+                            principal.getSchemaName());
                 } catch (Exception ex) {
                     log.warn("Invalid JWT token: {}", ex.getMessage());
                     SecurityContextHolder.clearContext();

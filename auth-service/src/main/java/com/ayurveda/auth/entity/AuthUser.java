@@ -28,7 +28,7 @@ import lombok.Setter;
         name = "auth_users",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_auth_users_tenant_email", columnNames = {"tenant_id", "email"}),
-                @UniqueConstraint(name = "uk_auth_users_username", columnNames = {"username"})
+                @UniqueConstraint(name = "uk_auth_users_tenant_username", columnNames = {"tenant_id", "username"})
         }
 )
 public class AuthUser extends BaseEntity {
@@ -37,7 +37,7 @@ public class AuthUser extends BaseEntity {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, length = 150)
     private String username;
 
     @Column(nullable = false, length = 150)
@@ -49,9 +49,18 @@ public class AuthUser extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String passwordHash;
 
+    /** System authority used by Spring Security (SUPER_ADMIN, ADMIN, DOCTOR, …). */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private UserRole role;
+
+    /**
+     * Hospital custom role for UI page access.
+     * Null for SUPER_ADMIN; ADMIN may also use a seeded hospital-admin role.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_role_id")
+    private TenantRole tenantRole;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

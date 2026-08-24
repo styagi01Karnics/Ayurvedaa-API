@@ -23,6 +23,11 @@ server:
 patient:
   tenant-code: GAN
 
+services:
+  activity-log:
+    url: http://45.195.229.15:8107
+    enabled: true
+
 springdoc:
   api-docs:
     path: /api-docs

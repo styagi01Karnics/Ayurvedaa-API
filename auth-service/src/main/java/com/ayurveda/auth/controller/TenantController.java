@@ -14,11 +14,12 @@ import com.ayurveda.auth.service.AuthService;
 import com.ayurveda.common.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@Tag(name = "Tenants", description = "Tenant onboarding APIs")
+@Tag(name = "Tenants", description = "Tenant onboarding APIs (Super Admin)")
 @RestController
 @RequestMapping("/api/v1/tenants")
 @RequiredArgsConstructor
@@ -27,7 +28,9 @@ public class TenantController {
 
     private final AuthService authService;
 
-    @Operation(summary = "Register a new tenant with admin user")
+    @Operation(
+            summary = "Register hospital + first admin + schema (Super Admin only)",
+            security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<TenantResponse>> registerTenant(
             @Valid @RequestBody RegisterTenantRequest request) {

@@ -23,6 +23,9 @@ public class TenantResponse {
     private String email;
     private String phone;
     private String address;
+    private String schemaName;
+    private Boolean platform;
     private TenantStatus status;
+    private String provisionMessage;
 
 }

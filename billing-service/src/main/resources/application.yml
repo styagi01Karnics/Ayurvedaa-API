@@ -25,6 +25,9 @@ services:
     url: http://45.195.229.15:8108
   appointment:
     url: http://45.195.229.15:8103
+  activity-log:
+    url: http://45.195.229.15:8107
+    enabled: true
 
 billing:
   default-cgst-percent: 3

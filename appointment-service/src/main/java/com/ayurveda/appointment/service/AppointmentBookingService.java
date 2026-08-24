@@ -58,11 +58,11 @@ public interface AppointmentBookingService {
     ApiResponse<List<AppointmentBookingResponse>> getTodayAppointmentsByConsultationType(
             UUID consultationTypeId);
 
-    /** Today's appointments for one doctor (cancelled excluded). */
-    ApiResponse<DoctorTodayScheduleResponse> getDoctorTodaySchedule(UUID doctorId);
+    /** Today's appointments for one doctor (cancelled excluded). Supports page/size. */
+    ApiResponse<DoctorTodayScheduleResponse> getDoctorTodaySchedule(UUID doctorId, int page, int size);
 
-    /** All doctors – today's appointments (cancelled excluded). */
-    ApiResponse<DoctorTodayScheduleResponse> getTodayAppointments();
+    /** All doctors – today's appointments (cancelled excluded). Supports page/size. */
+    ApiResponse<DoctorTodayScheduleResponse> getTodayAppointments(int page, int size);
 
     /** Dashboard page – Today's Schedule card. */
     ApiResponse<DashboardTodaysScheduleResponse> getDashboardTodaysSchedule(UUID doctorId);

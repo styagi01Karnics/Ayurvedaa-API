@@ -1,7 +1,9 @@
 package com.ayurveda.auth.dto.request;
 
-import jakarta.validation.constraints.Email;
+import com.ayurveda.auth.constant.AuthValidation;
+
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,14 +22,11 @@ public class SignUpRequest {
     @Size(max = 100)
     private String fullName;
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 50)
-    private String username;
-
-    @NotBlank(message = "Email is required")
-    @Email
+    /** Gmail address used as username (also stored as email). */
+    @NotBlank(message = "Username (Gmail) is required")
     @Size(max = 150)
-    private String email;
+    @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)
+    private String username;
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 100)

@@ -1,6 +1,8 @@
 package com.ayurveda.doctor.service.impl;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
@@ -27,6 +29,7 @@ public class DoctorServiceImpl implements DoctorService {
 
     private final DoctorRepository doctorRepository;
     private final DoctorCodeGenerator doctorCodeGenerator;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Override
     @Transactional
@@ -48,6 +51,11 @@ public class DoctorServiceImpl implements DoctorService {
         Doctor savedDoctor = doctorRepository.save(doctor);
 
         log.info("Doctor created successfully. Doctor ID: {}", savedDoctor.getId());
+
+        activityLogPublisher.record(
+                "Doctors",
+                ActivityActionType.CREATED,
+                "Doctor " + savedDoctor.getDoctorName());
 
         return ApiResponse.success(AppConstants.DOCTOR_CREATED_SUCCESSFULLY, DoctorMapper.toResponse(savedDoctor));
     }
@@ -109,6 +117,13 @@ public class DoctorServiceImpl implements DoctorService {
 
         log.info("Doctor status updated successfully. Doctor ID: {}", doctorId);
 
+        activityLogPublisher.record(
+                "Doctors",
+                ActivityActionType.UPDATED,
+                "Doctor " + savedDoctor.getDoctorName(),
+                null,
+                String.valueOf(request.getStatus()));
+
         return ApiResponse.success(
                 AppConstants.DOCTOR_STATUS_UPDATED_SUCCESSFULLY, DoctorMapper.toResponse(savedDoctor));
     }
@@ -125,6 +140,11 @@ public class DoctorServiceImpl implements DoctorService {
         doctorRepository.save(doctor);
 
         log.info("Doctor deleted successfully. Doctor ID: {}", doctorId);
+
+        activityLogPublisher.record(
+                "Doctors",
+                ActivityActionType.DELETED,
+                "Doctor " + doctor.getDoctorName());
 
         return ApiResponse.success(AppConstants.DOCTOR_DELETED_SUCCESSFULLY, null);
     }

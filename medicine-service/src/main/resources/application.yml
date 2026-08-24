@@ -23,6 +23,11 @@ server:
 medicine:
   low-stock-threshold-default: 20
 
+services:
+  activity-log:
+    url: http://45.195.229.15:8107
+    enabled: true
+
 springdoc:
   api-docs:
     path: /api-docs

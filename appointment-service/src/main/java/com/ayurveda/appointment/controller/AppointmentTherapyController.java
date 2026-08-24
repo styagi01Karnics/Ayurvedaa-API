@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateAppointmentTherapyRequest;
+import com.ayurveda.appointment.dto.request.UpdateAppointmentTherapyStatusRequest;
 import com.ayurveda.appointment.dto.response.AppointmentTherapyResponse;
 import com.ayurveda.appointment.dto.response.TherapistTodayScheduleResponse;
 import com.ayurveda.appointment.service.AppointmentTherapyService;
@@ -45,14 +46,29 @@ public class AppointmentTherapyController {
     }
 
     @Operation(
-            summary = "Get therapist's today scheduled slots",
-            description = "For a therapist: today's therapy time slots ordered by time. Cancelled excluded.")
-    @GetMapping("/therapist/{therapistId}/today")
-    public ResponseEntity<ApiResponse<TherapistTodayScheduleResponse>> getTherapistTodaySchedule(
-            @PathVariable UUID therapistId) {
+            summary = "Update appointment therapy status",
+            description = "Updates session status: SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED.")
+    @PutMapping("/{appointmentTherapyId}/status")
+    public ResponseEntity<ApiResponse<AppointmentTherapyResponse>> updateAppointmentTherapyStatus(
+            @PathVariable UUID appointmentTherapyId,
+            @Valid @RequestBody UpdateAppointmentTherapyStatusRequest request) {
 
         return ResponseEntity.ok(
-                appointmentTherapyService.getTherapistTodaySchedule(therapistId));
+                appointmentTherapyService.updateAppointmentTherapyStatus(
+                        appointmentTherapyId, request));
+    }
+
+    @Operation(
+            summary = "Get therapist's today scheduled slots",
+            description = "For a therapist: today's therapy time slots ordered by time. Cancelled excluded. Supports page/size.")
+    @GetMapping("/therapist/{therapistId}/today")
+    public ResponseEntity<ApiResponse<TherapistTodayScheduleResponse>> getTherapistTodaySchedule(
+            @PathVariable UUID therapistId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        return ResponseEntity.ok(
+                appointmentTherapyService.getTherapistTodaySchedule(therapistId, page, size));
     }
 
     @Operation(

@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.medicine.constant.MedicineMessages;
@@ -42,6 +44,7 @@ public class MedicineServiceImpl implements MedicineService {
 
     private final MedicineRepository medicineRepository;
     private final MedicineMapper medicineMapper;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Value("${medicine.low-stock-threshold-default:20}")
     private int defaultLowStockThreshold;
@@ -57,6 +60,11 @@ public class MedicineServiceImpl implements MedicineService {
         List<MedicineResponse> saved = medicineRepository.saveAll(medicines).stream()
                 .map(medicineMapper::toResponse)
                 .toList();
+
+        saved.forEach(item -> activityLogPublisher.record(
+                "Medicines",
+                ActivityActionType.CREATED,
+                "Medicine " + item.getMedicineName()));
 
         String message = saved.size() == 1
                 ? MedicineMessages.MEDICINE_ADDED_SUCCESSFULLY
@@ -74,6 +82,11 @@ public class MedicineServiceImpl implements MedicineService {
         Medicine saved = medicineRepository.save(medicine);
 
         log.info("Medicine updated successfully. Medicine ID: {}", medicineId);
+
+        activityLogPublisher.record(
+                "Medicines",
+                ActivityActionType.UPDATED,
+                "Medicine " + saved.getMedicineName());
 
         return ApiResponse.success(
                 MedicineMessages.MEDICINE_UPDATED_SUCCESSFULLY, medicineMapper.toResponse(saved));
@@ -122,6 +135,11 @@ public class MedicineServiceImpl implements MedicineService {
         medicineRepository.save(medicine);
 
         log.info("Medicine deleted successfully. Medicine ID: {}", medicineId);
+
+        activityLogPublisher.record(
+                "Medicines",
+                ActivityActionType.DELETED,
+                "Medicine " + medicine.getMedicineName());
 
         return ApiResponse.success(MedicineMessages.MEDICINE_DELETED_SUCCESSFULLY, null);
     }

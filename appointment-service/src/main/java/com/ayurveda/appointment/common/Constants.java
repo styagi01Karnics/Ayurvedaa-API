@@ -41,10 +41,14 @@ public final class Constants {
     // ==========================
     public static final String APPOINTMENT_THERAPY_CREATED = "Appointment therapy created successfully.";
     public static final String APPOINTMENT_THERAPY_UPDATED = "Appointment therapy updated successfully.";
+    public static final String APPOINTMENT_THERAPY_STATUS_UPDATED =
+            "Appointment therapy status updated successfully.";
     public static final String APPOINTMENT_THERAPY_FETCHED = "Appointment therapy fetched successfully.";
     public static final String APPOINTMENT_THERAPY_NO_RECORDS =
             "No therapy records available for this patient.";
     public static final String APPOINTMENT_THERAPY_NOT_FOUND = "Therapy details not found for patient: ";
+    public static final String APPOINTMENT_THERAPY_NOT_FOUND_WITH_ID =
+            "Appointment therapy not found with id: ";
 
     // ==========================
     // Medical History

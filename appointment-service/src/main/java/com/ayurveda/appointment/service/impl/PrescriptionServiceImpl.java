@@ -66,6 +66,8 @@ import com.ayurveda.appointment.repository.TreatmentRepository;
 import com.ayurveda.appointment.service.PrescriptionService;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 
@@ -94,6 +96,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final FollowUpRepository followUpRepository;
     private final PatientServiceClient patientServiceClient;
     private final DoctorServiceClient doctorServiceClient;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Override
     public ApiResponse<PrescriptionResponse> createPrescription(CreatePrescriptionRequest request) {
@@ -137,6 +140,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 saveTherapySuggestions(saved.getId(), therapySuggestions);
 
         log.info("Prescription generated successfully. Prescription ID: {}", saved.getId());
+
+        activityLogPublisher.record(
+                "Patients",
+                ActivityActionType.CREATED,
+                "Prescription " + saved.getId());
 
         return ApiResponse.success(
                 AppMessages.PRESCRIPTION_CREATED,
@@ -188,6 +196,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 saveTherapySuggestions(saved.getId(), therapySuggestions);
 
         log.info("Prescription updated successfully. Prescription ID: {}", prescriptionId);
+
+        activityLogPublisher.record(
+                "Patients",
+                ActivityActionType.UPDATED,
+                "Prescription " + prescriptionId);
 
         return ApiResponse.success(
                 AppMessages.PRESCRIPTION_UPDATED,

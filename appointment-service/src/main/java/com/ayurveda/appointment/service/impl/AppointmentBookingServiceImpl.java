@@ -18,6 +18,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -58,6 +60,8 @@ import com.ayurveda.appointment.repository.TreatmentCategoryRepository;
 import com.ayurveda.appointment.service.AppointmentBookingService;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
@@ -84,6 +88,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     private final FollowUpRepository followUpRepository;
     private final PatientServiceClient patientServiceClient;
     private final DoctorServiceClient doctorServiceClient;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Override
     @Transactional
@@ -135,6 +140,11 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
         log.info("Appointment created successfully with id: {}",
                 savedAppointment.getId());
+
+        activityLogPublisher.record(
+                "Appointments",
+                ActivityActionType.CREATED,
+                "Appointment " + savedAppointment.getId());
 
         AppointmentBookingResponse response =
                 appointmentBookingMapper.toResponse(
@@ -627,43 +637,32 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<DoctorTodayScheduleResponse> getDoctorTodaySchedule(UUID doctorId) {
+    public ApiResponse<DoctorTodayScheduleResponse> getDoctorTodaySchedule(
+            UUID doctorId, int page, int size) {
         LocalDate today = LocalDate.now();
-        log.info("Fetching today's schedule for doctor {} on {}", doctorId, today);
+        log.info("Fetching today's schedule for doctor {} on {} (page={}, size={})",
+                doctorId, today, page, size);
 
         // Ensure doctor exists
         fetchDoctor(doctorId);
 
-        List<AppointmentBooking> appointmentsList =
+        PageRequest pageable = toPageRequest(page, size);
+        Page<AppointmentBooking> appointmentsPage =
                 appointmentBookingRepository.findByDoctorAndDateExcludingCancelled(
-                        doctorId, today, BookingStatus.CANCELLED);
+                        doctorId, today, BookingStatus.CANCELLED, pageable);
 
         List<DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse> appointments =
-                appointmentsList.stream()
-                .map(appointment -> {
-                    PatientSummaryResponse patient = fetchPatientQuietly(appointment.getPatientId());
-
-                    List<ConsultationTypeItemResponse> consultationTypes =
-                            resolveConsultationTypes(appointment.getId());
-
-                    return DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse.builder()
-                            .bookingId(appointment.getId())
-                            .assignedDoctorId(appointment.getAssignedDoctorId())
-                            .slotTime(appointment.getSlotTime())
-                            .bookingTime(resolveBookingDateTime(appointment))
-                            .bookingStatus(appointment.getBookingStatus())
-                            .patientId(appointment.getPatientId())
-                            .patientName(patient != null ? patient.getFullName() : null)
-                            .patientMobileNumber(patient != null ? patient.getMobileNumber() : null)
-                            .consultationTypes(consultationTypes)
-                            .build();
-                })
+                appointmentsPage.getContent().stream()
+                .map(this::toDoctorTodayAppointment)
                 .toList();
 
         DoctorTodayScheduleResponse response = DoctorTodayScheduleResponse.builder()
                 .doctorId(doctorId)
                 .date(today)
-                .totalAppointments(appointments.size())
+                .totalAppointments(appointmentsPage.getTotalElements())
+                .page(appointmentsPage.getNumber())
+                .size(appointmentsPage.getSize())
+                .totalPages(appointmentsPage.getTotalPages())
                 .appointments(appointments)
                 .build();
 
@@ -672,44 +671,59 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<DoctorTodayScheduleResponse> getTodayAppointments() {
+    public ApiResponse<DoctorTodayScheduleResponse> getTodayAppointments(int page, int size) {
         LocalDate today = LocalDate.now();
-        log.info("Fetching today's appointments for all doctors on {}", today);
+        log.info("Fetching today's appointments for all doctors on {} (page={}, size={})",
+                today, page, size);
 
-        List<AppointmentBooking> appointmentsList =
-                appointmentBookingRepository.findTodaySchedule(today, BookingStatus.CANCELLED, null);
+        PageRequest pageable = toPageRequest(page, size);
+        Page<AppointmentBooking> appointmentsPage =
+                appointmentBookingRepository.findTodaySchedule(
+                        today, BookingStatus.CANCELLED, null, pageable);
 
         List<DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse> appointments =
-                appointmentsList.stream()
-                .map(appointment -> {
-                    PatientSummaryResponse patient = fetchPatientQuietly(appointment.getPatientId());
-
-                    List<ConsultationTypeItemResponse> consultationTypes =
-                            resolveConsultationTypes(appointment.getId());
-
-                    return DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse.builder()
-                            .bookingId(appointment.getId())
-                            .assignedDoctorId(appointment.getAssignedDoctorId())
-                            .slotTime(appointment.getSlotTime())
-                            .bookingTime(resolveBookingDateTime(appointment))
-                            .bookingStatus(appointment.getBookingStatus())
-                            .patientId(appointment.getPatientId())
-                            .patientName(patient != null ? patient.getFullName() : null)
-                            .patientMobileNumber(patient != null ? patient.getMobileNumber() : null)
-                            .consultationTypes(consultationTypes)
-                            .build();
-                })
+                appointmentsPage.getContent().stream()
+                .map(this::toDoctorTodayAppointment)
                 .toList();
 
         DoctorTodayScheduleResponse response = DoctorTodayScheduleResponse.builder()
                 .doctorId(null)
                 .date(today)
-                .totalAppointments(appointments.size())
+                .totalAppointments(appointmentsPage.getTotalElements())
+                .page(appointmentsPage.getNumber())
+                .size(appointmentsPage.getSize())
+                .totalPages(appointmentsPage.getTotalPages())
                 .appointments(appointments)
                 .build();
 
-        log.info("Fetched {} today's appointments successfully", appointments.size());
+        log.info("Fetched {} today's appointments (page {} of {})",
+                appointments.size(), response.getPage() + 1, response.getTotalPages());
         return ApiResponse.success(AppMessages.TODAY_APPOINTMENTS_FETCHED, response);
+    }
+
+    private DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse toDoctorTodayAppointment(
+            AppointmentBooking appointment) {
+        PatientSummaryResponse patient = fetchPatientQuietly(appointment.getPatientId());
+        List<ConsultationTypeItemResponse> consultationTypes =
+                resolveConsultationTypes(appointment.getId());
+
+        return DoctorTodayScheduleResponse.DoctorTodayAppointmentResponse.builder()
+                .bookingId(appointment.getId())
+                .assignedDoctorId(appointment.getAssignedDoctorId())
+                .slotTime(appointment.getSlotTime())
+                .bookingTime(resolveBookingDateTime(appointment))
+                .bookingStatus(appointment.getBookingStatus())
+                .patientId(appointment.getPatientId())
+                .patientName(patient != null ? patient.getFullName() : null)
+                .patientMobileNumber(patient != null ? patient.getMobileNumber() : null)
+                .consultationTypes(consultationTypes)
+                .build();
+    }
+
+    private PageRequest toPageRequest(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
+        return PageRequest.of(safePage, safeSize);
     }
 
     @Override
@@ -874,6 +888,13 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         appointment.setBookingStatus(BookingStatus.CANCELLED);
         AppointmentBooking saved = appointmentBookingRepository.save(appointment);
 
+        activityLogPublisher.record(
+                "Appointments",
+                ActivityActionType.UPDATED,
+                "Appointment " + bookingId,
+                null,
+                "CANCELLED");
+
         return ApiResponse.success(AppMessages.APPOINTMENT_CANCELLED, toResponse(saved));
     }
 
@@ -887,6 +908,11 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         appointment.setBookingStatus(BookingStatus.CANCELLED);
         appointment.setDeleted(true);
         appointmentBookingRepository.save(appointment);
+
+        activityLogPublisher.record(
+                "Appointments",
+                ActivityActionType.DELETED,
+                "Appointment " + bookingId);
 
         return ApiResponse.success(AppMessages.APPOINTMENT_DELETED, null);
     }

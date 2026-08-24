@@ -25,7 +25,14 @@ public class DoctorTodayScheduleResponse {
 
     private LocalDate date;
 
+    /** Total matching appointments today (before paging). */
     private long totalAppointments;
+
+    private int page;
+
+    private int size;
+
+    private int totalPages;
 
     private List<DoctorTodayAppointmentResponse> appointments;
 

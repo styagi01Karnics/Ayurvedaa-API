@@ -1,10 +1,13 @@
 package com.ayurveda.appointment.repository;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,8 +15,6 @@ import org.springframework.stereotype.Repository;
 
 import com.ayurveda.appointment.entity.AppointmentBooking;
 import com.ayurveda.appointment.enums.BookingStatus;
-
-import java.time.LocalTime;
 
 @Repository
 public interface AppointmentBookingRepository
@@ -73,6 +74,20 @@ public interface AppointmentBookingRepository
             @Param("cancelled") BookingStatus cancelled);
 
     @Query("""
+            SELECT a FROM AppointmentBooking a
+            WHERE a.assignedDoctorId = :doctorId
+              AND a.registrationDate = :date
+              AND a.deleted = false
+              AND a.bookingStatus <> :cancelled
+            ORDER BY a.slotTime ASC NULLS LAST, a.createdAt ASC
+            """)
+    Page<AppointmentBooking> findByDoctorAndDateExcludingCancelled(
+            @Param("doctorId") UUID doctorId,
+            @Param("date") LocalDate date,
+            @Param("cancelled") BookingStatus cancelled,
+            Pageable pageable);
+
+    @Query("""
             SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
             FROM AppointmentBooking a
             WHERE a.assignedDoctorId = :doctorId
@@ -101,6 +116,20 @@ public interface AppointmentBookingRepository
             @Param("date") LocalDate date,
             @Param("cancelled") BookingStatus cancelled,
             @Param("doctorId") UUID doctorId);
+
+    @Query("""
+            SELECT a FROM AppointmentBooking a
+            WHERE a.registrationDate = :date
+              AND a.deleted = false
+              AND a.bookingStatus <> :cancelled
+              AND (:doctorId IS NULL OR a.assignedDoctorId = :doctorId)
+            ORDER BY a.slotTime ASC NULLS LAST, a.createdAt ASC
+            """)
+    Page<AppointmentBooking> findTodaySchedule(
+            @Param("date") LocalDate date,
+            @Param("cancelled") BookingStatus cancelled,
+            @Param("doctorId") UUID doctorId,
+            Pageable pageable);
 
     @Query("""
             SELECT a FROM AppointmentBooking a

@@ -36,6 +36,8 @@ import com.ayurveda.billing.util.BillSectionResolver;
 import com.ayurveda.billing.util.InvoiceCalculationUtil;
 import com.ayurveda.billing.util.InvoiceNumberGenerator;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityActionType;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 
@@ -54,6 +56,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final InvoiceMapper invoiceMapper;
     private final InvoiceNumberGenerator invoiceNumberGenerator;
     private final MedicineServiceClient medicineServiceClient;
+    private final ActivityLogPublisher activityLogPublisher;
 
     @Value("${billing.default-cgst-percent:3}")
     private BigDecimal defaultCgstPercent;
@@ -124,6 +127,11 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         log.info("Invoice created successfully. Invoice ID: {}, Invoice Number: {}",
                 saved.getId(), saved.getInvoiceNumber());
+
+        activityLogPublisher.record(
+                "Billing",
+                ActivityActionType.CREATED,
+                "Invoice " + saved.getInvoiceNumber());
 
         return ApiResponse.success(BillingMessages.INVOICE_GENERATED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
     }
@@ -229,6 +237,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoiceRepository.save(invoice);
 
         log.info("Invoice deleted successfully. Invoice ID: {}", invoiceId);
+
+        activityLogPublisher.record(
+                "Billing",
+                ActivityActionType.DELETED,
+                "Invoice " + invoice.getInvoiceNumber());
 
         return ApiResponse.success(BillingMessages.INVOICE_DELETED_SUCCESSFULLY, null);
     }

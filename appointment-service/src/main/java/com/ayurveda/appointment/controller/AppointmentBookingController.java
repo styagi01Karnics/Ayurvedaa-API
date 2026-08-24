@@ -91,15 +91,17 @@ public class AppointmentBookingController {
     @Operation(
             summary = "Get today's appointments",
             description = """
-                    Returns all today's appointments across doctors (cancelled excluded),
-                    ordered ascending by slot time.
+                    Returns today's appointments across doctors (cancelled excluded),
+                    ordered ascending by slot time. Supports pagination via page/size.
                     Same response shape as doctor's today API; doctorId is null.
                     Each appointment includes assignedDoctorId.
                     """)
     @GetMapping("/today")
-    public ResponseEntity<ApiResponse<DoctorTodayScheduleResponse>> getTodayAppointments() {
+    public ResponseEntity<ApiResponse<DoctorTodayScheduleResponse>> getTodayAppointments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(appointmentBookingService.getTodayAppointments());
+        return ResponseEntity.ok(appointmentBookingService.getTodayAppointments(page, size));
     }
 
     @Operation(
@@ -118,13 +120,16 @@ public class AppointmentBookingController {
             description = """
                     Returns only today's appointments for the doctor (cancelled excluded),
                     ordered ascending by booking time (createdAt).
-                    No timeslot — uses booking slotTime (ordered ascending).
+                    Supports pagination via page/size.
                     """)
     @GetMapping("/doctor/{doctorId}/today")
     public ResponseEntity<ApiResponse<DoctorTodayScheduleResponse>> getDoctorTodaySchedule(
-            @PathVariable UUID doctorId) {
+            @PathVariable UUID doctorId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(appointmentBookingService.getDoctorTodaySchedule(doctorId));
+        return ResponseEntity.ok(
+                appointmentBookingService.getDoctorTodaySchedule(doctorId, page, size));
     }
 
     @Operation(

@@ -29,6 +29,9 @@ services:
     url: http://45.195.229.15:8104
   file-upload:
     url: http://45.195.229.15:8105
+  activity-log:
+    url: http://45.195.229.15:8107
+    enabled: true
 
 springdoc:
   api-docs:
