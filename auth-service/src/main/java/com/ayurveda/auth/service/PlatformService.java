@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.ayurveda.auth.dto.request.BootstrapSuperAdminRequest;
 import com.ayurveda.auth.dto.request.CreateHospitalAdminRequest;
 import com.ayurveda.auth.dto.request.OnboardHospitalRequest;
+import com.ayurveda.auth.dto.request.UpdateHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalStatusRequest;
 import com.ayurveda.auth.dto.response.HospitalOnboardResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
@@ -22,6 +23,9 @@ public interface PlatformService {
     ApiResponse<List<TenantResponse>> listHospitals();
 
     ApiResponse<TenantResponse> getHospital(UUID hospitalId);
+
+    /** Update clinic/contact profile fields (not tenantCode / schema / password). */
+    ApiResponse<TenantResponse> updateHospital(UUID hospitalId, UpdateHospitalRequest request);
 
     ApiResponse<UserResponse> createHospitalAdmin(UUID hospitalId, CreateHospitalAdminRequest request);
 

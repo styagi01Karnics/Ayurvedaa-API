@@ -24,10 +24,10 @@ public class UpdateUserRequest {
     @Size(max = 100)
     private String fullName;
 
-    /** Optional new Gmail username (also updates email). */
+    /** Optional new Gmail login identity. */
     @Size(max = 150)
     @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)
-    private String username;
+    private String email;
 
     private UserRole role;
 

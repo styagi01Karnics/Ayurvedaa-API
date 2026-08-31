@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.ayurveda.auth.config.ResetPasswordProperties;
 import com.ayurveda.auth.constant.AuthMessages;
 import com.ayurveda.auth.dto.request.ChangePasswordRequest;
 import com.ayurveda.auth.dto.request.ForgotPasswordRequest;
@@ -61,6 +62,7 @@ import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ForbiddenException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.exception.UnauthorizedException;
+import com.ayurveda.common.notification.EmailNotificationPublisher;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,8 +72,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Transactional
 public class AuthServiceImpl implements AuthService {
-
-    private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
 
     private final TenantRepository tenantRepository;
     private final AuthUserRepository authUserRepository;
@@ -83,6 +83,8 @@ public class AuthServiceImpl implements AuthService {
     private final PageAccessService pageAccessService;
     private final TenantBootstrapService tenantBootstrapService;
     private final ActivityLogPublisher activityLogPublisher;
+    private final EmailNotificationPublisher emailNotificationPublisher;
+    private final ResetPasswordProperties resetPasswordProperties;
 
     @Override
     @Transactional(readOnly = true)
@@ -102,7 +104,7 @@ public class AuthServiceImpl implements AuthService {
                 throw new BadRequestException(AuthMessages.TENANT_NOT_ALLOWED_FOR_SUPER_ADMIN_LOGIN);
             }
         } else {
-            user = resolveSuperAdminByUsernameOrEmail(loginId)
+            user = resolveSuperAdminByEmail(loginId)
                     .orElseThrow(() -> new UnauthorizedException(AuthMessages.INVALID_CREDENTIALS));
 
             if (user.getRole() != UserRole.SUPER_ADMIN) {
@@ -138,7 +140,7 @@ public class AuthServiceImpl implements AuthService {
                 .tenant(authMapper.toTenantResponse(tenant))
                 .build();
 
-        log.info("User {} logged in for tenant {}", user.getUsername(), tenant.getTenantCode());
+        log.info("User {} logged in for tenant {}", user.getEmail(), tenant.getTenantCode());
 
         return ApiResponse.success(AuthMessages.LOGIN_SUCCESSFUL, response);
     }
@@ -154,7 +156,7 @@ public class AuthServiceImpl implements AuthService {
             userOpt = resolveUserForTenant(tenant.getId(), loginId)
                     .filter(u -> u.getRole() != UserRole.SUPER_ADMIN);
         } else {
-            userOpt = resolveSuperAdminByUsernameOrEmail(loginId);
+            userOpt = resolveSuperAdminByEmail(loginId);
         }
 
         if (userOpt.isEmpty()) {
@@ -170,7 +172,8 @@ public class AuthServiceImpl implements AuthService {
 
         String rawToken = UUID.randomUUID().toString().replace("-", "")
                 + UUID.randomUUID().toString().replace("-", "");
-        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(RESET_TOKEN_EXPIRY_MINUTES);
+        int expiryMinutes = Math.max(1, resetPasswordProperties.getExpiryMinutes());
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(expiryMinutes);
 
         PasswordResetToken resetToken = PasswordResetToken.builder()
                 .user(user)
@@ -181,15 +184,34 @@ public class AuthServiceImpl implements AuthService {
 
         passwordResetTokenRepository.save(resetToken);
 
-        log.info("Password reset token generated for user {}", user.getUsername());
+        String resetLink = buildResetLink(rawToken);
+        String emailBody = """
+                Hello %s,
 
-        return ApiResponse.success(
-                AuthMessages.PASSWORD_RESET_TOKEN_GENERATED,
-                ForgotPasswordResponse.builder()
-                        .message(AuthMessages.PASSWORD_RESET_TOKEN_GENERATED)
-                        .resetToken(rawToken)
-                        .expiresAt(expiresAt)
-                        .build());
+                We received a request to reset your Ayurvedaa password.
+                Open this link to set a new password (valid for %d minutes):
+
+                %s
+
+                If you did not request this, you can ignore this email.
+                """.formatted(user.getFullName(), expiryMinutes, resetLink);
+
+        emailNotificationPublisher.sendEmail(
+                user.getEmail(),
+                "Ayurvedaa password reset",
+                emailBody);
+
+        log.info("Password reset email requested for user {}", user.getEmail());
+
+        ForgotPasswordResponse.ForgotPasswordResponseBuilder responseBuilder = ForgotPasswordResponse.builder()
+                .message(AuthMessages.PASSWORD_RESET_EMAIL_SENT)
+                .expiresAt(expiresAt);
+
+        if (resetPasswordProperties.isExposeToken()) {
+            responseBuilder.resetToken(rawToken);
+        }
+
+        return ApiResponse.success(AuthMessages.PASSWORD_RESET_EMAIL_SENT, responseBuilder.build());
     }
 
     @Override
@@ -218,7 +240,7 @@ public class AuthServiceImpl implements AuthService {
         passwordResetTokenRepository.save(resetToken);
         passwordResetTokenRepository.invalidateActiveTokensForUser(user.getId());
 
-        log.info("Password reset completed for user {}", user.getUsername());
+        log.info("Password reset completed for user {}", user.getEmail());
 
         return ApiResponse.success(AuthMessages.PASSWORD_RESET_SUCCESSFUL, null);
     }
@@ -238,12 +260,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException(AuthMessages.CANNOT_ASSIGN_ROLE_ON_PLATFORM_TENANT);
         }
 
-        String email = request.getUsername().trim().toLowerCase();
-        String username = email;
-
-        if (authUserRepository.existsByTenantIdAndUsernameIgnoreCaseAndDeletedFalse(tenant.getId(), username)) {
-            throw new DuplicateResourceException(AuthMessages.USERNAME_ALREADY_EXISTS + username);
-        }
+        String email = request.getEmail().trim().toLowerCase();
 
         if (authUserRepository.existsByTenantIdAndEmailIgnoreCaseAndDeletedFalse(tenant.getId(), email)) {
             throw new DuplicateResourceException(AuthMessages.USER_EXISTS_FOR_TENANT_EMAIL + email);
@@ -258,7 +275,6 @@ public class AuthServiceImpl implements AuthService {
 
         AuthUser user = AuthUser.builder()
                 .tenant(tenant)
-                .username(username)
                 .email(email)
                 .fullName(request.getFullName().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -270,12 +286,12 @@ public class AuthServiceImpl implements AuthService {
         AuthUser saved = authUserRepository.save(user);
         List<String> pageCodes = pageAccessService.resolvePageCodes(saved);
 
-        log.info("Registered user {} with role {} for tenant {}", username, request.getRole(), tenant.getTenantCode());
+        log.info("Registered user {} with role {} for tenant {}", email, request.getRole(), tenant.getTenantCode());
 
         activityLogPublisher.record(
                 "Settings",
                 ActivityActionType.CREATED,
-                "User " + username,
+                "User " + email,
                 null,
                 request.getRole().name(),
                 principal.getUserId(),
@@ -301,20 +317,14 @@ public class AuthServiceImpl implements AuthService {
             user.setFullName(request.getFullName().trim());
         }
 
-        if (StringUtils.hasText(request.getUsername())) {
-            String username = request.getUsername().trim().toLowerCase();
-            if (!username.equalsIgnoreCase(user.getUsername())
-                    && authUserRepository.existsByTenantIdAndUsernameIgnoreCaseAndDeletedFalse(
-                            principal.getTenantId(), username)) {
-                throw new DuplicateResourceException(AuthMessages.USERNAME_ALREADY_EXISTS + username);
-            }
-            if (!username.equalsIgnoreCase(user.getEmail())
+        if (StringUtils.hasText(request.getEmail())) {
+            String email = request.getEmail().trim().toLowerCase();
+            if (!email.equalsIgnoreCase(user.getEmail())
                     && authUserRepository.existsByTenantIdAndEmailIgnoreCaseAndDeletedFalse(
-                            principal.getTenantId(), username)) {
-                throw new DuplicateResourceException(AuthMessages.USER_EXISTS_FOR_TENANT_EMAIL + username);
+                            principal.getTenantId(), email)) {
+                throw new DuplicateResourceException(AuthMessages.USER_EXISTS_FOR_TENANT_EMAIL + email);
             }
-            user.setUsername(username);
-            user.setEmail(username);
+            user.setEmail(email);
         }
 
         if (request.getRole() != null) {
@@ -341,7 +351,7 @@ public class AuthServiceImpl implements AuthService {
         activityLogPublisher.record(
                 "Settings",
                 ActivityActionType.UPDATED,
-                "User " + saved.getUsername(),
+                "User " + saved.getEmail(),
                 null,
                 saved.getRole().name(),
                 principal.getUserId(),
@@ -368,7 +378,7 @@ public class AuthServiceImpl implements AuthService {
         activityLogPublisher.record(
                 "Settings",
                 ActivityActionType.UPDATED,
-                "User status " + saved.getUsername(),
+                "User status " + saved.getEmail(),
                 null,
                 request.getStatus().name(),
                 principal.getUserId(),
@@ -402,7 +412,7 @@ public class AuthServiceImpl implements AuthService {
         activityLogPublisher.record(
                 "Settings",
                 ActivityActionType.DELETED,
-                "User " + user.getUsername(),
+                "User " + user.getEmail(),
                 null,
                 user.getRole().name(),
                 principal.getUserId(),
@@ -468,7 +478,7 @@ public class AuthServiceImpl implements AuthService {
         authUserRepository.save(user);
         passwordResetTokenRepository.invalidateActiveTokensForUser(user.getId());
 
-        log.info("Password changed for user {}", user.getUsername());
+        log.info("Password changed for user {}", user.getEmail());
         return ApiResponse.success(AuthMessages.PASSWORD_CHANGED_SUCCESSFULLY, null);
     }
 
@@ -558,27 +568,24 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private Optional<AuthUser> resolveSuperAdminByUsernameOrEmail(String usernameOrEmail) {
-        String loginId = usernameOrEmail.toLowerCase();
-        if (loginId.contains("@")) {
-            return authUserRepository.findByRoleAndEmailIgnoreCaseAndDeletedFalse(
-                    UserRole.SUPER_ADMIN, loginId);
+    private String buildResetLink(String rawToken) {
+        String base = resetPasswordProperties.getResetLinkBaseUrl();
+        if (!StringUtils.hasText(base)) {
+            base = "http://localhost:3000/reset-password";
         }
-        return authUserRepository
-                .findByRoleAndUsernameIgnoreCaseAndDeletedFalse(UserRole.SUPER_ADMIN, loginId)
-                .or(() -> authUserRepository.findByRoleAndEmailIgnoreCaseAndDeletedFalse(
-                        UserRole.SUPER_ADMIN, loginId));
+        String separator = base.contains("?") ? "&" : "?";
+        return base + separator + "token=" + rawToken;
     }
 
-    private Optional<AuthUser> resolveUserForTenant(UUID tenantId, String usernameOrEmail) {
-        String loginId = usernameOrEmail.toLowerCase();
-        if (loginId.contains("@")) {
-            return authUserRepository.findByTenantIdAndEmailIgnoreCaseAndDeletedFalse(tenantId, loginId);
-        }
-        return authUserRepository
-                .findByTenantIdAndUsernameIgnoreCaseAndDeletedFalse(tenantId, loginId)
-                .or(() -> authUserRepository.findByTenantIdAndEmailIgnoreCaseAndDeletedFalse(
-                        tenantId, loginId));
+    private Optional<AuthUser> resolveSuperAdminByEmail(String emailOrLogin) {
+        String loginId = emailOrLogin.toLowerCase();
+        return authUserRepository.findByRoleAndEmailIgnoreCaseAndDeletedFalse(
+                UserRole.SUPER_ADMIN, loginId);
+    }
+
+    private Optional<AuthUser> resolveUserForTenant(UUID tenantId, String emailOrLogin) {
+        String loginId = emailOrLogin.toLowerCase();
+        return authUserRepository.findByTenantIdAndEmailIgnoreCaseAndDeletedFalse(tenantId, loginId);
     }
 
     private AuthUser requireTenantUser(UUID userId, UUID tenantId) {

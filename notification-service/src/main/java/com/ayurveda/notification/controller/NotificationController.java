@@ -18,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.notification.dto.request.CreateNotificationRequest;
+import com.ayurveda.notification.dto.request.SendEmailRequest;
 import com.ayurveda.notification.dto.response.NotificationResponse;
 import com.ayurveda.notification.dto.response.UnreadCountResponse;
 import com.ayurveda.notification.enums.NotificationType;
+import com.ayurveda.notification.service.EmailService;
 import com.ayurveda.notification.service.NotificationService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,6 +38,13 @@ import lombok.RequiredArgsConstructor;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final EmailService emailService;
+
+    @Operation(summary = "Send an email (internal / service-to-service)")
+    @PostMapping("/email")
+    public ResponseEntity<ApiResponse<Void>> sendEmail(@Valid @RequestBody SendEmailRequest request) {
+        return ResponseEntity.ok(emailService.sendEmail(request));
+    }
 
     @Operation(summary = "Create notification")
     @PostMapping

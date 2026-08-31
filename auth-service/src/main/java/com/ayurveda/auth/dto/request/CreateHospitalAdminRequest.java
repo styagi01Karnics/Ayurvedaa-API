@@ -28,11 +28,11 @@ public class CreateHospitalAdminRequest {
     @Size(max = 100)
     private String fullName;
 
-    /** Gmail address used as username (also stored as email). */
-    @NotBlank(message = "Admin username (Gmail) is required")
+    /** Gmail login identity. */
+    @NotBlank(message = "Admin email (Gmail) is required")
     @Size(max = 150)
     @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)
-    private String username;
+    private String email;
 
     @NotBlank(message = "Admin password is required")
     @Size(min = 8, max = 100)

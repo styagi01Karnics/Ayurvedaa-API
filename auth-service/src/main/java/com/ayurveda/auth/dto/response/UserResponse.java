@@ -23,7 +23,6 @@ public class UserResponse {
     private UUID tenantId;
     private String tenantCode;
     private String schemaName;
-    private String username;
     private String email;
     private String fullName;
     private String mobileNumber;

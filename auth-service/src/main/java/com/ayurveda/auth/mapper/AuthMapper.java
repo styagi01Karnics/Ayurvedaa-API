@@ -54,7 +54,6 @@ public class AuthMapper {
                 .tenantId(user.getTenant().getId())
                 .tenantCode(user.getTenant().getTenantCode())
                 .schemaName(user.getTenant().getSchemaName())
-                .username(user.getUsername())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .mobileNumber(user.getMobileNumber())

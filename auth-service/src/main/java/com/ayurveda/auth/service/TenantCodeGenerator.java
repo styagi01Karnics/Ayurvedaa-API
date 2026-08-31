@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -13,9 +14,13 @@ import com.ayurveda.common.exception.BadRequestException;
 
 /**
  * Builds hospital tenant codes as {@code BRAND-STATE}, e.g. {@code GAN-DL}, {@code GAN-UK}.
+ * On collision, allocates {@code BRAND-STATE-2}, {@code BRAND-STATE-3}, …
  */
 @Component
 public class TenantCodeGenerator {
+
+    /** Safety cap so onboard never loops forever if uniqueness checks misbehave. */
+    private static final int MAX_SUFFIX = 9_999;
 
     private static final Set<String> SKIP_WORDS = Set.of(
             "AYURVEDA", "AYURVEDIC", "HOSPITAL", "CLINIC", "THE", "AND", "OF", "PVT", "LTD", "LIMITED");
@@ -67,6 +72,30 @@ public class TenantCodeGenerator {
         String brand = extractBrandCode(hospitalName);
         String stateCode = resolveStateCode(state);
         return brand + "-" + stateCode;
+    }
+
+    /**
+     * Returns {@code baseCode} when free; otherwise {@code baseCode-2}, {@code baseCode-3}, …
+     * until {@code isTaken} is false for the candidate.
+     *
+     * @param baseCode BRAND-STATE from {@link #generate(String, String)}
+     * @param isTaken  true when tenantCode or derived schemaName is already in use
+     */
+    public String allocateUnique(String baseCode, Predicate<String> isTaken) {
+        if (!StringUtils.hasText(baseCode)) {
+            throw new BadRequestException(AuthMessages.CANNOT_BUILD_TENANT_CODE_FROM_NAME);
+        }
+        String base = baseCode.trim().toUpperCase(Locale.ROOT);
+        if (!isTaken.test(base)) {
+            return base;
+        }
+        for (int n = 2; n <= MAX_SUFFIX; n++) {
+            String candidate = base + "-" + n;
+            if (!isTaken.test(candidate)) {
+                return candidate;
+            }
+        }
+        throw new BadRequestException(AuthMessages.TENANT_CODE_ALLOCATION_EXHAUSTED + base);
     }
 
     public String resolveStateCode(String state) {

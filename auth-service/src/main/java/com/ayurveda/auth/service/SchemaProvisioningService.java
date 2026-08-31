@@ -10,8 +10,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Creates Postgres schemas for hospital tenants.
- * Hospital domain table migrations in those schemas are step-2 (other services).
+ * Creates Postgres schemas for hospital tenants and runs {@link HospitalSchemaMigrator}.
+ * Provision applies the full clinical table baseline (masters, appointments, billing, ops)
+ * from {@code classpath:db/hospital-schema/*.sql}.
  */
 @Slf4j
 @Service
@@ -21,6 +22,7 @@ public class SchemaProvisioningService {
     private static final String SCHEMA_PREFIX = "hosp_";
 
     private final JdbcTemplate jdbcTemplate;
+    private final HospitalSchemaMigrator hospitalSchemaMigrator;
 
     public String buildSchemaName(String tenantCode) {
         String normalized = tenantCode == null ? "" : tenantCode.trim().toLowerCase()
@@ -38,6 +40,17 @@ public class SchemaProvisioningService {
             throw new BadRequestException(AuthMessages.INVALID_SCHEMA_NAME + schema);
         }
         return schema;
+    }
+
+    /**
+     * Creates the schema (if missing) and applies classpath hospital-schema baseline scripts.
+     *
+     * @return provision summary message suitable for {@code tenants.provisionMessage}
+     */
+    public String provisionSchema(String schemaName) {
+        createSchema(schemaName);
+        String migrationSummary = hospitalSchemaMigrator.migrate(schemaName);
+        return "Schema " + schemaName + " created. " + migrationSummary;
     }
 
     public void createSchema(String schemaName) {

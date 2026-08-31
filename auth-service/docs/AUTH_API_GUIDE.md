@@ -66,13 +66,25 @@ Failure shape (errors):
 | Table | Purpose |
 |-------|---------|
 | `tenants` | Hospitals + platform tenant. Onboard stores **all** clinic + contact form fields here (except passwords). Includes `tenantCode`, `schemaName`, address, `logoUrl`, contact `fullName` / `mobileNumber` / `email` / `photoUrl`, status. |
-| `auth_users` | Login accounts. Onboard extracts `fullName`, `mobileNumber`, `email` (username mirrored = same Gmail), `password` → `passwordHash`, role `ADMIN`. Unique per `(tenant_id, email)` and `(tenant_id, username)`. |
+| `auth_users` | Login accounts. Canonical identity is **email only** (Gmail). Onboard stores `fullName`, `mobileNumber`, `email`, `password` → `passwordHash`, role `ADMIN`. Unique per `(tenant_id, email)`. No mirrored `username` column. |
 | `tenant_roles` / `ui_pages` | Hospital Role Management (page codes). Seeded system roles on onboard. |
 | `password_reset_tokens` | Hashed tokens for forgot/reset password. |
 
-**Username = Gmail only** (`^[A-Za-z0-9._%+-]+@gmail\.com$`).
+**Login identity = Gmail only** (`^[A-Za-z0-9._%+-]+@gmail\.com$`). Login/forgot request field is still named `usernameOrEmail` for FE compatibility but must be the Gmail address.
 
-**tenantCode auto-generation:** `BRAND-STATE` from `clinicName` + `state` (name or code), e.g. `Ganesha Ayurveda` + `Delhi` → `GAN-DL`. Schema → `hosp_gan_dl`. Platform tenant uses schema `public`.
+**tenantCode auto-generation:** `BRAND-STATE` from `clinicName` + `state` (name or code), e.g. `Ganesha Ayurveda` + `Delhi` → `GAN-DL`. Schema → `hosp_gan_dl`. If that code (or its schema) already exists, a numeric suffix is appended until free: `GAN-DL-2`, `GAN-DL-3`, … (schema follows, e.g. `hosp_gan_dl_2`). DB unique constraints on `tenantCode` / `schemaName` remain. Platform tenant uses schema `public`.
+
+**Hospital schema provision (step-2):** Onboard / retry-provision runs `CREATE SCHEMA` then `HospitalSchemaMigrator`, which applies ordered classpath scripts under `auth-service/src/main/resources/db/hospital-schema/*.sql`. Scripts are recorded in `${schema}.schema_migrations` (idempotent on retry). Tables created per `hosp_*` schema:
+
+| Script | Tables |
+|--------|--------|
+| `V000__baseline.sql` | `schema_baseline`, `schema_migrations` |
+| `V001__masters.sql` | `mst_patient`, `mst_doctor`, `mst_therapist`, `mst_therapist_assigned_therapies`, `medicine_inventory`, `mst_treatment_category`, `mst_therapy`, `mst_doshas`, `mst_consultation_type`, `mst_treatment_plan`, `mst_package` |
+| `V002__appointments.sql` | `appointment_bookings`, `appointment_consultation_types`, `treatments`, `follow_ups`, `appointment_therapies`, `appointment_therapy_recommendations`, `prescriptions`, `prescription_medicines`, `prescription_therapy_suggestions`, `prescription_therapy_suggestion_items`, `appointment_medical_histories`, `appointment_physical_examinations`, `appointment_systemic_examinations`, `appointment_ayurvedic_assessments`, `appointment_lifestyle_information`, `appointment_treatment_plans` |
+| `V003__billing.sql` | `billings`, `billing_service_items`, `billing_invoices`, `billing_invoice_items`, `billing_invoice_payments`, `patient_packages` |
+| `V004__ops.sql` | `attendances`, `employee_attendance_master`, `device_attendance_logs`, `appointment_documents`, `activity_logs`, `notifications` |
+
+Auth platform tables (`tenants`, `auth_users`, `tenant_roles`, …) stay in **`public`**. Domain services still need tenant `search_path` / schema routing wired separately so they read/write these `hosp_*` tables instead of `public`.
 
 ---
 
@@ -114,17 +126,37 @@ One-time, public, until a `SUPER_ADMIN` already exists.
 Figma **Clinic Information + Contact Information** → single API.
 
 1. Super Admin must be logged in (Bearer).
-2. Optionally upload logo/photo via **file-upload-service**, then pass returned URLs as `logoUrl` / `photoUrl`.
+2. Optionally upload logo/photo (**upload-then-URL** — see Logo / photo flow below), then pass returned HTTPS URLs as `logoUrl` / `photoUrl`.
 3. `POST /api/v1/platform/hospitals` with clinic + contact fields (see API reference).
 4. Backend:
-   - Generates `tenantCode` (`BRAND-STATE`) and `schemaName` (`hosp_…`)
-   - Writes clinic + contact fields onto `tenants` (passwords excluded)
-   - Creates Postgres schema, seeds hospital roles
-   - Creates first hospital `ADMIN` on `auth_users` (`username` = `email` = Gmail)
+   - Generates unique `tenantCode` (`BRAND-STATE`, or `BRAND-STATE-N` on collision) and `schemaName` (`hosp_…`)
+   - Writes clinic + contact fields onto `tenants` (passwords excluded), including `logoUrl` / `photoUrl`
+   - Creates Postgres schema, applies hospital-schema baseline scripts, seeds hospital roles
+   - Creates first hospital `ADMIN` on `auth_users` (`email` = Gmail only)
 5. Response includes `hospital` + `admin`. Give the hospital their `tenantCode` for login.
 6. Additional admins later: `POST /api/v1/platform/hospitals/{hospitalId}/admins`.
+7. Edit clinic/contact later: `PUT /api/v1/platform/hospitals/{hospitalId}` (does **not** change `tenantCode`).
 
 **Do not send:** `tenantId`, `tenantCode`, or a separate `userId`. Map UI “User ID” → `email`.
+
+---
+
+### Logo / photo upload-then-URL (FE)
+
+Auth **never** accepts multipart files. Pass **URLs only** on onboard / hospital profile update.
+
+1. Upload the image somewhere that returns a stable HTTPS URL.
+2. Put that URL in `logoUrl` (clinic) and/or `photoUrl` (contact) on:
+   - `POST /api/v1/platform/hospitals`
+   - `PUT /api/v1/platform/hospitals/{hospitalId}`
+3. Values are stored on `tenants.logoUrl` / `tenants.photoUrl`. Omitting them is fine (null).
+
+**file-upload-service today:** port `8105`, APIs under `/api/v1/documents/**` are **patient appointment documents** (`patientId` + `DocumentType` required). That is **not** a general hospital logo/photo CDN. Prefer:
+
+- External CDN / object storage / static host for logos & admin photos, **or**
+- A future generic media upload endpoint
+
+Do **not** break URL-based onboard: FE can always paste a public URL without calling file-upload-service.
 
 ---
 
@@ -141,9 +173,12 @@ Figma **Clinic Information + Contact Information** → single API.
 1. **Forgot:** `POST /api/v1/auth/forgot-password`
    - Super Admin: Gmail only (omit `tenantCode`)
    - Hospital: `tenantCode` + Gmail
-2. Response may include `resetToken` + `expiresAt` (dev; production intended as email).
-3. **Reset:** `POST /api/v1/auth/reset-password` with `token`, `newPassword`, `confirmPassword`.
-4. User logs in again with the new password.
+2. Auth generates a hashed reset token, then asks **notification-service** (`POST /api/v1/notifications/email`) to email a reset link to the user's Gmail.
+3. **API response does not include `resetToken` in production-like config.** For local/dev only, set `auth.reset-password.expose-token=true` (default in local `application.yml`) to also return `resetToken` + `expiresAt`.
+4. **Reset:** `POST /api/v1/auth/reset-password` with `token` (from email link or exposed local response), `newPassword`, `confirmPassword`.
+5. User logs in again with the new password.
+
+Email link base URL: `auth.reset-password.reset-link-base-url` (default `http://localhost:3000/reset-password?token=…`).
 
 ---
 
@@ -215,7 +250,6 @@ Figma **Clinic Information + Contact Information** → single API.
       "tenantId": "…",
       "tenantCode": "GAN-DL",
       "schemaName": "hosp_gan_dl",
-      "username": "rahul.sharma@gmail.com",
       "email": "rahul.sharma@gmail.com",
       "fullName": "Rahul Sharma",
       "mobileNumber": "9876543210",
@@ -278,20 +312,24 @@ Figma **Clinic Information + Contact Information** → single API.
 
 **Response** (`ApiResponse<ForgotPasswordResponse>`):
 
+When `auth.reset-password.expose-token=true` (local/dev):
+
 ```json
 {
   "success": true,
   "status": 200,
-  "message": "Password reset token generated. In production this will be sent by email.",
+  "message": "If an account exists, a password reset email has been sent.",
   "data": {
-    "message": "Password reset token generated. In production this will be sent by email.",
+    "message": "If an account exists, a password reset email has been sent.",
     "resetToken": "<opaque-token>",
     "expiresAt": "2026-08-31T15:30:00"
   }
 }
 ```
 
-If no matching account, still `success: true` with a generic message and no `resetToken` (anti-enumeration).
+When `expose-token=false` (production-like): same message, but **`resetToken` is omitted** (email only). `expiresAt` may still be present.
+
+If no matching account, still `success: true` with a generic message and no `resetToken` (anti-enumeration). Email delivery failures are logged and do not change this response shape.
 
 ---
 
@@ -432,7 +470,7 @@ All hospital management routes below require **Bearer + role SUPER_ADMIN** (enfo
 ```json
 {
   "fullName": "Platform Owner",
-  "username": "superadmin@gmail.com",
+  "email": "superadmin@gmail.com",
   "password": "Password@123"
 }
 ```
@@ -449,7 +487,6 @@ All hospital management routes below require **Bearer + role SUPER_ADMIN** (enfo
     "tenantId": "…",
     "tenantCode": "…",
     "schemaName": "public",
-    "username": "superadmin@gmail.com",
     "email": "superadmin@gmail.com",
     "fullName": "Platform Owner",
     "mobileNumber": null,
@@ -503,7 +540,7 @@ All hospital management routes below require **Bearer + role SUPER_ADMIN** (enfo
 | `logoUrl` | No | `tenants` |
 | `fullName` | Yes | `tenants` + `auth_users` |
 | `mobileNumber` | No | `tenants` + `auth_users` |
-| `email` | Yes | Gmail; `tenants` + `auth_users.email` / `username` |
+| `email` | Yes | Gmail; `tenants` + `auth_users.email` (login) |
 | `password` / `confirmPassword` | Yes | Hashed on `auth_users` only |
 | `photoUrl` | No | `tenants` only |
 
@@ -512,6 +549,7 @@ All hospital management routes below require **Bearer + role SUPER_ADMIN** (enfo
 | clinicName | state | tenantCode | schemaName |
 |------------|-------|------------|------------|
 | Ganesha Ayurveda | Delhi / DL | `GAN-DL` | `hosp_gan_dl` |
+| Ganesha Ayurveda (2nd in Delhi) | Delhi / DL | `GAN-DL-2` | `hosp_gan_dl_2` |
 | Ganesha Ayurveda | Uttarakhand / UK | `GAN-UK` | `hosp_gan_uk` |
 | Ganesha Ayurveda | Odisha / OD | `GAN-OD` | `hosp_gan_od` |
 
@@ -543,14 +581,13 @@ All hospital management routes below require **Bearer + role SUPER_ADMIN** (enfo
       "schemaName": "hosp_gan_dl",
       "platform": false,
       "status": "ACTIVE",
-      "provisionMessage": "Schema hosp_gan_dl created. Hospital domain migrations are step-2."
+      "provisionMessage": "Schema hosp_gan_dl created. Hospital-schema scripts applied (V000__baseline.sql, V001__masters.sql, V002__appointments.sql, V003__billing.sql, V004__ops.sql). Clinical tables provisioned in hosp_gan_dl."
     },
     "admin": {
       "id": "…",
       "tenantId": "…",
       "tenantCode": "GAN-DL",
       "schemaName": "hosp_gan_dl",
-      "username": "rahul.sharma@gmail.com",
       "email": "rahul.sharma@gmail.com",
       "fullName": "Rahul Sharma",
       "mobileNumber": "9876543210",
@@ -583,6 +620,42 @@ Hospital statuses: `PROVISIONING` | `ACTIVE` | `INACTIVE` | `SUSPENDED` | `FAILE
 
 ---
 
+#### PUT `/api/v1/platform/hospitals/{hospitalId}`
+
+**Full URL:** `http://localhost:8111/api/v1/platform/hospitals/{hospitalId}`  
+**Auth:** Bearer + SUPER_ADMIN  
+**When:** Edit hospital clinic/contact profile (same Figma fields as onboard except password).
+
+**Request** (`UpdateHospitalRequest` — all fields optional; blank strings clear optional URL/text fields where applicable):
+
+```json
+{
+  "clinicName": "Ganesha Ayurveda Updated",
+  "clinicType": "Ayurveda Clinic",
+  "state": "Delhi",
+  "city": "New Delhi",
+  "pinCode": "110001",
+  "addressLine1": "12 Green Park",
+  "addressLine2": "Near Metro Station",
+  "registrationNumberGst": "07AAAAA0000A1Z5",
+  "logoUrl": "https://cdn.example.com/hospitals/gan-dl/logo.png",
+  "fullName": "Rahul Sharma",
+  "mobileNumber": "9876543210",
+  "email": "rahul.sharma@gmail.com",
+  "photoUrl": "https://cdn.example.com/admins/rahul.png"
+}
+```
+
+| Notes | |
+|-------|--|
+| Does **not** change `tenantCode` or `schemaName` (even if `state` changes display/`stateCode`) | |
+| `email` updates `tenants.email` (contact) only — does **not** change `auth_users` login | |
+| `logoUrl` / `photoUrl` are URL-only (see Logo / photo flow) | |
+
+**Response:** `ApiResponse<TenantResponse>` — `"Hospital profile updated successfully."`
+
+---
+
 #### POST `/api/v1/platform/hospitals/{hospitalId}/admins`
 
 **Auth:** Bearer + SUPER_ADMIN  
@@ -594,7 +667,7 @@ Hospital statuses: `PROVISIONING` | `ACTIVE` | `INACTIVE` | `SUSPENDED` | `FAILE
 ```json
 {
   "fullName": "Second Admin",
-  "username": "admin2@gmail.com",
+  "email": "admin2@gmail.com",
   "password": "Password@123"
 }
 ```
@@ -652,7 +725,7 @@ Requires **Bearer** and `ADMIN` / `SUPER_ADMIN` or authority `PAGE_SETTINGS`.
 ```json
 {
   "fullName": "Anita Nurse",
-  "username": "nurse@gmail.com",
+  "email": "nurse@gmail.com",
   "password": "Password@123",
   "role": "RECEPTIONIST",
   "tenantRoleId": "<uuid-from-GET-/roles>"
@@ -661,7 +734,7 @@ Requires **Bearer** and `ADMIN` / `SUPER_ADMIN` or authority `PAGE_SETTINGS`.
 
 | Field | Notes |
 |-------|--------|
-| `username` | Gmail (also stored as email) |
+| `email` | Gmail login identity |
 | `role` | `ADMIN`, `MANAGER`, `RECEPTIONIST`, `DIETICIAN`, `DOCTOR`, `CHEMIST` — not `SUPER_ADMIN` |
 | `tenantRoleId` | Required for non-ADMIN (owns `pageCodes`) |
 
@@ -717,7 +790,7 @@ Requires **Bearer** and `ADMIN` / `SUPER_ADMIN` or authority `PAGE_SETTINGS`.
 ```json
 {
   "fullName": "New Name",
-  "username": "newmail@gmail.com",
+  "email": "newmail@gmail.com",
   "role": "DOCTOR",
   "tenantRoleId": "…",
   "status": "ACTIVE"
@@ -831,6 +904,7 @@ System roles (e.g. `HOSPITAL_ADMIN`, `DOCTOR`, `RECEPTIONIST`) cannot be deleted
 | POST | `/api/v1/platform/hospitals` | Bearer + SUPER_ADMIN |
 | GET | `/api/v1/platform/hospitals` | Bearer + SUPER_ADMIN |
 | GET | `/api/v1/platform/hospitals/{hospitalId}` | Bearer + SUPER_ADMIN |
+| PUT | `/api/v1/platform/hospitals/{hospitalId}` | Bearer + SUPER_ADMIN |
 | POST | `/api/v1/platform/hospitals/{hospitalId}/admins` | Bearer + SUPER_ADMIN |
 | GET | `/api/v1/platform/hospitals/{hospitalId}/admins` | Bearer + SUPER_ADMIN |
 | PUT | `/api/v1/platform/hospitals/{hospitalId}/status` | Bearer + SUPER_ADMIN |
@@ -844,11 +918,114 @@ System roles (e.g. `HOSPITAL_ADMIN`, `DOCTOR`, `RECEPTIONIST`) cannot be deleted
 
 ---
 
+
+## Frontend: page permissions
+
+Hospital UI access is controlled by **`pageCodes`** (strings from the seeded catalog). The backend stores codes only; the frontend maps each code → menu item + route and hides anything not in the user's list.
+
+### What they are
+
+| Source | Behavior |
+|--------|----------|
+| `SUPER_ADMIN` / hospital `ADMIN` | Always get **all** catalog `pageCodes` (`PageAccessService`) |
+| Other hospital users | Codes from their assigned `tenantRole` (`tenant_role_pages`) |
+| Inactive / missing tenant role | Empty list → no hospital modules |
+
+JWT embeds the same list as claim `pageCodes`. On each request the filter turns each code into authority `PAGE_<CODE>` (e.g. `SETTINGS` → `PAGE_SETTINGS`). That authority (or role `ADMIN` / `SUPER_ADMIN`) is what guards Role Management and user CRUD APIs — see [Related — roles & UI pages](#related--roles--ui-pages) and Security summary.
+
+### Where the FE gets them
+
+1. **Login** — `POST /api/v1/auth/login` → `data.user.pageCodes` (also inside the JWT).
+2. **Refresh profile** — `GET /api/v1/auth/me` → same `UserResponse` with **live** `pageCodes` from DB (use after an admin changes roles; JWT authorities stay stale until the user logs in again).
+3. **Optional** — `POST /api/v1/auth/validate` returns `pageCodes` from the token only (not re-resolved).
+
+Persist `pageCodes` with `accessToken` / session. Prefer `/auth/me` for menu rebuild after permission edits; require re-login if you need updated API authorities (`PAGE_SETTINGS`, etc.).
+
+### Configure menus & routes
+
+Map each code to a route/menu entry. Show only codes present in `user.pageCodes`. Do not invent codes — catalog is seeded by `UiPageSeeder`:
+
+| `pageCode` | Seeded name | Module | Suggested FE route (example) |
+|------------|-------------|--------|------------------------------|
+| `DASHBOARD` | Dashboard | HOME | `/dashboard` |
+| `PATIENTS` | Patients | CLINICAL | `/patients` |
+| `DOCTORS` | Doctors | CLINICAL | `/doctors` |
+| `APPOINTMENTS` | Appointments | CLINICAL | `/appointments` |
+| `TREATMENTS` | Treatments | CLINICAL | `/treatments` |
+| `MEDICINES` | Medicines | PHARMACY | `/medicines` |
+| `SALES` | Sales | SALES | `/sales` |
+| `ACTIVITY_LOG` | Activity Log | ADMIN | `/activity-log` |
+| `BILLING` | Billing | BILLING | `/billing` |
+| `SETTINGS` | Settings | ADMIN | `/settings` (Role Management lives here) |
+
+**Route guard pattern:** if `!pageCodes.includes(requiredCode)` → redirect to dashboard or 403. Deep links must use the same check as the sidebar.
+
+Onboard seeds system templates (`TenantBootstrapService`):
+
+| Role code | Default pages |
+|-----------|----------------|
+| `HOSPITAL_ADMIN` | All catalog pages |
+| `DOCTOR` | `DASHBOARD`, `PATIENTS`, `DOCTORS`, `APPOINTMENTS`, `TREATMENTS` |
+| `RECEPTIONIST` | `DASHBOARD`, `PATIENTS`, `APPOINTMENTS`, `BILLING` |
+
+Hospital users with enum role `ADMIN` already receive all pages regardless of template; custom staff use `tenantRoleId` + that role's `pageCodes`.
+
+### How admins assign permissions
+
+Full API shapes: [Related — roles & UI pages](#related--roles--ui-pages) and hospital user management. Flow:
+
+1. **List modules** — `GET /api/v1/ui-pages` (Bearer + `ADMIN` / `SUPER_ADMIN` / `PAGE_SETTINGS`).
+2. **Create / update role** with selected codes:
+
+```http
+POST /api/v1/roles
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "roleName": "Nurse",
+  "description": "Ward nurse access",
+  "pageCodes": ["DASHBOARD", "PATIENTS", "APPOINTMENTS"],
+  "active": true
+}
+```
+
+```http
+PUT /api/v1/roles/{roleId}
+```
+
+```json
+{
+  "roleName": "Nurse",
+  "description": "Updated",
+  "pageCodes": ["DASHBOARD", "PATIENTS", "APPOINTMENTS", "BILLING"],
+  "active": true
+}
+```
+
+3. **Assign role to user** — `POST /api/v1/auth/register-user` or `PUT /api/v1/auth/users/{userId}` with `tenantRoleId` (required for non-`ADMIN`). Giving a role that includes `SETTINGS` grants `PAGE_SETTINGS` after next login, so that user can manage roles/users without being `ADMIN`.
+
+System roles (`HOSPITAL_ADMIN`, `DOCTOR`, `RECEPTIONIST`) cannot be deleted; update their pages via `PUT /api/v1/roles/{roleId}` when allowed by product rules.
+
+### Recommended FE pattern
+
+1. On login: store `accessToken`, `user` (incl. `pageCodes`, `role`, `tenantRoleCode`), and `tenant`.
+2. Build nav from `pageCodes` ∩ your route map; guard every protected route the same way.
+3. **Super Admin** — omit `tenantCode` on login; all `pageCodes` returned; primary UI is platform hospital management (`/api/v1/platform/**`), not hospital Role Management.
+4. **Hospital Admin (`role: ADMIN`)** — all hospital modules; use Role Management under Settings to create custom roles and register staff.
+5. **Custom role user** — only assigned modules; if `SETTINGS` is included, Role/User APIs work after login (authority `PAGE_SETTINGS`).
+6. After an admin changes someone's role pages: that user should call `GET /auth/me` (menus) and ideally **re-login** (JWT/`PAGE_*` authorities).
+
+---
 ## Frontend checklist
 
 - [ ] Two login UIs: Super Admin (no `tenantCode`) vs Hospital (`tenantCode` + Gmail)
-- [ ] Persist `accessToken`, `user.pageCodes`, `tenant`
+- [ ] Persist `accessToken`, `user.pageCodes`, `tenant` — use `user.email` (no `username` field)
 - [ ] Onboard form maps to `OnboardHospitalRequest` fields; UI “User ID” → `email`
+- [ ] Logo/photo: upload elsewhere → pass HTTPS URLs only (`logoUrl` / `photoUrl`)
 - [ ] No public signup; no `tenantId` in login/forgot bodies
-- [ ] Map `pageCodes` → routes on the frontend only
+- [ ] Map `pageCodes` → routes on the frontend only (see [Frontend: page permissions](#frontend-page-permissions))
 - [ ] After onboard, hospital login uses returned `tenantCode` + same Gmail
+- [ ] Forgot-password: prefer email link; only use API `resetToken` when local `expose-token=true`
+- [ ] Hospital profile edit via `PUT /api/v1/platform/hospitals/{hospitalId}` (never change `tenantCode` from FE)

@@ -16,13 +16,14 @@ import lombok.Setter;
  * <p>
  * All form fields (except {@code password} / {@code confirmPassword}) are persisted on
  * {@code tenants}. Auth extracts only what login needs into {@code auth_users}:
- * {@code fullName}, {@code mobileNumber}, {@code email} → both username and email
- * (same Gmail value), and {@code password} → passwordHash.
+ * {@code fullName}, {@code mobileNumber}, {@code email} (canonical login identity),
+ * and {@code password} → passwordHash.
  * <p>
  * Figma may label a separate "User ID" field; the API accepts only {@code email} (Gmail)
  * as the single login identity.
  * <p>
- * {@code tenantCode} is auto-generated as BRAND-STATE (e.g. GAN-DL) from clinic name + state.
+ * {@code tenantCode} is auto-generated as BRAND-STATE (e.g. GAN-DL) from clinic name + state;
+ * collisions get a numeric suffix (GAN-DL-2, GAN-DL-3, …).
  */
 @Getter
 @Setter

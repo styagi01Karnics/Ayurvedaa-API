@@ -20,13 +20,16 @@ public final class AuthMessages {
     public static final String UI_PAGES_FETCHED_SUCCESSFULLY = "UI pages fetched successfully.";
     public static final String LOGIN_SUCCESSFUL = "Login successful.";
     public static final String PASSWORD_RESET_TOKEN_IF_ACCOUNT_EXISTS =
-            "If an account exists, a password reset token has been generated.";
-    public static final String PASSWORD_RESET_TOKEN_GENERATED =
-            "Password reset token generated. In production this will be sent by email.";
+            "If an account exists, a password reset email has been sent.";
+    public static final String PASSWORD_RESET_EMAIL_SENT =
+            "If an account exists, a password reset email has been sent.";
     public static final String PASSWORD_RESET_SUCCESSFUL = "Password reset successful.";
     public static final String USER_REGISTERED_SUCCESSFULLY = "User registered successfully.";
+    public static final String HOSPITAL_PROFILE_UPDATED = "Hospital profile updated successfully.";
 
     public static final String TENANT_CODE_ALREADY_EXISTS = "Tenant code already exists: ";
+    public static final String TENANT_CODE_ALLOCATION_EXHAUSTED =
+            "Could not allocate a unique tenant code for base: ";
     public static final String STATE_REQUIRED = "State is required.";
     public static final String HOSPITAL_NAME_REQUIRED = "Hospital name is required.";
     public static final String INVALID_STATE =
@@ -34,11 +37,10 @@ public final class AuthMessages {
     public static final String CANNOT_BUILD_TENANT_CODE_FROM_NAME =
             "Cannot build tenant code from hospital name. Use a name starting with letters (e.g. Ganesha Ayurveda).";
     public static final String SCHEMA_ALREADY_EXISTS = "Schema name already exists: ";
-    public static final String USERNAME_ALREADY_EXISTS = "Username already exists: ";
     public static final String TENANT_NOT_ACTIVE = "Tenant is not active.";
     public static final String USER_ACCOUNT_NOT_ACTIVE_WITH_STATUS = "User account is not active: ";
     public static final String USER_ACCOUNT_NOT_ACTIVE = "User account is not active.";
-    public static final String INVALID_CREDENTIALS = "Invalid username/email or password.";
+    public static final String INVALID_CREDENTIALS = "Invalid email or password.";
     public static final String NEW_PASSWORD_CONFIRM_MISMATCH =
             "New password and confirm password do not match.";
     public static final String TENANT_NOT_FOUND = "Tenant not found.";
@@ -86,7 +88,7 @@ public final class AuthMessages {
     public static final String HOSPITAL_LOGIN_CANNOT_USE_PLATFORM_TENANT =
             "Hospital login cannot use the platform tenant.";
     public static final String USER_NOT_FOUND_FOR_TENANT =
-            "Invalid username/email or password for this hospital.";
+            "Invalid email or password for this hospital.";
     public static final String USER_UPDATED_SUCCESSFULLY = "User updated successfully.";
     public static final String USER_STATUS_UPDATED_SUCCESSFULLY = "User status updated successfully.";
     public static final String USER_DELETED_SUCCESSFULLY = "User deleted successfully.";

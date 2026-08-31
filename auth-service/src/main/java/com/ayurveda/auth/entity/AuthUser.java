@@ -27,8 +27,7 @@ import lombok.Setter;
 @Table(
         name = "auth_users",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_auth_users_tenant_email", columnNames = {"tenant_id", "email"}),
-                @UniqueConstraint(name = "uk_auth_users_tenant_username", columnNames = {"tenant_id", "username"})
+                @UniqueConstraint(name = "uk_auth_users_tenant_email", columnNames = {"tenant_id", "email"})
         }
 )
 public class AuthUser extends BaseEntity {
@@ -37,9 +36,7 @@ public class AuthUser extends BaseEntity {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
-    @Column(nullable = false, length = 150)
-    private String username;
-
+    /** Canonical login identity (Gmail). */
     @Column(nullable = false, length = 150)
     private String email;
 

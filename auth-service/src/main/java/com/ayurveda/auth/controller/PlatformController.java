@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ayurveda.auth.dto.request.BootstrapSuperAdminRequest;
 import com.ayurveda.auth.dto.request.CreateHospitalAdminRequest;
 import com.ayurveda.auth.dto.request.OnboardHospitalRequest;
+import com.ayurveda.auth.dto.request.UpdateHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalStatusRequest;
 import com.ayurveda.auth.dto.response.HospitalOnboardResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
@@ -51,13 +52,13 @@ public class PlatformController {
             summary = "Onboard hospital + first admin (Figma Clinic + Contact signup)",
             description = """
                     Clinic Information + Contact Information (first hospital admin).
-                    tenantCode is auto-generated BRAND-STATE (e.g. GAN-DL) from clinicName + state.
-                    Schema becomes hosp_gan_dl. State can be name or code (Delhi/DL, Odisha/OD).
+                    tenantCode is auto-generated BRAND-STATE (e.g. GAN-DL) from clinicName + state;
+                    on collision appends -2, -3, … (e.g. GAN-DL-2). Schema follows (hosp_gan_dl_2).
+                    State can be name or code (Delhi/DL, Odisha/OD).
                     email must be Gmail (single login identity; UI "User ID" maps to email).
                     No tenantId in body. All form fields (except password) save to tenants;
-                    auth_users gets fullName, mobileNumber, email (username mirrored = email),
-                    password→passwordHash.
-                    logoUrl / photoUrl are optional URLs after file-upload-service (stored on tenant).
+                    auth_users gets fullName, mobileNumber, email, password→passwordHash.
+                    logoUrl / photoUrl are optional URLs after upload-then-URL (stored on tenant).
                     """,
             security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/hospitals")
@@ -77,6 +78,21 @@ public class PlatformController {
     @GetMapping("/hospitals/{hospitalId}")
     public ResponseEntity<ApiResponse<TenantResponse>> getHospital(@PathVariable UUID hospitalId) {
         return ResponseEntity.ok(platformService.getHospital(hospitalId));
+    }
+
+    @Operation(
+            summary = "Update hospital clinic/contact profile",
+            description = """
+                    Same Figma clinic + contact fields as onboard (except password).
+                    Does not change tenantCode or schemaName. logoUrl / photoUrl are URL-only.
+                    Contact email updates tenants.email only (does not change auth_users login).
+                    """,
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/hospitals/{hospitalId}")
+    public ResponseEntity<ApiResponse<TenantResponse>> updateHospital(
+            @PathVariable UUID hospitalId,
+            @Valid @RequestBody UpdateHospitalRequest request) {
+        return ResponseEntity.ok(platformService.updateHospital(hospitalId, request));
     }
 
     @Operation(

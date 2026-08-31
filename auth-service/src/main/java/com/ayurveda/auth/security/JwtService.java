@@ -36,7 +36,7 @@ public class JwtService {
                 .claim("tenantId", user.getTenant().getId().toString())
                 .claim("tenantCode", user.getTenant().getTenantCode())
                 .claim("schemaName", user.getTenant().getSchemaName())
-                .claim("username", user.getUsername())
+                .claim("username", user.getEmail())
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
                 .claim("pageCodes", pages)

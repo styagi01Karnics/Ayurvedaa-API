@@ -29,7 +29,7 @@ public class LoginRequest {
     @Size(max = 50)
     private String tenantCode;
 
-    /** Gmail address used as username. */
+    /** Gmail login identity (field name kept for FE compatibility). */
     @NotBlank(message = "Username (Gmail) is required")
     @Size(max = 150)
     @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)

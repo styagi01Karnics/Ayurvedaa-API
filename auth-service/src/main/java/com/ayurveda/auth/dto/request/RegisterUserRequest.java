@@ -26,11 +26,11 @@ public class RegisterUserRequest {
     @Size(max = 100)
     private String fullName;
 
-    /** Gmail address used as username (also stored as email). */
-    @NotBlank(message = "Username (Gmail) is required")
+    /** Gmail login identity. */
+    @NotBlank(message = "Email (Gmail) is required")
     @Size(max = 150)
     @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)
-    private String username;
+    private String email;
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 100)

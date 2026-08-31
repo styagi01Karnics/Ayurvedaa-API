@@ -16,6 +16,8 @@ public final class NotificationMessages {
             "Unread count fetched successfully.";
     public static final String NOTIFICATION_DELETED_SUCCESSFULLY =
             "Notification deleted successfully.";
+    public static final String EMAIL_SENT = "Email sent successfully.";
+    public static final String EMAIL_QUEUED = "Email accepted.";
 
     public static final String NOTIFICATION_NOT_FOUND_WITH_ID =
             "Notification not found with id: ";

@@ -15,21 +15,11 @@ public interface AuthUserRepository extends JpaRepository<AuthUser, UUID> {
 
     Optional<AuthUser> findByTenantIdAndEmailIgnoreCaseAndDeletedFalse(UUID tenantId, String email);
 
-    Optional<AuthUser> findByTenantIdAndUsernameIgnoreCaseAndDeletedFalse(UUID tenantId, String username);
-
     Optional<AuthUser> findByEmailIgnoreCaseAndDeletedFalse(String email);
-
-    Optional<AuthUser> findByUsernameIgnoreCaseAndDeletedFalse(String username);
-
-    Optional<AuthUser> findByRoleAndUsernameIgnoreCaseAndDeletedFalse(UserRole role, String username);
 
     Optional<AuthUser> findByRoleAndEmailIgnoreCaseAndDeletedFalse(UserRole role, String email);
 
     boolean existsByTenantIdAndEmailIgnoreCaseAndDeletedFalse(UUID tenantId, String email);
-
-    boolean existsByTenantIdAndUsernameIgnoreCaseAndDeletedFalse(UUID tenantId, String username);
-
-    boolean existsByUsernameIgnoreCaseAndDeletedFalse(String username);
 
     boolean existsByRoleAndDeletedFalse(UserRole role);
 
