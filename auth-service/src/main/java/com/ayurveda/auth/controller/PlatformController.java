@@ -18,6 +18,7 @@ import com.ayurveda.auth.dto.request.BootstrapSuperAdminRequest;
 import com.ayurveda.auth.dto.request.CreateHospitalAdminRequest;
 import com.ayurveda.auth.dto.request.OnboardHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalStatusRequest;
+import com.ayurveda.auth.dto.response.HospitalOnboardResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
 import com.ayurveda.auth.dto.response.UserResponse;
 import com.ayurveda.auth.service.PlatformService;
@@ -47,10 +48,20 @@ public class PlatformController {
     }
 
     @Operation(
-            summary = "Onboard hospital (creates tenant + Postgres schema)",
+            summary = "Onboard hospital + first admin (Figma Clinic + Contact signup)",
+            description = """
+                    Clinic Information + Contact Information (first hospital admin).
+                    tenantCode is auto-generated BRAND-STATE (e.g. GAN-DL) from clinicName + state.
+                    Schema becomes hosp_gan_dl. State can be name or code (Delhi/DL, Odisha/OD).
+                    email must be Gmail (single login identity; UI "User ID" maps to email).
+                    No tenantId in body. All form fields (except password) save to tenants;
+                    auth_users gets fullName, mobileNumber, email (username mirrored = email),
+                    password→passwordHash.
+                    logoUrl / photoUrl are optional URLs after file-upload-service (stored on tenant).
+                    """,
             security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/hospitals")
-    public ResponseEntity<ApiResponse<TenantResponse>> onboardHospital(
+    public ResponseEntity<ApiResponse<HospitalOnboardResponse>> onboardHospital(
             @Valid @RequestBody OnboardHospitalRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(platformService.onboardHospital(request));

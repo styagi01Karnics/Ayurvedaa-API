@@ -20,9 +20,21 @@ public class TenantResponse {
     private UUID id;
     private String tenantCode;
     private String name;
+    private String clinicType;
+    private String state;
+    private String stateCode;
+    private String city;
+    private String pinCode;
+    private String addressLine1;
+    private String addressLine2;
+    private String registrationNumberGst;
+    private String logoUrl;
+    /** Hospital primary contact full name. */
+    private String fullName;
+    private String mobileNumber;
     private String email;
-    private String phone;
-    private String address;
+    /** Primary contact / admin photo URL. */
+    private String photoUrl;
     private String schemaName;
     private Boolean platform;
     private TenantStatus status;

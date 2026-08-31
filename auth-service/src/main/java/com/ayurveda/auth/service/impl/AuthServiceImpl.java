@@ -23,10 +23,8 @@ import com.ayurveda.auth.constant.AuthMessages;
 import com.ayurveda.auth.dto.request.ChangePasswordRequest;
 import com.ayurveda.auth.dto.request.ForgotPasswordRequest;
 import com.ayurveda.auth.dto.request.LoginRequest;
-import com.ayurveda.auth.dto.request.RegisterTenantRequest;
 import com.ayurveda.auth.dto.request.RegisterUserRequest;
 import com.ayurveda.auth.dto.request.ResetPasswordRequest;
-import com.ayurveda.auth.dto.request.SignUpRequest;
 import com.ayurveda.auth.dto.request.UpdateProfileRequest;
 import com.ayurveda.auth.dto.request.UpdateUserRequest;
 import com.ayurveda.auth.dto.request.UpdateUserStatusRequest;
@@ -53,7 +51,6 @@ import com.ayurveda.auth.security.JwtService;
 import com.ayurveda.auth.security.TenantContext;
 import com.ayurveda.auth.service.AuthService;
 import com.ayurveda.auth.service.PageAccessService;
-import com.ayurveda.auth.service.SchemaProvisioningService;
 import com.ayurveda.auth.service.TenantBootstrapService;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityActionType;
@@ -84,89 +81,20 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthMapper authMapper;
     private final PageAccessService pageAccessService;
-    private final SchemaProvisioningService schemaProvisioningService;
     private final TenantBootstrapService tenantBootstrapService;
     private final ActivityLogPublisher activityLogPublisher;
-
-    @Override
-    public ApiResponse<TenantResponse> registerTenant(RegisterTenantRequest request) {
-        requireSuperAdmin();
-
-        String tenantCode = request.getTenantCode().trim().toUpperCase();
-
-        if (tenantRepository.existsByTenantCodeIgnoreCaseAndDeletedFalse(tenantCode)) {
-            throw new DuplicateResourceException(AuthMessages.TENANT_CODE_ALREADY_EXISTS + tenantCode);
-        }
-
-        String username = request.getAdminUsername().trim().toLowerCase();
-
-        String schemaName = schemaProvisioningService.buildSchemaName(tenantCode);
-        if (tenantRepository.existsBySchemaNameIgnoreCaseAndDeletedFalse(schemaName)) {
-            throw new DuplicateResourceException(AuthMessages.SCHEMA_ALREADY_EXISTS + schemaName);
-        }
-
-        Tenant tenant = Tenant.builder()
-                .tenantCode(tenantCode)
-                .name(request.getName().trim())
-                .email(request.getEmail())
-                .phone(request.getPhone())
-                .address(request.getAddress())
-                .schemaName(schemaName)
-                .platform(false)
-                .status(TenantStatus.PROVISIONING)
-                .build();
-
-        Tenant savedTenant = tenantRepository.save(tenant);
-
-        if (authUserRepository.existsByTenantIdAndUsernameIgnoreCaseAndDeletedFalse(
-                savedTenant.getId(), username)) {
-            throw new DuplicateResourceException(AuthMessages.USERNAME_ALREADY_EXISTS + username);
-        }
-
-        try {
-            schemaProvisioningService.createSchema(schemaName);
-            savedTenant.setStatus(TenantStatus.ACTIVE);
-            savedTenant.setProvisionMessage("Schema " + schemaName + " created.");
-            tenantRepository.save(savedTenant);
-        } catch (Exception ex) {
-            savedTenant.setStatus(TenantStatus.FAILED);
-            savedTenant.setProvisionMessage(ex.getMessage());
-            tenantRepository.save(savedTenant);
-            throw new BadRequestException("Hospital schema provision failed: " + ex.getMessage());
-        }
-
-        TenantRole hospitalAdminRole = tenantBootstrapService.ensureHospitalAdminRole(savedTenant);
-
-        AuthUser admin = AuthUser.builder()
-                .tenant(savedTenant)
-                .username(username)
-                .email(request.getAdminUsername().trim().toLowerCase())
-                .fullName(request.getAdminFullName().trim())
-                .passwordHash(passwordEncoder.encode(request.getAdminPassword()))
-                .role(UserRole.ADMIN)
-                .tenantRole(hospitalAdminRole)
-                .status(UserStatus.ACTIVE)
-                .build();
-        authUserRepository.save(admin);
-
-        log.info("Registered tenant {} with schema {} and admin {}", tenantCode, schemaName, username);
-
-        return ApiResponse.success(
-                AuthMessages.TENANT_REGISTERED_SUCCESSFULLY, authMapper.toTenantResponse(savedTenant));
-    }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<AuthTokenResponse> login(LoginRequest request) {
         String loginId = request.getUsernameOrEmail().trim();
-        boolean hasTenant = request.getTenantId() != null
-                || (request.getTenantCode() != null && !request.getTenantCode().isBlank());
+        boolean hasTenant = request.getTenantCode() != null && !request.getTenantCode().isBlank();
 
         AuthUser user;
         Tenant tenant;
 
         if (hasTenant) {
-            tenant = resolveHospitalTenant(request.getTenantId(), request.getTenantCode());
+            tenant = resolveHospitalTenant(request.getTenantCode());
             user = resolveUserForTenant(tenant.getId(), loginId)
                     .orElseThrow(() -> new UnauthorizedException(AuthMessages.USER_NOT_FOUND_FOR_TENANT));
 
@@ -216,19 +144,13 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ApiResponse<AuthTokenResponse> signUp(SignUpRequest request) {
-        throw new BadRequestException(AuthMessages.SIGNUP_DISABLED);
-    }
-
-    @Override
     public ApiResponse<ForgotPasswordResponse> forgotPassword(ForgotPasswordRequest request) {
         String loginId = request.getUsernameOrEmail().trim();
-        boolean hasTenant = request.getTenantId() != null
-                || (request.getTenantCode() != null && !request.getTenantCode().isBlank());
+        boolean hasTenant = request.getTenantCode() != null && !request.getTenantCode().isBlank();
 
         Optional<AuthUser> userOpt;
         if (hasTenant) {
-            Tenant tenant = resolveHospitalTenant(request.getTenantId(), request.getTenantCode());
+            Tenant tenant = resolveHospitalTenant(request.getTenantCode());
             userOpt = resolveUserForTenant(tenant.getId(), loginId)
                     .filter(u -> u.getRole() != UserRole.SUPER_ADMIN);
         } else {
@@ -688,17 +610,14 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.TENANT_ROLE_NOT_FOUND));
     }
 
-    private Tenant resolveHospitalTenant(UUID tenantId, String tenantCode) {
-        Tenant tenant;
-        if (tenantId != null) {
-            tenant = tenantRepository.findByIdAndDeletedFalse(tenantId)
-                    .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.HOSPITAL_NOT_FOUND));
-        } else {
-            String code = tenantCode.trim().toUpperCase();
-            tenant = tenantRepository.findByTenantCodeIgnoreCaseAndDeletedFalse(code)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            AuthMessages.TENANT_NOT_FOUND_WITH_CODE + code));
+    private Tenant resolveHospitalTenant(String tenantCode) {
+        if (tenantCode == null || tenantCode.isBlank()) {
+            throw new BadRequestException(AuthMessages.TENANT_REQUIRED_FOR_HOSPITAL_LOGIN);
         }
+        String code = tenantCode.trim().toUpperCase();
+        Tenant tenant = tenantRepository.findByTenantCodeIgnoreCaseAndDeletedFalse(code)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        AuthMessages.TENANT_NOT_FOUND_WITH_CODE + code));
         if (Boolean.TRUE.equals(tenant.getPlatform())) {
             throw new BadRequestException(AuthMessages.HOSPITAL_LOGIN_CANNOT_USE_PLATFORM_TENANT);
         }
@@ -731,13 +650,6 @@ public class AuthServiceImpl implements AuthService {
         if (!UserRole.ADMIN.name().equals(principal.getRole())
                 && !UserRole.SUPER_ADMIN.name().equals(principal.getRole())) {
             throw new ForbiddenException(AuthMessages.ONLY_ADMIN_ALLOWED);
-        }
-    }
-
-    private void requireSuperAdmin() {
-        AuthPrincipal principal = currentPrincipal();
-        if (!UserRole.SUPER_ADMIN.name().equals(principal.getRole())) {
-            throw new ForbiddenException(AuthMessages.ONLY_SUPER_ADMIN_ALLOWED);
         }
     }
 

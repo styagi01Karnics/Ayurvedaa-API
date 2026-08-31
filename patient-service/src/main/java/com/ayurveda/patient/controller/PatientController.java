@@ -2,6 +2,7 @@ package com.ayurveda.patient.controller;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
+import com.ayurveda.patient.dto.response.PatientCountResponse;
 import com.ayurveda.patient.dto.response.PatientResponse;
 import com.ayurveda.patient.service.PatientService;
 
@@ -65,11 +66,11 @@ public class PatientController {
         return ResponseEntity.ok(patientService.getAllPatients());
     }
 
-    @Operation(summary = "Get Total Patient Count")
+    @Operation(summary = "Get Patient Counts")
     @GetMapping("/get-patient-count")
-    public ResponseEntity<ApiResponse<Long>> getTotalPatientCount() {
+    public ResponseEntity<ApiResponse<PatientCountResponse>> getTotalPatientCount() {
 
-        log.info("Received request to fetch total patient count.");
+        log.info("Received request to fetch patient counts.");
 
         return ResponseEntity.ok(patientService.getTotalPatientCount());
     }

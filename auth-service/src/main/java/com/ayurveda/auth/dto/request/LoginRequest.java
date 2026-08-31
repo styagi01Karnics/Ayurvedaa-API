@@ -14,8 +14,8 @@ import lombok.Setter;
 /**
  * Login:
  * <ul>
- *   <li>Platform SUPER_ADMIN — Gmail username + password only (no tenant)</li>
- *   <li>Hospital users — tenantId or tenantCode + Gmail username + password</li>
+ *   <li>Platform SUPER_ADMIN — Gmail + password only (no tenantCode)</li>
+ *   <li>Hospital users — tenantCode (e.g. GAN-DL) + Gmail + password</li>
  * </ul>
  */
 @Getter
@@ -25,10 +25,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class LoginRequest {
 
-    /** Required for hospital users. Omit for platform Super Admin. */
-    private java.util.UUID tenantId;
-
-    /** Alternative to tenantId for hospital users (e.g. GAN). */
+    /** Required for hospital users (e.g. GAN-DL). Omit for platform Super Admin. */
     @Size(max = 50)
     private String tenantCode;
 

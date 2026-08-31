@@ -6,7 +6,6 @@ import java.util.UUID;
 import com.ayurveda.auth.dto.request.ChangePasswordRequest;
 import com.ayurveda.auth.dto.request.ForgotPasswordRequest;
 import com.ayurveda.auth.dto.request.LoginRequest;
-import com.ayurveda.auth.dto.request.RegisterTenantRequest;
 import com.ayurveda.auth.dto.request.RegisterUserRequest;
 import com.ayurveda.auth.dto.request.ResetPasswordRequest;
 import com.ayurveda.auth.dto.request.UpdateProfileRequest;
@@ -22,12 +21,7 @@ import com.ayurveda.common.ApiResponse;
 
 public interface AuthService {
 
-    ApiResponse<TenantResponse> registerTenant(RegisterTenantRequest request);
-
     ApiResponse<AuthTokenResponse> login(LoginRequest request);
-
-    /** Disabled for multi-tenant hospitals — use register-user. */
-    ApiResponse<AuthTokenResponse> signUp(com.ayurveda.auth.dto.request.SignUpRequest request);
 
     ApiResponse<ForgotPasswordResponse> forgotPassword(ForgotPasswordRequest request);
 

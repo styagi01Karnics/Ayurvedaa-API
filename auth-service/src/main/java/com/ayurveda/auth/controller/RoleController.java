@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Validated
 @SecurityRequirement(name = "bearerAuth")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('PAGE_SETTINGS')")
 public class RoleController {
 
     private final RoleService roleService;

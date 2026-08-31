@@ -1,6 +1,7 @@
 package com.ayurveda.patient.repository;
 
 import com.ayurveda.patient.entity.Patient;
+import com.ayurveda.patient.enums.PatientStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -26,5 +27,7 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
     boolean existsByMobileNumberAndDeletedFalse(String mobileNumber);
 
     long countByDeletedFalse();
+
+    long countByDeletedFalseAndStatus(PatientStatus status);
 
 }

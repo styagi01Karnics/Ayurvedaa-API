@@ -14,6 +14,7 @@ import com.ayurveda.auth.dto.request.BootstrapSuperAdminRequest;
 import com.ayurveda.auth.dto.request.CreateHospitalAdminRequest;
 import com.ayurveda.auth.dto.request.OnboardHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalStatusRequest;
+import com.ayurveda.auth.dto.response.HospitalOnboardResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
 import com.ayurveda.auth.dto.response.UserResponse;
 import com.ayurveda.auth.entity.AuthUser;
@@ -30,6 +31,7 @@ import com.ayurveda.auth.service.PageAccessService;
 import com.ayurveda.auth.service.PlatformService;
 import com.ayurveda.auth.service.SchemaProvisioningService;
 import com.ayurveda.auth.service.TenantBootstrapService;
+import com.ayurveda.auth.service.TenantCodeGenerator;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.exception.BadRequestException;
@@ -54,6 +56,7 @@ public class PlatformServiceImpl implements PlatformService {
     private final AuthUserRepository authUserRepository;
     private final TenantBootstrapService tenantBootstrapService;
     private final SchemaProvisioningService schemaProvisioningService;
+    private final TenantCodeGenerator tenantCodeGenerator;
     private final PageAccessService pageAccessService;
     private final PasswordEncoder passwordEncoder;
     private final AuthMapper authMapper;
@@ -94,10 +97,18 @@ public class PlatformServiceImpl implements PlatformService {
     }
 
     @Override
-    public ApiResponse<TenantResponse> onboardHospital(OnboardHospitalRequest request) {
+    public ApiResponse<HospitalOnboardResponse> onboardHospital(OnboardHospitalRequest request) {
         requireSuperAdmin();
 
-        String tenantCode = request.getTenantCode().trim().toUpperCase();
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException(AuthMessages.NEW_PASSWORD_CONFIRM_MISMATCH);
+        }
+
+        String hospitalName = request.getClinicName().trim();
+        String stateCode = tenantCodeGenerator.resolveStateCode(request.getState());
+        String stateDisplay = tenantCodeGenerator.resolveStateDisplayName(request.getState());
+        String tenantCode = tenantCodeGenerator.generate(hospitalName, request.getState());
+
         if (tenantRepository.existsByTenantCodeIgnoreCaseAndDeletedFalse(tenantCode)) {
             throw new DuplicateResourceException(AuthMessages.TENANT_CODE_ALREADY_EXISTS + tenantCode);
         }
@@ -107,12 +118,24 @@ public class PlatformServiceImpl implements PlatformService {
             throw new DuplicateResourceException(AuthMessages.SCHEMA_ALREADY_EXISTS + schemaName);
         }
 
+        String contactEmail = request.getEmail().trim().toLowerCase();
+
         Tenant hospital = Tenant.builder()
                 .tenantCode(tenantCode)
-                .name(request.getName().trim())
-                .email(request.getEmail())
-                .phone(request.getPhone())
-                .address(request.getAddress())
+                .name(hospitalName)
+                .clinicType(trimToNull(request.getClinicType()))
+                .state(stateDisplay)
+                .stateCode(stateCode)
+                .city(trimToNull(request.getCity()))
+                .pinCode(trimToNull(request.getPinCode()))
+                .addressLine1(trimToNull(request.getAddressLine1()))
+                .addressLine2(trimToNull(request.getAddressLine2()))
+                .registrationNumberGst(trimToNull(request.getRegistrationNumberGst()))
+                .logoUrl(trimToNull(request.getLogoUrl()))
+                .fullName(request.getFullName().trim())
+                .mobileNumber(trimToNull(request.getMobileNumber()))
+                .email(contactEmail)
+                .photoUrl(trimToNull(request.getPhotoUrl()))
                 .schemaName(schemaName)
                 .platform(false)
                 .status(TenantStatus.PROVISIONING)
@@ -122,11 +145,50 @@ public class PlatformServiceImpl implements PlatformService {
 
         try {
             schemaProvisioningService.createSchema(schemaName);
-            tenantBootstrapService.ensureHospitalAdminRole(saved);
+            TenantRole hospitalAdminRole = tenantBootstrapService.ensureHospitalAdminRole(saved);
             saved.setStatus(TenantStatus.ACTIVE);
             saved.setProvisionMessage("Schema " + schemaName + " created. Hospital domain migrations are step-2.");
             tenantRepository.save(saved);
-            log.info("Onboarded hospital {} with schema {}", tenantCode, schemaName);
+
+            // Single identity: Gmail email; username mirrored for legacy uniqueness/JWT.
+            String loginEmail = contactEmail;
+
+            if (authUserRepository.existsByTenantIdAndUsernameIgnoreCaseAndDeletedFalse(
+                    saved.getId(), loginEmail)) {
+                throw new DuplicateResourceException(AuthMessages.USERNAME_ALREADY_EXISTS + loginEmail);
+            }
+            if (authUserRepository.existsByTenantIdAndEmailIgnoreCaseAndDeletedFalse(saved.getId(), loginEmail)) {
+                throw new DuplicateResourceException(AuthMessages.USER_EXISTS_FOR_TENANT_EMAIL + loginEmail);
+            }
+
+            AuthUser admin = AuthUser.builder()
+                    .tenant(saved)
+                    .username(loginEmail)
+                    .email(loginEmail)
+                    .fullName(request.getFullName().trim())
+                    .mobileNumber(trimToNull(request.getMobileNumber()))
+                    .passwordHash(passwordEncoder.encode(request.getPassword()))
+                    .role(UserRole.ADMIN)
+                    .tenantRole(hospitalAdminRole)
+                    .status(UserStatus.ACTIVE)
+                    .build();
+            AuthUser savedAdmin = authUserRepository.save(admin);
+
+            log.info("Onboarded hospital {} ({}) with admin {} schema {}",
+                    tenantCode, hospitalName, loginEmail, schemaName);
+
+            HospitalOnboardResponse response = HospitalOnboardResponse.builder()
+                    .hospital(authMapper.toTenantResponse(saved))
+                    .admin(authMapper.toUserResponse(
+                            savedAdmin, pageAccessService.resolvePageCodes(savedAdmin)))
+                    .build();
+
+            return ApiResponse.success(AuthMessages.HOSPITAL_ONBOARDED_SUCCESSFULLY, response);
+        } catch (DuplicateResourceException | BadRequestException ex) {
+            saved.setStatus(TenantStatus.FAILED);
+            saved.setProvisionMessage(ex.getMessage());
+            tenantRepository.save(saved);
+            throw ex;
         } catch (Exception ex) {
             log.error("Hospital provision failed for {}: {}", tenantCode, ex.getMessage(), ex);
             saved.setStatus(TenantStatus.FAILED);
@@ -134,9 +196,14 @@ public class PlatformServiceImpl implements PlatformService {
             tenantRepository.save(saved);
             throw new BadRequestException("Hospital schema provision failed: " + ex.getMessage());
         }
+    }
 
-        return ApiResponse.success(
-                AuthMessages.HOSPITAL_ONBOARDED_SUCCESSFULLY, authMapper.toTenantResponse(saved));
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Override

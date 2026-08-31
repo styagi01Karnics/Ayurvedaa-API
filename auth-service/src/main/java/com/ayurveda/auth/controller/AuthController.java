@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,7 +23,6 @@ import com.ayurveda.auth.dto.request.ForgotPasswordRequest;
 import com.ayurveda.auth.dto.request.LoginRequest;
 import com.ayurveda.auth.dto.request.RegisterUserRequest;
 import com.ayurveda.auth.dto.request.ResetPasswordRequest;
-import com.ayurveda.auth.dto.request.SignUpRequest;
 import com.ayurveda.auth.dto.request.UpdateProfileRequest;
 import com.ayurveda.auth.dto.request.UpdateUserRequest;
 import com.ayurveda.auth.dto.request.UpdateUserStatusRequest;
@@ -50,7 +50,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Operation(summary = "Login — Super Admin: Gmail+password; Hospital: tenantId/tenantCode + Gmail+password")
+    @Operation(summary = "Login — Super Admin: Gmail+password; Hospital: tenantCode + Gmail+password")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthTokenResponse>> login(
             @Valid @RequestBody LoginRequest request) {
@@ -58,15 +58,7 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @Operation(summary = "Sign up (disabled — hospital admin must create users)")
-    @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<AuthTokenResponse>> signUp(
-            @Valid @RequestBody SignUpRequest request) {
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(authService.signUp(request));
-    }
-
-    @Operation(summary = "Forgot password — Super Admin: Gmail only; Hospital: tenant + Gmail")
+    @Operation(summary = "Forgot password — Super Admin: Gmail only; Hospital: tenantCode + Gmail")
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<ForgotPasswordResponse>> forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request) {
@@ -91,6 +83,7 @@ public class AuthController {
     }
 
     @Operation(summary = "Register user under current tenant", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('PAGE_SETTINGS')")
     @PostMapping("/register-user")
     public ResponseEntity<ApiResponse<UserResponse>> registerUser(
             @Valid @RequestBody RegisterUserRequest request) {
@@ -119,6 +112,7 @@ public class AuthController {
     }
 
     @Operation(summary = "List users for current tenant", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('PAGE_SETTINGS')")
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<UserResponse>>> users() {
         return ResponseEntity.ok(authService.getUsersForCurrentTenant());
@@ -127,6 +121,7 @@ public class AuthController {
     @Operation(
             summary = "Paginated users for current tenant",
             security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('PAGE_SETTINGS')")
     @GetMapping("/users/paged")
     public ResponseEntity<ApiResponse<PagedResponse<UserResponse>>> usersPaged(
             @RequestParam(defaultValue = "0") int page,
@@ -135,12 +130,14 @@ public class AuthController {
     }
 
     @Operation(summary = "Get user by id", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('PAGE_SETTINGS')")
     @GetMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable UUID userId) {
         return ResponseEntity.ok(authService.getUserById(userId));
     }
 
     @Operation(summary = "Update user", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('PAGE_SETTINGS')")
     @PutMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable UUID userId,
@@ -149,6 +146,7 @@ public class AuthController {
     }
 
     @Operation(summary = "Update user status", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('PAGE_SETTINGS')")
     @PutMapping("/users/{userId}/status")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
             @PathVariable UUID userId,
@@ -157,6 +155,7 @@ public class AuthController {
     }
 
     @Operation(summary = "Soft-delete user", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('PAGE_SETTINGS')")
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable UUID userId) {
         return ResponseEntity.ok(authService.deleteUser(userId));

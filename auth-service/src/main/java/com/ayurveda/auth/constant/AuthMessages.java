@@ -5,7 +5,6 @@ public final class AuthMessages {
     private AuthMessages() {
     }
 
-    public static final String TENANT_REGISTERED_SUCCESSFULLY = "Tenant registered successfully.";
     public static final String HOSPITAL_ONBOARDED_SUCCESSFULLY =
             "Hospital onboarded successfully. Schema provisioned.";
     public static final String HOSPITAL_ADMIN_CREATED_SUCCESSFULLY =
@@ -20,7 +19,6 @@ public final class AuthMessages {
     public static final String ROLES_FETCHED_SUCCESSFULLY = "Roles fetched successfully.";
     public static final String UI_PAGES_FETCHED_SUCCESSFULLY = "UI pages fetched successfully.";
     public static final String LOGIN_SUCCESSFUL = "Login successful.";
-    public static final String SIGN_UP_SUCCESSFUL = "Sign up successful.";
     public static final String PASSWORD_RESET_TOKEN_IF_ACCOUNT_EXISTS =
             "If an account exists, a password reset token has been generated.";
     public static final String PASSWORD_RESET_TOKEN_GENERATED =
@@ -29,21 +27,23 @@ public final class AuthMessages {
     public static final String USER_REGISTERED_SUCCESSFULLY = "User registered successfully.";
 
     public static final String TENANT_CODE_ALREADY_EXISTS = "Tenant code already exists: ";
+    public static final String STATE_REQUIRED = "State is required.";
+    public static final String HOSPITAL_NAME_REQUIRED = "Hospital name is required.";
+    public static final String INVALID_STATE =
+            "Unsupported state. Use name or code (e.g. Delhi/DL, Odisha/OD, Uttarakhand/UK): ";
+    public static final String CANNOT_BUILD_TENANT_CODE_FROM_NAME =
+            "Cannot build tenant code from hospital name. Use a name starting with letters (e.g. Ganesha Ayurveda).";
     public static final String SCHEMA_ALREADY_EXISTS = "Schema name already exists: ";
     public static final String USERNAME_ALREADY_EXISTS = "Username already exists: ";
     public static final String TENANT_NOT_ACTIVE = "Tenant is not active.";
     public static final String USER_ACCOUNT_NOT_ACTIVE_WITH_STATUS = "User account is not active: ";
     public static final String USER_ACCOUNT_NOT_ACTIVE = "User account is not active.";
     public static final String INVALID_CREDENTIALS = "Invalid username/email or password.";
-    public static final String PASSWORD_CONFIRM_MISMATCH =
-            "Password and confirm password do not match.";
     public static final String NEW_PASSWORD_CONFIRM_MISMATCH =
             "New password and confirm password do not match.";
     public static final String TENANT_NOT_FOUND = "Tenant not found.";
     public static final String TENANT_NOT_FOUND_WITH_CODE = "Tenant not found: ";
     public static final String HOSPITAL_NOT_FOUND = "Hospital not found.";
-    public static final String EMAIL_ALREADY_REGISTERED_FOR_TENANT =
-            "Email already registered for this tenant.";
     public static final String INVALID_OR_EXPIRED_RESET_TOKEN =
             "Invalid or expired reset token.";
     public static final String TENANT_NOT_AVAILABLE_FOR_REGISTRATION =
@@ -78,11 +78,11 @@ public final class AuthMessages {
     public static final String CANNOT_MODIFY_PLATFORM_AS_HOSPITAL =
             "Platform tenant cannot be managed as a hospital.";
     public static final String TENANT_REQUIRED_FOR_HOSPITAL_LOGIN =
-            "tenantId or tenantCode is required for hospital user login.";
+            "tenantCode is required for hospital user login.";
     public static final String TENANT_NOT_ALLOWED_FOR_SUPER_ADMIN_LOGIN =
-            "Do not send tenantId/tenantCode for platform Super Admin login.";
+            "Do not send tenantCode for platform Super Admin login.";
     public static final String SUPER_ADMIN_LOGIN_ONLY_WITHOUT_TENANT =
-            "Only platform Super Admin can login without tenant. Hospital users must send tenantId or tenantCode.";
+            "Only platform Super Admin can login without tenant. Hospital users must send tenantCode.";
     public static final String HOSPITAL_LOGIN_CANNOT_USE_PLATFORM_TENANT =
             "Hospital login cannot use the platform tenant.";
     public static final String USER_NOT_FOUND_FOR_TENANT =
@@ -95,14 +95,12 @@ public final class AuthMessages {
     public static final String HOSPITAL_ADMINS_FETCHED = "Hospital admins fetched successfully.";
     public static final String HOSPITAL_PROVISION_RETRIED =
             "Hospital schema provision retried successfully.";
-    public static final String SIGNUP_DISABLED =
-            "Public signup is disabled. Ask your hospital admin to create your account.";
     public static final String CURRENT_PASSWORD_INCORRECT = "Current password is incorrect.";
     public static final String CANNOT_DELETE_SELF = "You cannot delete your own account.";
     public static final String CANNOT_MODIFY_SUPER_ADMIN = "Cannot modify platform super admin via this API.";
     public static final String HOSPITAL_NOT_IN_FAILED_STATE =
             "Retry provision is only allowed when hospital status is FAILED.";
     public static final String TENANT_REQUIRED_FOR_HOSPITAL_FORGOT_PASSWORD =
-            "tenantId or tenantCode is required for hospital user forgot-password.";
+            "tenantCode is required for hospital user forgot-password.";
 
 }

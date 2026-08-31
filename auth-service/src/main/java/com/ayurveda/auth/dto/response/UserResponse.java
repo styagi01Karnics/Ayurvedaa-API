@@ -26,6 +26,7 @@ public class UserResponse {
     private String username;
     private String email;
     private String fullName;
+    private String mobileNumber;
     private UserRole role;
     private UUID tenantRoleId;
     private String tenantRoleCode;

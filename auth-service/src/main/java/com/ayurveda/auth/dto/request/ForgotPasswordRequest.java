@@ -1,7 +1,5 @@
 package com.ayurveda.auth.dto.request;
 
-import java.util.UUID;
-
 import com.ayurveda.auth.constant.AuthValidation;
 
 import jakarta.validation.constraints.NotBlank;
@@ -16,8 +14,8 @@ import lombok.Setter;
 /**
  * Forgot password:
  * <ul>
- *   <li>Super Admin — Gmail only (no tenant)</li>
- *   <li>Hospital users — tenantId or tenantCode + Gmail</li>
+ *   <li>Super Admin — Gmail only (no tenantCode)</li>
+ *   <li>Hospital users — tenantCode (e.g. GAN-DL) + Gmail</li>
  * </ul>
  */
 @Getter
@@ -27,8 +25,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class ForgotPasswordRequest {
 
-    private UUID tenantId;
-
+    /** Required for hospital users (e.g. GAN-DL). Omit for Super Admin. */
     @Size(max = 50)
     private String tenantCode;
 

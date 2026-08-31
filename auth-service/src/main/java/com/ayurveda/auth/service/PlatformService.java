@@ -7,6 +7,7 @@ import com.ayurveda.auth.dto.request.BootstrapSuperAdminRequest;
 import com.ayurveda.auth.dto.request.CreateHospitalAdminRequest;
 import com.ayurveda.auth.dto.request.OnboardHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalStatusRequest;
+import com.ayurveda.auth.dto.response.HospitalOnboardResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
 import com.ayurveda.auth.dto.response.UserResponse;
 import com.ayurveda.common.ApiResponse;
@@ -15,7 +16,8 @@ public interface PlatformService {
 
     ApiResponse<UserResponse> bootstrapSuperAdmin(BootstrapSuperAdminRequest request);
 
-    ApiResponse<TenantResponse> onboardHospital(OnboardHospitalRequest request);
+    /** Clinic + first hospital admin (Figma signup form). */
+    ApiResponse<HospitalOnboardResponse> onboardHospital(OnboardHospitalRequest request);
 
     ApiResponse<List<TenantResponse>> listHospitals();
 

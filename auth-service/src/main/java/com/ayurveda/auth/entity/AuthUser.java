@@ -46,6 +46,9 @@ public class AuthUser extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String fullName;
 
+    @Column(length = 20)
+    private String mobileNumber;
+
     @Column(nullable = false, length = 255)
     private String passwordHash;
 

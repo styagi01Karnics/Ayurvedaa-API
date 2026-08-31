@@ -10,6 +10,7 @@ import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.util.ResponseUtil;
 import com.ayurveda.common.validation.IdProofValidator;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
+import com.ayurveda.patient.dto.response.PatientCountResponse;
 import com.ayurveda.patient.dto.response.PatientResponse;
 import com.ayurveda.patient.entity.Patient;
 import com.ayurveda.patient.enums.PatientStatus;
@@ -217,17 +218,26 @@ public class PatientServiceImpl implements PatientService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<Long> getTotalPatientCount() {
+    public ApiResponse<PatientCountResponse> getTotalPatientCount() {
 
-        log.info("Fetching total active patient count.");
+        log.info("Fetching patient counts (total, active, inactive).");
 
-        long count = patientRepository.countByDeletedFalse();
+        long totalPatients = patientRepository.countByDeletedFalse();
+        long activePatients = patientRepository.countByDeletedFalseAndStatus(PatientStatus.ACTIVE);
+        long inactivePatients = patientRepository.countByDeletedFalseAndStatus(PatientStatus.INACTIVE);
 
-        log.info("Total active patients: {}", count);
+        log.info("Patient counts — total: {}, active: {}, inactive: {}",
+                totalPatients, activePatients, inactivePatients);
+
+        PatientCountResponse counts = PatientCountResponse.builder()
+                .totalPatients(totalPatients)
+                .activePatients(activePatients)
+                .inactivePatients(inactivePatients)
+                .build();
 
         return ResponseUtil.success(
-                "Total patient count fetched successfully.",
-                count
+                "Patient counts fetched successfully.",
+                counts
         );
     }
 
