@@ -1,5 +1,6 @@
 package com.ayurveda.appointment.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,5 +18,7 @@ public interface TreatmentCategoryRepository
     boolean existsByCategoryName(String categoryName);
 
     Optional<TreatmentCategoryMaster> findTopByOrderByCategoryCodeDesc();
+
+    List<TreatmentCategoryMaster> findByCategoryCodeStartingWith(String prefix);
 
 }

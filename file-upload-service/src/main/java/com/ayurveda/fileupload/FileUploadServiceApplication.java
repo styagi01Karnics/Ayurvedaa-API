@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class FileUploadServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(FileUploadServiceApplication.class, args);
+        SpringApplication app = new SpringApplication(FileUploadServiceApplication.class);
+        app.setAdditionalProfiles("tenant");
+        app.run(args);
     }
 
 }

@@ -26,6 +26,8 @@ public interface TherapyRepository
 
     Optional<TherapyMaster> findTopByOrderByTherapyCodeDesc();
 
+    List<TherapyMaster> findByTherapyCodeStartingWith(String prefix);
+
     List<TherapyMaster> findByCategoryIdAndDeletedFalse(UUID categoryId);
 
     List<TherapyMaster> findByCategoryIdAndDeletedFalseAndStatus(

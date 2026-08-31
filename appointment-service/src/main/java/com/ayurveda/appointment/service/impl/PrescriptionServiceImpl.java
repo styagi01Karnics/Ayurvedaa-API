@@ -381,7 +381,6 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
         return PatientDetails.builder()
                 .id(patient != null ? patient.getId() : null)
-                .patientDisplayId(patient != null ? patient.getPatientDisplayId() : null)
                 .patientCode(patient != null ? patient.getPatientCode() : null)
                 .fullName(patient != null ? patient.getFullName() : null)
                 .age(patient != null ? patient.getAge() : null)

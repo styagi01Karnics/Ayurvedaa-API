@@ -12,6 +12,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.ayurveda.common.tenant.TenantContext;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,7 +60,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     TenantContext.set(
                             principal.getTenantId(),
                             principal.getTenantCode(),
-                            principal.getSchemaName());
+                            principal.getSchemaName(),
+                            principal.getUserId(),
+                            principal.getRole(),
+                            header);
                 } catch (Exception ex) {
                     log.warn("Invalid JWT token: {}", ex.getMessage());
                     SecurityContextHolder.clearContext();

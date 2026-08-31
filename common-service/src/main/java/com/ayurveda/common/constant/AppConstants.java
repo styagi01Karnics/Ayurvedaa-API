@@ -181,6 +181,19 @@ public final class AppConstants {
     public static final String ACCESS_DENIED =
             "Access denied.";
 
+    public static final String INVALID_OR_EXPIRED_TOKEN =
+            "Invalid or expired access token.";
+
+    public static final String HOSPITAL_SCHEMA_REQUIRED =
+            "Hospital schema is required. Platform Super Admin tokens cannot call clinical APIs; "
+                    + "login as a hospital user so the JWT includes schemaName (hosp_*).";
+
+    public static final String INVALID_TENANT_SCHEMA =
+            "Invalid tenant schema name in token.";
+
+    public static final String TENANT_CODE_REQUIRED =
+            "tenantCode is required in the JWT for clinical APIs.";
+
     // ===========================
     // Downstream / Feign
     // ===========================

@@ -4,13 +4,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.ayurveda.common.tenant.TenantContext;
 import com.ayurveda.therapist.entity.Therapist;
 import com.ayurveda.therapist.repository.TherapistRepository;
 
@@ -23,20 +27,30 @@ class TherapistCodeGeneratorTest {
     @InjectMocks
     private TherapistCodeGenerator codeGenerator;
 
-    @Test
-    void generate_startsAt0001WhenEmpty() {
-        when(therapistRepository.findByTherapistCodeStartingWith("THP-")).thenReturn(List.of());
+    @BeforeEach
+    void setUp() {
+        TenantContext.set(UUID.randomUUID(), "GAN-DL", "hosp_gan_dl");
+    }
 
-        assertEquals("THP-0001", codeGenerator.generate());
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
+    }
+
+    @Test
+    void generate_startsAt00001WhenEmpty() {
+        when(therapistRepository.findByTherapistCodeStartingWith("GAN-DL-THP-")).thenReturn(List.of());
+
+        assertEquals("GAN-DL-THP-00001", codeGenerator.generate());
     }
 
     @Test
     void generate_incrementsFromLatest() {
-        when(therapistRepository.findByTherapistCodeStartingWith("THP-")).thenReturn(List.of(
-                Therapist.builder().therapistCode("THP-0003").build(),
-                Therapist.builder().therapistCode("THP-0001").build()));
+        when(therapistRepository.findByTherapistCodeStartingWith("GAN-DL-THP-")).thenReturn(List.of(
+                Therapist.builder().therapistCode("GAN-DL-THP-00003").build(),
+                Therapist.builder().therapistCode("GAN-DL-THP-00001").build()));
 
-        assertEquals("THP-0004", codeGenerator.generate());
+        assertEquals("GAN-DL-THP-00004", codeGenerator.generate());
     }
 
 }

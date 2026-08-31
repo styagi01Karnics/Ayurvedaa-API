@@ -16,9 +16,7 @@ import com.ayurveda.patient.enums.PatientStatus;
 public class PatientResponse {
 
     private UUID id;
-    /** e.g. #PT458652 */
-    private String patientDisplayId;
-    /** e.g. GAN2025-0129 */
+    /** e.g. GAN-DL-PT-00001 */
     private String patientCode;
     private String firstName;
     private String lastName;

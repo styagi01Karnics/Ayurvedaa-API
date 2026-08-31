@@ -10,11 +10,15 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import com.ayurveda.common.tenant.TenantContext;
+import com.ayurveda.common.tenant.TenantSchemaFilter;
+
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Publishes activity logs to activity-log-service.
  * Failures are logged and never break the calling business flow.
+ * Forwards Bearer / schema headers from {@link TenantContext} when present.
  */
 @Slf4j
 @Component
@@ -70,6 +74,14 @@ public class ActivityLogPublisher {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            String authorization = TenantContext.getAuthorizationHeader();
+            if (authorization != null && !authorization.isBlank()) {
+                headers.set(HttpHeaders.AUTHORIZATION, authorization);
+            }
+            String schema = TenantContext.getSchemaName();
+            if (schema != null && !schema.isBlank()) {
+                headers.set(TenantSchemaFilter.TENANT_SCHEMA_HEADER, schema);
+            }
 
             restTemplate.postForEntity(
                     activityLogBaseUrl + "/api/v1/activity-logs",

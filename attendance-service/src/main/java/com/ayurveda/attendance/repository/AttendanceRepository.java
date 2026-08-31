@@ -24,6 +24,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
 
     long countBySerialNumberStartingWith(String prefix);
 
+    List<Attendance> findBySerialNumberStartingWith(String prefix);
+
     boolean existsByEmpIdAndAttendanceDateAndDeletedFalse(String empId, LocalDate attendanceDate);
 
 }

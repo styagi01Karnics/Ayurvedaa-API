@@ -22,7 +22,7 @@ import lombok.Setter;
 @Table(name = "mst_treatment_category")
 public class TreatmentCategoryMaster extends BaseEntity {
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(nullable = false, unique = true, length = 50)
     private String categoryCode;
 
     @Column(nullable = false, unique = true)

@@ -43,7 +43,6 @@ public class PrescriptionResponse {
     @AllArgsConstructor
     public static class PatientDetails {
         private UUID id;
-        private String patientDisplayId;
         private String patientCode;
         private String fullName;
         private Integer age;

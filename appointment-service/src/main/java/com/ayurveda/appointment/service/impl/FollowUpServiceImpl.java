@@ -204,7 +204,7 @@ public class FollowUpServiceImpl implements FollowUpService {
         return FollowUpResponse.builder()
                 .id(followUp.getId())
                 .patientId(followUp.getPatientId())
-                .patientDisplayId(patient != null ? patient.getPatientDisplayId() : null)
+                .patientCode(patient != null ? patient.getPatientCode() : null)
                 .patientName(patient != null ? patient.getFullName() : null)
                 .assignedDoctorId(followUp.getAssignedDoctorId())
                 .doctorName(doctor != null ? doctor.getName() : null)

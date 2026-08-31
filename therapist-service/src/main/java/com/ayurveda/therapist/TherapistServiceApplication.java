@@ -9,7 +9,9 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 public class TherapistServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(TherapistServiceApplication.class, args);
+        SpringApplication app = new SpringApplication(TherapistServiceApplication.class);
+        app.setAdditionalProfiles("tenant");
+        app.run(args);
     }
 
 }

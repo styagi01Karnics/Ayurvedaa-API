@@ -49,7 +49,7 @@ public class InvoiceController {
                     - Service + Therapy
                     - Medicine + Therapy
                     - Service + Medicine + Therapy (all together)
-                    Each Make Payment call creates its own invoice (INV-xxxx).
+                    Each Make Payment call creates its own invoice ({tenantCode}-INV-#####).
                     """)
     @PostMapping
     public ResponseEntity<ApiResponse<InvoiceResponse>> createInvoice(

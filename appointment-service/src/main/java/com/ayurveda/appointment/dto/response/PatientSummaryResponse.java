@@ -17,8 +17,7 @@ import lombok.Setter;
 public class PatientSummaryResponse {
 
     private UUID id;
-    /** e.g. #PT458652 */
-    private String patientDisplayId;
+    /** e.g. GAN-DL-PT-00001 */
     private String patientCode;
     private String firstName;
     private String lastName;

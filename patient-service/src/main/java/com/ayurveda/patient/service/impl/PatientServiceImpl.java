@@ -52,11 +52,10 @@ public class PatientServiceImpl implements PatientService {
         validateDuplicatePatient(request);
 
         String[] names = FullNameSplitter.split(request.getFullName());
-        PatientCodeGenerator.PatientIdentifiers identifiers = patientCodeGenerator.generate();
+        String patientCode = patientCodeGenerator.generate();
 
         Patient patient = Patient.builder()
-                .patientDisplayId(identifiers.patientDisplayId())
-                .patientCode(identifiers.patientCode())
+                .patientCode(patientCode)
                 .firstName(names[0])
                 .lastName(names[1])
                 .gender(request.getGender())
@@ -80,15 +79,14 @@ public class PatientServiceImpl implements PatientService {
 
         Patient savedPatient = patientRepository.save(patient);
         
-        log.info("Patient created successfully. Patient ID: {}, Display ID: {}, Patient Code: {}",
+        log.info("Patient created successfully. Patient ID: {}, Patient Code: {}",
                 savedPatient.getId(),
-                savedPatient.getPatientDisplayId(),
                 savedPatient.getPatientCode());
 
         activityLogPublisher.record(
                 "Patients",
                 ActivityActionType.CREATED,
-                "Patient " + savedPatient.getPatientDisplayId());
+                "Patient " + savedPatient.getPatientCode());
 
         return ResponseUtil.success(
                 AppConstants.PATIENT_CREATED_SUCCESSFULLY,
@@ -265,7 +263,7 @@ public class PatientServiceImpl implements PatientService {
         activityLogPublisher.record(
                 "Patients",
                 ActivityActionType.DELETED,
-                "Patient " + patient.getPatientDisplayId());
+                "Patient " + patient.getPatientCode());
 
         return ResponseUtil.success(
                 AppConstants.PATIENT_DELETED_SUCCESSFULLY

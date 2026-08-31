@@ -49,7 +49,7 @@ class DoctorServiceImplTest {
         doctorId = UUID.randomUUID();
         doctor = Doctor.builder()
                 .doctorName("Dr. Sheekha")
-                .doctorCode("DOC-0001")
+                .doctorCode("GAN-DL-DOC-00001")
                 .specialization("Panchakarma")
                 .status(DoctorStatus.ACTIVE)
                 .consultationFees(BigDecimal.valueOf(500))
@@ -68,7 +68,7 @@ class DoctorServiceImplTest {
         request.setFollowUpFees(BigDecimal.valueOf(300));
         request.setAvailability(" Mon-Fri ");
 
-        when(doctorCodeGenerator.generate()).thenReturn("DOC-0001");
+        when(doctorCodeGenerator.generate()).thenReturn("GAN-DL-DOC-00001");
         when(doctorRepository.save(any(Doctor.class))).thenAnswer(inv -> {
             Doctor saved = inv.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", doctorId);

@@ -28,7 +28,7 @@ public class TherapyMaster extends BaseEntity {
     @Column(nullable = false)
     private UUID categoryId;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(nullable = false, unique = true, length = 50)
     private String therapyCode;
 
     @Column(nullable = false, unique = true)

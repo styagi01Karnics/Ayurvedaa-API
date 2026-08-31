@@ -1,2 +1,3 @@
 com.ayurveda.common.config.CommonAutoConfiguration
 com.ayurveda.common.config.OpenApiAutoConfiguration
+com.ayurveda.common.config.TenantRoutingAutoConfiguration

@@ -1,0 +1,9 @@
+ayurveda:
+  tenant:
+    routing:
+      enabled: true
+      require-hospital-schema: true
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}

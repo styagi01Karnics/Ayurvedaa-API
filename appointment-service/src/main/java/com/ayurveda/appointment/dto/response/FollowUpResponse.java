@@ -20,7 +20,7 @@ public class FollowUpResponse {
 
     private UUID id;
     private UUID patientId;
-    private String patientDisplayId;
+    private String patientCode;
     private String patientName;
     private UUID assignedDoctorId;
     private String doctorName;

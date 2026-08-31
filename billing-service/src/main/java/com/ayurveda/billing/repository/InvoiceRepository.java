@@ -21,6 +21,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     Optional<Invoice> findTopByOrderByInvoiceNumberDesc();
 
+    List<Invoice> findByInvoiceNumberStartingWith(String prefix);
+
     @Query("""
             SELECT i FROM Invoice i
             WHERE i.deleted = false

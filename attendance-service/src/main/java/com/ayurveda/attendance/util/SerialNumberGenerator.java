@@ -1,37 +1,31 @@
 package com.ayurveda.attendance.util;
 
+import org.springframework.stereotype.Component;
+
+import com.ayurveda.attendance.entity.Attendance;
 import com.ayurveda.attendance.repository.AttendanceRepository;
+import com.ayurveda.common.util.BusinessCodeGenerator;
+import com.ayurveda.common.util.BusinessCodeTypes;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.stereotype.Component;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-
+/**
+ * Attendance serial numbers use the unified business-code format
+ * {@code {tenantCode}-ATT-{#####}}. ADMS device SN is unrelated (device allowlist / punch logs).
+ */
 @Component
 @RequiredArgsConstructor
 public class SerialNumberGenerator {
 
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     private final AttendanceRepository attendanceRepository;
 
     public synchronized String generate() {
-        String prefix = "ATT-" + LocalDate.now().format(DATE_FORMAT) + "-";
-        long sequence = attendanceRepository.countBySerialNumberStartingWith(prefix) + 1;
-
-        String candidate = buildSerialNumber(prefix, sequence);
-        while (attendanceRepository.existsBySerialNumber(candidate)) {
-            sequence++;
-            candidate = buildSerialNumber(prefix, sequence);
-        }
-
-        return candidate;
-    }
-
-    private String buildSerialNumber(String prefix, long sequence) {
-        return prefix + String.format("%04d", sequence);
+        String prefix = BusinessCodeGenerator.prefix(BusinessCodeTypes.ATTENDANCE);
+        return BusinessCodeGenerator.next(
+                BusinessCodeTypes.ATTENDANCE,
+                attendanceRepository.findBySerialNumberStartingWith(prefix).stream()
+                        .map(Attendance::getSerialNumber)
+                        .toList());
     }
 
 }

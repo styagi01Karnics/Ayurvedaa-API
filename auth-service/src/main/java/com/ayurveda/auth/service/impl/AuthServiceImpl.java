@@ -49,7 +49,7 @@ import com.ayurveda.auth.repository.TenantRepository;
 import com.ayurveda.auth.repository.TenantRoleRepository;
 import com.ayurveda.auth.security.AuthPrincipal;
 import com.ayurveda.auth.security.JwtService;
-import com.ayurveda.auth.security.TenantContext;
+import com.ayurveda.common.tenant.TenantContext;
 import com.ayurveda.auth.service.AuthService;
 import com.ayurveda.auth.service.PageAccessService;
 import com.ayurveda.auth.service.TenantBootstrapService;

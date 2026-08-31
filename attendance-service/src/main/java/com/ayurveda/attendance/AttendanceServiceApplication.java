@@ -13,7 +13,9 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 public class AttendanceServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(AttendanceServiceApplication.class, args);
+        SpringApplication app = new SpringApplication(AttendanceServiceApplication.class);
+        app.setAdditionalProfiles("tenant");
+        app.run(args);
     }
 
 }

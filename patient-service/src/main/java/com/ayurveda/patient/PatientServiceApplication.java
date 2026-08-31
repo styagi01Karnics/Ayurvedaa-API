@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class PatientServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(PatientServiceApplication.class, args);
+        SpringApplication app = new SpringApplication(PatientServiceApplication.class);
+        app.setAdditionalProfiles("tenant");
+        app.run(args);
     }
 
 }

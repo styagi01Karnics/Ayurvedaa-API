@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class ActivityLogServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ActivityLogServiceApplication.class, args);
+        SpringApplication app = new SpringApplication(ActivityLogServiceApplication.class);
+        app.setAdditionalProfiles("tenant");
+        app.run(args);
     }
 
 }

@@ -11,7 +11,6 @@ public final class PatientMapper {
     public static PatientResponse toResponse(Patient patient) {
         return PatientResponse.builder()
                 .id(patient.getId())
-                .patientDisplayId(formatDisplayId(patient.getPatientDisplayId()))
                 .patientCode(patient.getPatientCode())
                 .firstName(patient.getFirstName())
                 .lastName(patient.getLastName())
@@ -36,13 +35,6 @@ public final class PatientMapper {
                 .createdAt(patient.getCreatedAt())
                 .updatedAt(patient.getUpdatedAt())
                 .build();
-    }
-
-    private static String formatDisplayId(String patientDisplayId) {
-        if (patientDisplayId == null || patientDisplayId.isBlank()) {
-            return patientDisplayId;
-        }
-        return patientDisplayId.startsWith("#") ? patientDisplayId : "#" + patientDisplayId;
     }
 
 }

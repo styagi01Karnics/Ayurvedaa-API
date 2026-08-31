@@ -59,7 +59,7 @@ class TherapistServiceImplTest {
         therapyId = UUID.randomUUID();
         therapist = Therapist.builder()
                 .therapistName("Dr. Rahul Verma")
-                .therapistCode("THP-0002")
+                .therapistCode("GAN-DL-THP-00002")
                 .status(TherapistStatus.ACTIVE)
                 .assignedTherapyIds(new ArrayList<>(List.of(therapyId)))
                 .build();
@@ -77,7 +77,7 @@ class TherapistServiceImplTest {
                         .id(therapyId)
                         .name("Kayakalpa")
                         .build()));
-        when(therapistCodeGenerator.generate()).thenReturn("THP-0002");
+        when(therapistCodeGenerator.generate()).thenReturn("GAN-DL-THP-00002");
         when(therapistRepository.save(any(Therapist.class))).thenAnswer(inv -> {
             Therapist saved = inv.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", therapistId);

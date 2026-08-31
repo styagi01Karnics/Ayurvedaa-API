@@ -216,7 +216,6 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
             items.add(PatientAppointmentListItemResponse.builder()
                     .bookingId(booking.getId())
                     .patientId(booking.getPatientId())
-                    .patientDisplayId(patient != null ? patient.getPatientDisplayId() : null)
                     .patientCode(patient != null ? patient.getPatientCode() : null)
                     .patientFullName(patient != null ? patient.getFullName() : null)
                     .patientMobileNumber(patient != null ? patient.getMobileNumber() : null)
@@ -422,8 +421,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         }
 
         String term = search.trim().toLowerCase(Locale.ROOT).replace("#", "");
-        return containsIgnoreCase(patient.getPatientDisplayId(), term)
-                || containsIgnoreCase(patient.getPatientCode(), term)
+        return containsIgnoreCase(patient.getPatientCode(), term)
                 || containsIgnoreCase(patient.getFullName(), term)
                 || containsIgnoreCase(patient.getMobileNumber(), term);
     }

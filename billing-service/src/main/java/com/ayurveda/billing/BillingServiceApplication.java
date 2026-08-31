@@ -9,7 +9,9 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 public class BillingServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(BillingServiceApplication.class, args);
+        SpringApplication app = new SpringApplication(BillingServiceApplication.class);
+        app.setAdditionalProfiles("tenant");
+        app.run(args);
     }
 
 }
