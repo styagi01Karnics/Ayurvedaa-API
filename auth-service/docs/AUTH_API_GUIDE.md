@@ -930,6 +930,27 @@ Backend stores **page codes only**; frontend maps codes → routes.
 Seeded catalog (`UiPageSeeder`):  
 `DASHBOARD`, `PATIENTS`, `DOCTORS`, `APPOINTMENTS`, `TREATMENTS`, `MEDICINES`, `SALES`, `ACTIVITY_LOG`, `BILLING`, `SETTINGS`.
 
+#### Frontend: page permissions
+
+**React procedure (sidebar + route guards):** [docs/FRONTEND_PAGE_PERMISSIONS.md](../../docs/FRONTEND_PAGE_PERMISSIONS.md).
+
+Figma **Role Permissions** modal toggles map 1:1 to `pageCodes` from `GET /api/v1/ui-pages` / login `user.pageCodes`. Use codes in role APIs; never send URLs to the backend.
+
+| pageCode | Figma toggle | Suggested FE route / menu |
+| --- | --- | --- |
+| `DASHBOARD` | Dashboard | `/dashboard` |
+| `PATIENTS` | Patients | `/patients` |
+| `DOCTORS` | Doctors | `/doctors` |
+| `APPOINTMENTS` | Appointments | `/appointments` |
+| `TREATMENTS` | Treatments | `/treatments` |
+| `MEDICINES` | Medicines | `/medicines` |
+| `SALES` | Sales | `/sales` |
+| `ACTIVITY_LOG` | Activity Log | `/activity-log` |
+| `BILLING` | Billing | `/billing` |
+| `SETTINGS` | Settings | `/settings` |
+
+Hide or disable nav items whose code is absent from `user.pageCodes`. Exact path strings are FE-owned; codes above are the contract with auth-service.
+
 #### GET `/api/v1/ui-pages`
 
 List toggleable modules for Role Management.

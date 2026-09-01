@@ -96,6 +96,7 @@ public class PlatformServiceImpl implements PlatformService {
     }
 
     @Override
+    @Transactional(noRollbackFor = { BadRequestException.class, DuplicateResourceException.class })
     public ApiResponse<HospitalOnboardResponse> onboardHospital(OnboardHospitalRequest request) {
         requireSuperAdmin();
 
@@ -338,6 +339,7 @@ public class PlatformServiceImpl implements PlatformService {
     }
 
     @Override
+    @Transactional(noRollbackFor = BadRequestException.class)
     public ApiResponse<TenantResponse> retryHospitalProvision(UUID hospitalId) {
         requireSuperAdmin();
 

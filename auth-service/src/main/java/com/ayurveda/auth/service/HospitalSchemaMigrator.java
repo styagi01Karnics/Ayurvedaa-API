@@ -142,10 +142,10 @@ public class HospitalSchemaMigrator {
                     ex);
         }
 
-        sql = sql.replace("${schema}", schemaName);
+        sql = stripSqlComments(sql.replace("${schema}", schemaName));
         String[] statements = sql.split(";");
         for (String raw : statements) {
-            String statement = stripSqlComments(raw).trim();
+            String statement = raw.trim();
             if (!StringUtils.hasText(statement)) {
                 continue;
             }

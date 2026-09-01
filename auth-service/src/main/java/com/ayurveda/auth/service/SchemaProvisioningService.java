@@ -55,6 +55,14 @@ public class SchemaProvisioningService {
 
     public void createSchema(String schemaName) {
         validateSchemaName(schemaName);
+        Boolean exists = jdbcTemplate.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = ?)",
+                Boolean.class,
+                schemaName);
+        if (Boolean.TRUE.equals(exists)) {
+            log.info("Postgres schema {} already exists; skipping CREATE SCHEMA", schemaName);
+            return;
+        }
         log.info("Creating Postgres schema {}", schemaName);
         jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
     }

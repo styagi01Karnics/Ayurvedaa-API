@@ -45,7 +45,8 @@ public class ActivityLogController {
 
     @Operation(
             summary = "List activity logs",
-            description = "Supports search (page/action/target/user) and optional page/action filters.")
+            description = "Optional filters: page (exact, case-insensitive), action enum, "
+                    + "search (substring on page/target/userName/before/after). Newest first.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<ActivityLogResponse>>> getActivityLogs(
             @RequestParam(required = false) String page,

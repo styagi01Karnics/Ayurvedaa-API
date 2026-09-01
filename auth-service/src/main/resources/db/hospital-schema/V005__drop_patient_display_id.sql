@@ -1,4 +1,4 @@
--- Drop obsolete patient display id; widen code columns for tenant-prefixed business codes.
+-- Drop obsolete patient display id and widen code columns for tenant-prefixed business codes.
 -- Applied to already-provisioned hospital schemas via HospitalSchemaMigrator.
 -- Fresh onboard uses updated V001 (no patient_display_id); this script is still idempotent.
 
