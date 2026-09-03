@@ -1,4 +1,4 @@
-package com.ayurveda.auth.config;
+package com.ayurveda.medicine.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,11 +13,11 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 public class OpenApiConfig {
 
     @Bean
-    public OpenAPI authOpenApi() {
+    public OpenAPI medicineOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Ayurvedaa Auth Service")
-                        .description("Tenant-based authentication APIs")
+                        .title("Ayurvedaa Medicine API")
+                        .description("API documentation for Ayurvedaa Medicine API")
                         .version("v1"))
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth",
@@ -28,5 +28,4 @@ public class OpenApiConfig {
                                         .bearerFormat("JWT")))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
-
 }
