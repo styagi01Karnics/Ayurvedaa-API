@@ -17,6 +17,10 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, UUID> 
 
     List<ActivityLog> findAllByDeletedFalseOrderByActivityTimestampDesc();
 
+    /**
+     * Avoid {@code COALESCE(textCol, '')} — Hibernate/Postgres can bind the empty literal as
+     * {@code bytea}, causing {@code lower(bytea)} errors on list/search.
+     */
     @Query("""
             SELECT a FROM ActivityLog a
             WHERE a.deleted = false
@@ -26,9 +30,12 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, UUID> 
                     :search IS NULL OR :search = ''
                     OR LOWER(a.page) LIKE LOWER(CONCAT('%', :search, '%'))
                     OR LOWER(a.target) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(a.performedByUserName, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(a.beforeValue, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(a.afterValue, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR (a.performedByUserName IS NOT NULL
+                        AND LOWER(a.performedByUserName) LIKE LOWER(CONCAT('%', :search, '%')))
+                    OR (a.beforeValue IS NOT NULL
+                        AND LOWER(a.beforeValue) LIKE LOWER(CONCAT('%', :search, '%')))
+                    OR (a.afterValue IS NOT NULL
+                        AND LOWER(a.afterValue) LIKE LOWER(CONCAT('%', :search, '%')))
                   )
             ORDER BY a.activityTimestamp DESC
             """)

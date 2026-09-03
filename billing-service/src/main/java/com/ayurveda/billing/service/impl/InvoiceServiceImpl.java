@@ -370,8 +370,16 @@ public class InvoiceServiceImpl implements InvoiceService {
         } catch (FeignException.NotFound ex) {
             throw new BadRequestException(BillingMessages.MEDICINE_NOT_FOUND_FOR_ID + medicineId);
         } catch (FeignException ex) {
-            log.error("Failed to fetch medicine {}", medicineId, ex);
-            throw new BadRequestException(BillingMessages.UNABLE_TO_LOAD_MEDICINE_DETAILS);
+            log.error("Failed to fetch medicine {} status={} body={}",
+                    medicineId, ex.status(), ex.contentUTF8(), ex);
+            String detail = ex.getMessage() != null ? ex.getMessage() : String.valueOf(ex.status());
+            throw new BadRequestException(
+                    BillingMessages.UNABLE_TO_LOAD_MEDICINE_DETAILS + " (" + detail + ")");
+        } catch (RuntimeException ex) {
+            // Covers Feign decode / mapping failures that are not FeignException
+            log.error("Failed to map medicine {} response", medicineId, ex);
+            throw new BadRequestException(
+                    BillingMessages.UNABLE_TO_LOAD_MEDICINE_DETAILS + " (" + ex.getMessage() + ")");
         }
     }
 

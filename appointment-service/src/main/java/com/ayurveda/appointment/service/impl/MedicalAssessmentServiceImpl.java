@@ -155,12 +155,24 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
 
     private void applyPatientId(CreateMedicalAssessmentRequest request) {
         UUID patientId = request.getPatientId();
-        request.getAyurvedicAssessment().setPatientId(patientId);
-        request.getPhysicalExamination().setPatientId(patientId);
-        request.getMedicalHistory().setPatientId(patientId);
-        request.getLifestyleInformation().setPatientId(patientId);
-        request.getSystemicExamination().setPatientId(patientId);
-        request.getTreatmentPlan().setPatientId(patientId);
+        if (request.getAyurvedicAssessment() != null) {
+            request.getAyurvedicAssessment().setPatientId(patientId);
+        }
+        if (request.getPhysicalExamination() != null) {
+            request.getPhysicalExamination().setPatientId(patientId);
+        }
+        if (request.getMedicalHistory() != null) {
+            request.getMedicalHistory().setPatientId(patientId);
+        }
+        if (request.getLifestyleInformation() != null) {
+            request.getLifestyleInformation().setPatientId(patientId);
+        }
+        if (request.getSystemicExamination() != null) {
+            request.getSystemicExamination().setPatientId(patientId);
+        }
+        if (request.getTreatmentPlan() != null) {
+            request.getTreatmentPlan().setPatientId(patientId);
+        }
     }
 
     private void uploadDocuments(

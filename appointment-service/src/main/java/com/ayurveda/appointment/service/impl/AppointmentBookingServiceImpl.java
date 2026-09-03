@@ -843,29 +843,41 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                     AppMessages.APPOINTMENT_CANNOT_RESCHEDULE_FROM_STATUS + currentStatus);
         }
 
-        if (!appointment.getPatientId().equals(request.getPatientId())) {
+        UUID patientId = request.getPatientId() != null
+                ? request.getPatientId()
+                : appointment.getPatientId();
+        if (!appointment.getPatientId().equals(patientId)) {
             throw new BadRequestException(AppMessages.PATIENT_ID_MISMATCH);
         }
 
-        PatientSummaryResponse patient = fetchPatient(request.getPatientId());
-        DoctorSummaryResponse doctor = fetchDoctor(request.getAssignedDoctorId());
+        UUID doctorId = request.getAssignedDoctorId() != null
+                ? request.getAssignedDoctorId()
+                : appointment.getAssignedDoctorId();
+
+        PatientSummaryResponse patient = fetchPatient(patientId);
+        DoctorSummaryResponse doctor = fetchDoctor(doctorId);
 
         ensureDoctorSlotAvailable(
-                request.getAssignedDoctorId(),
+                doctorId,
                 request.getRegistrationDate(),
                 request.getSlotTime(),
                 bookingId);
 
         appointment.setRegistrationDate(request.getRegistrationDate());
         appointment.setSlotTime(request.getSlotTime());
-        appointment.setAssignedDoctorId(request.getAssignedDoctorId());
+        appointment.setAssignedDoctorId(doctorId);
         appointment.setBookingStatus(BookingStatus.RESCHEDULED);
 
         AppointmentBooking saved = appointmentBookingRepository.save(appointment);
 
-        appointmentConsultationTypeRepository.deleteByBookingId(saved.getId());
-        List<ConsultationTypeItemResponse> consultationTypes =
-                saveConsultationTypes(saved.getId(), request.getConsultationTypeIds());
+        List<ConsultationTypeItemResponse> consultationTypes;
+        if (request.getConsultationTypeIds() != null && !request.getConsultationTypeIds().isEmpty()) {
+            appointmentConsultationTypeRepository.deleteByBookingId(saved.getId());
+            consultationTypes = saveConsultationTypes(saved.getId(), request.getConsultationTypeIds());
+        } else {
+            consultationTypes = loadConsultationTypes(List.of(saved))
+                    .getOrDefault(saved.getId(), List.of());
+        }
 
         AppointmentBookingResponse response =
                 appointmentBookingMapper.toResponse(saved, patient, doctor);

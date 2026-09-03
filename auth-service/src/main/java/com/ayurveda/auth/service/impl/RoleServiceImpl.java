@@ -1,8 +1,10 @@
 package com.ayurveda.auth.service.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -222,12 +224,33 @@ public class RoleServiceImpl implements RoleService {
     }
 
     private void replaceRolePages(TenantRole role, List<UiPage> pages) {
-        softDeleteRolePages(role.getId());
+        List<TenantRolePage> existing = tenantRolePageRepository.findAllByTenantRoleId(role.getId());
+        Map<UUID, TenantRolePage> byPageId = new HashMap<>();
+        for (TenantRolePage mapping : existing) {
+            if (mapping.getUiPage() != null) {
+                byPageId.putIfAbsent(mapping.getUiPage().getId(), mapping);
+            }
+        }
+
+        Set<UUID> desiredPageIds = pages.stream().map(UiPage::getId).collect(Collectors.toSet());
+
+        for (TenantRolePage mapping : existing) {
+            UUID pageId = mapping.getUiPage() != null ? mapping.getUiPage().getId() : null;
+            if (pageId != null && desiredPageIds.contains(pageId)) {
+                mapping.setDeleted(false);
+            } else {
+                mapping.setDeleted(true);
+            }
+        }
+        tenantRolePageRepository.saveAll(existing);
+
         for (UiPage page : pages) {
-            tenantRolePageRepository.save(TenantRolePage.builder()
-                    .tenantRole(role)
-                    .uiPage(page)
-                    .build());
+            if (!byPageId.containsKey(page.getId())) {
+                tenantRolePageRepository.save(TenantRolePage.builder()
+                        .tenantRole(role)
+                        .uiPage(page)
+                        .build());
+            }
         }
     }
 

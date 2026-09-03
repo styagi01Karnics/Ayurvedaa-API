@@ -69,9 +69,16 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         String pageFilter = StringUtils.hasText(page) ? page.trim() : null;
         String searchFilter = StringUtils.hasText(search) ? search.trim() : null;
 
-        List<ActivityLogResponse> logs = activityLogRepository
-                .search(pageFilter, action, searchFilter)
-                .stream()
+        // Unfiltered list must not use the JPQL search query: Postgres still type-checks
+        // CONCAT('%', :search, '%') when :search is null and can fail with lower(bytea).
+        List<ActivityLog> entities;
+        if (pageFilter == null && action == null && searchFilter == null) {
+            entities = activityLogRepository.findAllByDeletedFalseOrderByActivityTimestampDesc();
+        } else {
+            entities = activityLogRepository.search(pageFilter, action, searchFilter);
+        }
+
+        List<ActivityLogResponse> logs = entities.stream()
                 .map(activityLogMapper::toResponse)
                 .toList();
 

@@ -29,6 +29,7 @@ import com.ayurveda.auth.mapper.AuthMapper;
 import com.ayurveda.auth.repository.AuthUserRepository;
 import com.ayurveda.auth.repository.TenantRepository;
 import com.ayurveda.auth.security.AuthPrincipal;
+import com.ayurveda.auth.service.HospitalOnboardActivityLogger;
 import com.ayurveda.auth.service.PageAccessService;
 import com.ayurveda.auth.service.PlatformService;
 import com.ayurveda.auth.service.SchemaProvisioningService;
@@ -62,6 +63,7 @@ public class PlatformServiceImpl implements PlatformService {
     private final PageAccessService pageAccessService;
     private final PasswordEncoder passwordEncoder;
     private final AuthMapper authMapper;
+    private final HospitalOnboardActivityLogger hospitalOnboardActivityLogger;
 
     @Override
     public ApiResponse<UserResponse> bootstrapSuperAdmin(BootstrapSuperAdminRequest request) {
@@ -163,6 +165,9 @@ public class PlatformServiceImpl implements PlatformService {
 
             log.info("Onboarded hospital {} ({}) with admin {} schema {}",
                     tenantCode, hospitalName, loginEmail, schemaName);
+
+            hospitalOnboardActivityLogger.recordOnboarded(
+                    schemaName, hospitalName, tenantCode, currentPrincipal());
 
             HospitalOnboardResponse response = HospitalOnboardResponse.builder()
                     .hospital(authMapper.toTenantResponse(saved))
@@ -359,6 +364,12 @@ public class PlatformServiceImpl implements PlatformService {
             hospital.setProvisionMessage(provisionMessage);
             tenantRepository.save(hospital);
             log.info("Retried hospital provision for {}", hospital.getTenantCode());
+
+            hospitalOnboardActivityLogger.recordProvisionCompleted(
+                    hospital.getSchemaName(),
+                    hospital.getName(),
+                    hospital.getTenantCode(),
+                    currentPrincipal());
         } catch (Exception ex) {
             log.error("Hospital provision retry failed for {}: {}", hospital.getTenantCode(), ex.getMessage(), ex);
             hospital.setStatus(TenantStatus.FAILED);

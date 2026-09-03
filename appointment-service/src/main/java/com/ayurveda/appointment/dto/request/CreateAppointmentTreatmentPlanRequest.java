@@ -16,7 +16,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateAppointmentTreatmentPlanRequest {
 
-    @NotNull(message = "Patient Id is required")
+    /** Required for standalone POST; filled from parent for medical-assessment aggregate. */
     private UUID patientId;
 
     private String investigationAndPlanSuggested;

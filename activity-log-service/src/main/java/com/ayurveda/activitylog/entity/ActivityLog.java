@@ -35,10 +35,10 @@ public class ActivityLog extends BaseEntity {
     @Column(nullable = false, length = 150)
     private String target;
 
-    @Column(name = "before_value", columnDefinition = "TEXT")
+    @Column(name = "before_value", length = 4000)
     private String beforeValue;
 
-    @Column(name = "after_value", columnDefinition = "TEXT")
+    @Column(name = "after_value", length = 4000)
     private String afterValue;
 
     @Column(nullable = false)

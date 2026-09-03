@@ -6,6 +6,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,5 +36,16 @@ public class TreatmentCategoryMaster extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TreatmentCategoryStatus status;
+
+    @PrePersist
+    @PreUpdate
+    void ensureDefaults() {
+        if (status == null) {
+            status = TreatmentCategoryStatus.ACTIVE;
+        }
+        if (getDeleted() == null) {
+            setDeleted(false);
+        }
+    }
 
 }

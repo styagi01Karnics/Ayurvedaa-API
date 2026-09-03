@@ -151,32 +151,29 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Object>> handleUnreadableBody(HttpMessageNotReadableException ex) {
         log.warn("Malformed request body: {}", ex.getMessage());
-
-        Throwable cause = ex.getCause();
-        if (cause instanceof InvalidFormatException invalidFormatException
-                && invalidFormatException.getTargetType() != null
-                && invalidFormatException.getTargetType().isEnum()) {
-
-            String message = buildInvalidEnumMessage(invalidFormatException);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), message));
+        ResponseEntity<ApiResponse<Object>> invalidFormat = toInvalidFormatResponse(ex.getCause());
+        if (invalidFormat != null) {
+            return invalidFormat;
         }
-
-        if (cause instanceof InvalidFormatException invalidFormatException) {
-            String field = invalidFormatException.getPath().isEmpty()
-                    ? "value"
-                    : invalidFormatException.getPath().get(invalidFormatException.getPath().size() - 1).getFieldName();
-            String message = "Invalid value for '" + field + "': " + invalidFormatException.getValue()
-                    + ". Expected type: "
-                    + (invalidFormatException.getTargetType() != null
-                            ? invalidFormatException.getTargetType().getSimpleName()
-                            : "unknown");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), message));
-        }
-
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), AppConstants.MALFORMED_REQUEST_BODY));
+    }
+
+    /**
+     * Custom deserializers (e.g. medicine create list) often surface enum/format errors as
+     * {@link IllegalArgumentException} wrapping {@link InvalidFormatException} — map those to 400.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        ResponseEntity<ApiResponse<Object>> invalidFormat = toInvalidFormatResponse(ex);
+        if (invalidFormat != null) {
+            return invalidFormat;
+        }
+        log.warn("Illegal argument: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.failure(
+                        HttpStatus.BAD_REQUEST.value(),
+                        ex.getMessage() != null ? ex.getMessage() : AppConstants.MALFORMED_REQUEST_BODY));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -222,6 +219,44 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.failure(
                         HttpStatus.INTERNAL_SERVER_ERROR.value(), AppConstants.SOMETHING_WENT_WRONG));
+    }
+
+    private ResponseEntity<ApiResponse<Object>> toInvalidFormatResponse(Throwable throwable) {
+        InvalidFormatException invalidFormatException = findInvalidFormat(throwable);
+        if (invalidFormatException == null) {
+            return null;
+        }
+
+        if (invalidFormatException.getTargetType() != null
+                && invalidFormatException.getTargetType().isEnum()) {
+            String message = buildInvalidEnumMessage(invalidFormatException);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), message));
+        }
+
+        String field = invalidFormatException.getPath().isEmpty()
+                ? "value"
+                : invalidFormatException.getPath()
+                        .get(invalidFormatException.getPath().size() - 1)
+                        .getFieldName();
+        String message = "Invalid value for '" + field + "': " + invalidFormatException.getValue()
+                + ". Expected type: "
+                + (invalidFormatException.getTargetType() != null
+                        ? invalidFormatException.getTargetType().getSimpleName()
+                        : "unknown");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), message));
+    }
+
+    private InvalidFormatException findInvalidFormat(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof InvalidFormatException invalidFormatException) {
+                return invalidFormatException;
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     private String buildInvalidEnumMessage(InvalidFormatException ex) {

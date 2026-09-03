@@ -10,6 +10,7 @@ import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateAppointmentPhysicalExaminationRequest;
 import com.ayurveda.appointment.dto.response.AppointmentPhysicalExaminationResponse;
 import com.ayurveda.appointment.entity.AppointmentPhysicalExamination;
+import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.appointment.mapper.AppointmentPhysicalExaminationMapper;
 import com.ayurveda.appointment.repository.AppointmentBookingRepository;
@@ -41,6 +42,10 @@ public class AppointmentPhysicalExaminationServiceImpl
 
         log.info("Saving physical examination for patient: {}",
                 request.getPatientId());
+
+        if (request.getPatientId() == null) {
+            throw new BadRequestException("Patient Id is required");
+        }
 
         if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
             throw new ResourceNotFoundException(Constants.APPOINTMENT_NOT_FOUND + request.getPatientId());

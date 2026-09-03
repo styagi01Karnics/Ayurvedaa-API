@@ -10,6 +10,7 @@ import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateAppointmentMedicalHistoryRequest;
 import com.ayurveda.appointment.dto.response.AppointmentMedicalHistoryResponse;
 import com.ayurveda.appointment.entity.AppointmentMedicalHistory;
+import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.appointment.mapper.AppointmentMedicalHistoryMapper;
 import com.ayurveda.appointment.repository.AppointmentBookingRepository;
@@ -41,6 +42,10 @@ public class AppointmentMedicalHistoryServiceImpl
 
         log.info("Saving medical history for patient : {}",
                 request.getPatientId());
+
+        if (request.getPatientId() == null) {
+            throw new BadRequestException("Patient Id is required");
+        }
 
         if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
             throw new ResourceNotFoundException(

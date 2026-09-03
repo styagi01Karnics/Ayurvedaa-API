@@ -20,6 +20,8 @@ import com.ayurveda.appointment.enums.DocumentType;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.BadRequestException;
+import com.ayurveda.common.tenant.TenantContext;
+import com.ayurveda.common.tenant.TenantSchemaFilter;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,9 +47,18 @@ public class DocumentUploadClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        // Forward inbound JWT + schema so file-upload can resolve the hospital tenant.
+        String authorization = TenantContext.getAuthorizationHeader();
+        if (authorization != null && !authorization.isBlank()) {
+            headers.set(HttpHeaders.AUTHORIZATION, authorization);
+        }
+        String schema = TenantContext.getSchemaName();
+        if (schema != null && !schema.isBlank()) {
+            headers.set(TenantSchemaFilter.TENANT_SCHEMA_HEADER, schema);
+        }
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("patientId", patientId);
+        body.add("patientId", patientId.toString());
         body.add("documentType", documentType.name());
         body.add("file", file.getResource());
 

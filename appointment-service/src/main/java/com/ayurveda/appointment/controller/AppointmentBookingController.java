@@ -180,7 +180,12 @@ public class AppointmentBookingController {
                 || "ALL".equalsIgnoreCase(bookingStatus.trim())) {
             return null;
         }
-        return BookingStatus.valueOf(bookingStatus.trim().toUpperCase());
+        try {
+            return BookingStatus.valueOf(bookingStatus.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new com.ayurveda.common.exception.BadRequestException(
+                    "Invalid booking status. Use one of: SCHEDULED, CANCELLED, RESCHEDULED, IN_CONSULTATION, COMPLETED, ALL");
+        }
     }
 
     @Operation(summary = "Get appointments by registration date")
@@ -195,9 +200,10 @@ public class AppointmentBookingController {
     @Operation(
             summary = "Reschedule appointment",
             description = """
-                    Same fields as create, but uses existing patientId.
-                    Works for SCHEDULED, RESCHEDULED, and CANCELLED appointments.
-                    Sets booking status to RESCHEDULED (active again; cancelled tag cleared).
+                    Requires registrationDate + slotTime.
+                    patientId / assignedDoctorId / consultationTypeIds are optional
+                    (default to values already on the booking).
+                    Sets booking status to RESCHEDULED.
                     Not allowed for COMPLETED or IN_CONSULTATION.
                     """)
     @PutMapping("/{bookingId}/reschedule")

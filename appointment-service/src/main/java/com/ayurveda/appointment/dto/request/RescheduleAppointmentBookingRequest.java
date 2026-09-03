@@ -5,7 +5,6 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +19,9 @@ import lombok.Setter;
 @AllArgsConstructor
 public class RescheduleAppointmentBookingRequest {
 
-    @NotNull(message = "Patient id is required")
+    /**
+     * Optional — defaults to the existing booking's patient when omitted.
+     */
     private UUID patientId;
 
     @NotNull(message = "Registration date is required")
@@ -29,10 +30,14 @@ public class RescheduleAppointmentBookingRequest {
     @NotNull(message = "Slot time is required")
     private LocalTime slotTime;
 
-    @NotNull(message = "Assigned doctor id is required")
+    /**
+     * Optional — defaults to the existing booking's doctor when omitted.
+     */
     private UUID assignedDoctorId;
 
-    @NotEmpty(message = "At least one consultation type is required")
+    /**
+     * Optional — keeps existing consultation types when omitted/empty.
+     */
     private List<UUID> consultationTypeIds;
 
 }

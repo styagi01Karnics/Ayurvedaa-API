@@ -16,6 +16,7 @@ import com.ayurveda.appointment.repository.AppointmentBookingRepository;
 import com.ayurveda.appointment.service.AppointmentAyurvedicAssessmentService;
 import com.ayurveda.appointment.service.DoshaMasterService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,10 @@ public class AppointmentAyurvedicAssessmentServiceImpl
             CreateAppointmentAyurvedicAssessmentRequest request) {
 
         log.info("Saving ayurvedic assessment for patient: {}", request.getPatientId());
+
+        if (request.getPatientId() == null) {
+            throw new BadRequestException("Patient Id is required");
+        }
 
         if (!appointmentBookingRepository.existsByPatientId(request.getPatientId())) {
             throw new ResourceNotFoundException(Constants.APPOINTMENT_NOT_FOUND + request.getPatientId());
