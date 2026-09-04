@@ -120,6 +120,14 @@ public class TenantSchemaFilter extends OncePerRequestFilter {
                     claims.getRole(),
                     authorization);
 
+            log.info(
+                    "Tenant routing {} {} schema={} tenantCode={} role={}",
+                    request.getMethod(),
+                    request.getRequestURI(),
+                    schemaName,
+                    tenantCode,
+                    claims.getRole());
+
             filterChain.doFilter(request, response);
         } finally {
             TenantContext.clear();

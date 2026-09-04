@@ -2,7 +2,6 @@ package com.ayurveda.common.tenant;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import javax.sql.DataSource;
 
@@ -35,8 +34,13 @@ public class TenantAwareDataSource extends DelegatingDataSource {
     private void applySearchPath(Connection connection) throws SQLException {
         String schema = TenantContext.getSchemaName();
         String searchPath = TenantSchemaNames.isHospitalSchema(schema) ? schema : "public";
-        try (Statement statement = connection.createStatement()) {
-            statement.execute("SET search_path TO " + searchPath);
+        connection.setSchema(searchPath);
+        if (TenantSchemaNames.isHospitalSchema(schema)) {
+            String current = connection.getSchema();
+            if (current == null || !schema.equalsIgnoreCase(current)) {
+                throw new SQLException(
+                        "Hospital schema '" + schema + "' is not active (current=" + current + ")");
+            }
         }
     }
 

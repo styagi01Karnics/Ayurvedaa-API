@@ -4,6 +4,8 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -17,7 +19,9 @@ import org.springframework.core.Ordered;
 
 import com.ayurveda.common.tenant.JwtClaimParser;
 import com.ayurveda.common.tenant.JwtTenantProperties;
+import com.ayurveda.common.tenant.SchemaMultiTenantConnectionProvider;
 import com.ayurveda.common.tenant.TenantAwareDataSource;
+import com.ayurveda.common.tenant.TenantIdentifierResolver;
 import com.ayurveda.common.tenant.TenantRoutingProperties;
 import com.ayurveda.common.tenant.TenantSchemaFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,12 +51,31 @@ public class TenantRoutingAutoConfiguration {
     }
 
     /**
-     * Clear Hibernate {@code default_schema} so SQL uses PostgreSQL {@code search_path}
-     * (set per request) instead of always qualifying {@code public.*}.
+     * Hibernate SCHEMA multi-tenancy so SQL is bound to {@code hosp_*} (not {@code public.mst_*}).
      */
     @Bean
-    public HibernatePropertiesCustomizer tenantHibernateSchemaCustomizer() {
-        return (Map<String, Object> hibernateProperties) -> hibernateProperties.remove("hibernate.default_schema");
+    public TenantIdentifierResolver tenantIdentifierResolver() {
+        return new TenantIdentifierResolver();
+    }
+
+    @Bean
+    public SchemaMultiTenantConnectionProvider schemaMultiTenantConnectionProvider(DataSource dataSource) {
+        return new SchemaMultiTenantConnectionProvider(dataSource);
+    }
+
+    /**
+     * Clear Hibernate {@code default_schema} so SQL is not frozen as {@code public.*},
+     * and register SCHEMA multi-tenancy.
+     */
+    @Bean
+    public HibernatePropertiesCustomizer tenantHibernateSchemaCustomizer(
+            SchemaMultiTenantConnectionProvider connectionProvider,
+            CurrentTenantIdentifierResolver<String> tenantIdentifierResolver) {
+        return (Map<String, Object> hibernateProperties) -> {
+            hibernateProperties.remove("hibernate.default_schema");
+            hibernateProperties.put(AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER, connectionProvider);
+            hibernateProperties.put(AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, tenantIdentifierResolver);
+        };
     }
 
     /**
