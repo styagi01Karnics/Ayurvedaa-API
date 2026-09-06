@@ -12,6 +12,8 @@ Audit rows are stored in the hospital schema’s `activity_logs` table (PostgreS
 
 Hospital JWT is required on every endpoint. Super Admin tokens (`schemaName: public`) get **403**. Schema comes from the JWT claim — FE does **not** need `X-Tenant-Schema` (that header is optional for service-to-service publishers).
 
+**Super Admin hospital onboard:** auth-service inserts one `Settings` / `CREATED` row directly into the new hospital’s `hosp_*.activity_logs` after successful onboard (and on successful retry-provision). That write does not go through this service’s HTTP API.
+
 ---
 
 ## FE: list / filter (Bearer + hospital schema)

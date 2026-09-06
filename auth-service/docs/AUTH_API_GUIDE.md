@@ -98,7 +98,7 @@ Failure shape (errors):
 | `V004__ops.sql`          | `attendances`, `employee_attendance_master`, `device_attendance_logs`, `appointment_documents`, `activity_logs`, `notifications`                                                                                                                                                                                                                                                                                                                                                                 |
 
 
-Auth platform tables (`tenants`, `auth_users`, `tenant_roles`, …) stay in `public`. Clinical services route via JWT `schemaName` → PostgreSQL `search_path` (see [`docs/TENANT_SCHEMA_WIRING.md`](../../docs/TENANT_SCHEMA_WIRING.md)).
+Auth platform tables (`tenants`, `auth_users`, `tenant_roles`, …) stay in `public`. Clinical services route via JWT `schemaName` → PostgreSQL `search_path` (see [`docs/TENANT_SCHEMA_WIRING.md`](../../docs/TENANT_SCHEMA_WIRING.md)). After successful onboard (and successful retry-provision), auth-service inserts one fail-soft `Settings` / `CREATED` row into the new hospital’s `activity_logs` (Super Admin JWT cannot call activity-log-service with `public` schema).
 
 ---
 

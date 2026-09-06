@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import com.ayurveda.appointment.entity.ConsultationTypeMaster;
 import com.ayurveda.appointment.enums.ConsultationTypeMasterStatus;
 import com.ayurveda.appointment.repository.ConsultationTypeMasterRepository;
+import com.ayurveda.common.tenant.TenantContext;
+import com.ayurveda.common.tenant.TenantSchemaNames;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,11 @@ public class ConsultationTypeMasterSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        String schema = TenantContext.getSchemaName();
+        if (!TenantSchemaNames.isHospitalSchema(schema)) {
+            log.info("Skip consultation type seed outside hospital schema (schema={})", schema);
+            return;
+        }
         seedIfMissing("CONSULTATION");
         seedIfMissing("THERAPY");
     }

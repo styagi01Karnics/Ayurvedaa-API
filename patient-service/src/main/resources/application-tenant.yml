@@ -2,6 +2,11 @@
 # Activated by each clinical service Application main via additional profile "tenant".
 # Keep secrets out of git: override auth.jwt.secret with env JWT_SECRET in real deploys.
 
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+
 ayurveda:
   tenant:
     routing:

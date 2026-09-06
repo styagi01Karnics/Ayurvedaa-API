@@ -1,0 +1,12 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+ayurveda:
+  tenant:
+    routing:
+      enabled: true
+      require-hospital-schema: false
+      skip-path-patterns:
+        - /api/v1/notifications/email
