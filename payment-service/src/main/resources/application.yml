@@ -1,0 +1,88 @@
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        max.block.ms: 3000
+        request.timeout.ms: 3000
+        retries: 1
+        acks: 1
+    admin:
+      fail-fast: false
+    listener:
+      missing-topics-fatal: false
+
+server:
+  port: 8112
+
+ayurveda:
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}
+  tenant:
+    routing:
+      enabled: true
+      require-hospital-schema: true
+      skip-path-patterns:
+        - /api/v1/payments/payu/**
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}
+
+# Set PAYU_MERCHANT_KEY and PAYU_MERCHANT_SALT from the PayU dashboard (test or live).
+payu:
+  merchant-key: ${PAYU_MERCHANT_KEY:}
+  merchant-salt: ${PAYU_MERCHANT_SALT:}
+  payment-url: ${PAYU_PAYMENT_URL:https://test.payu.in/_payment}
+  success-url: ${PAYU_SUCCESS_URL:http://localhost:8112/api/v1/payments/payu/success}
+  failure-url: ${PAYU_FAILURE_URL:http://localhost:8112/api/v1/payments/payu/failure}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+  show-actuator: false
+
+logging:
+  level:
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    com.ayurveda.payment: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: payment-service
+  prometheus:
+    metrics:
+      export:
+        enabled: true

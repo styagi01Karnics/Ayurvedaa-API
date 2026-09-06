@@ -1,15 +1,15 @@
-package com.ayurveda.notification;
+package com.ayurveda.payment;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
-@EnableKafka
-public class NotificationServiceApplication {
+@ConfigurationPropertiesScan
+public class PaymentServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication app = new SpringApplication(NotificationServiceApplication.class);
+        SpringApplication app = new SpringApplication(PaymentServiceApplication.class);
         app.setAdditionalProfiles("tenant");
         app.run(args);
     }

@@ -1,0 +1,30 @@
+-- PayU payment transactions (payment-service).
+
+CREATE TABLE IF NOT EXISTS ${schema}.payments (
+    id                     UUID PRIMARY KEY,
+    created_at             TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    updated_at             TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    is_deleted             BOOLEAN DEFAULT FALSE,
+    payment_code           VARCHAR(50)  NOT NULL UNIQUE,
+    payu_txn_id            VARCHAR(25)  NOT NULL UNIQUE,
+    amount                 NUMERIC(12, 2) NOT NULL,
+    product_info           VARCHAR(100) NOT NULL,
+    first_name             VARCHAR(100) NOT NULL,
+    email                  VARCHAR(150) NOT NULL,
+    phone                  VARCHAR(20),
+    invoice_id             UUID,
+    patient_id             UUID,
+    initiated_by_user_id   UUID,
+    gateway                VARCHAR(20)  NOT NULL,
+    status                 VARCHAR(20)  NOT NULL,
+    payu_status            VARCHAR(50),
+    mihpayid               VARCHAR(100),
+    payment_mode           VARCHAR(50),
+    error_message          VARCHAR(500),
+    request_hash           VARCHAR(500),
+    schema_name            VARCHAR(63),
+    tenant_code            VARCHAR(50),
+    frontend_success_url   VARCHAR(500),
+    frontend_failure_url   VARCHAR(500),
+    raw_callback           TEXT
+);

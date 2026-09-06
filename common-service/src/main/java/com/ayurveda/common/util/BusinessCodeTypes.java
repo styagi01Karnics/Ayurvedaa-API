@@ -13,6 +13,7 @@ public final class BusinessCodeTypes {
     public static final String TREATMENT_CATEGORY = "TC";
     public static final String INVOICE = "INV";
     public static final String ATTENDANCE = "ATT";
+    public static final String PAYMENT = "PAY";
 
     private BusinessCodeTypes() {
     }

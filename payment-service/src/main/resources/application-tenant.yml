@@ -1,0 +1,16 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+ayurveda:
+  tenant:
+    routing:
+      enabled: true
+      require-hospital-schema: true
+      skip-path-patterns:
+        - /api/v1/payments/payu/**
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}
