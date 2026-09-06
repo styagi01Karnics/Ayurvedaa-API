@@ -191,6 +191,11 @@ pipeline {
                         -t ${IMAGE_PREFIX}-auth-service:${BUILD_NUMBER} \
                         ./auth-service
 
+                    
+                    docker build \
+                        -t ${IMAGE_PREFIX}-payment-service:${BUILD_NUMBER} \
+                        ./payment-service
+
 
                     echo ""
                     echo "=========================================="
@@ -249,6 +254,8 @@ pipeline {
                         docker push ${IMAGE_PREFIX}-notification-service:${BUILD_NUMBER}
 
                         docker push ${IMAGE_PREFIX}-auth-service:${BUILD_NUMBER}
+
+                        docker push ${IMAGE_PREFIX}-payment-service:${BUILD_NUMBER}
 
 
                         echo ""
@@ -507,6 +514,7 @@ medicine-service
 billing-service
 notification-service
 auth-service
+payment-service
 "
 
 
@@ -655,7 +663,8 @@ REMOTE_SCRIPT
                         medicine-service \
                         billing-service \
                         notification-service \
-                        auth-service
+                        auth-service \
+                        payment-service
                     do
 
                         IMAGE="${IMAGE_PREFIX}-${SERVICE}"
