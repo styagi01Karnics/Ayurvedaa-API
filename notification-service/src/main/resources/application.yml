@@ -7,7 +7,14 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      connection-init-sql: SET search_path TO public
+      pool-name: notification-service
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 60000
+      max-lifetime: 1800000
+      keepalive-time: 30000
+      connection-timeout: 10000
+      leak-detection-threshold: 30000
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,10 +22,41 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        default_schema: public
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: true
+    listener:
+      missing-topics-fatal: false
 
 server:
   port: 8110
+
+ayurveda:
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}
+  tenant:
+    routing:
+      enabled: true
+      require-hospital-schema: false
+      skip-path-patterns:
+        - /api/v1/notifications/email
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}
+
+# Optional SMTP — when host is unset, EmailServiceImpl logs the message instead of sending.
+# Do not commit real SMTP passwords. Prefer env vars in deployed environments:
+#   SPRING_MAIL_HOST / SPRING_MAIL_USERNAME / SPRING_MAIL_PASSWORD
+notification:
+  mail:
+    enabled: true
+    from: ${NOTIFICATION_MAIL_FROM:noreply@ayurvedaa.local}
 
 springdoc:
   api-docs:

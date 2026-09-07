@@ -2,12 +2,19 @@ spring:
   application:
     name: attendance-service
   datasource:
-    url: jdbc:postgresql://45.195.229.15:5432/ayurveda_db?currentSchema=public
-    username: ayurveda
-    password: "S@b8at1zeauyrveda"
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      connection-init-sql: SET search_path TO public
+      pool-name: attendance-service
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 60000
+      max-lifetime: 1800000
+      keepalive-time: 30000
+      connection-timeout: 10000
+      leak-detection-threshold: 30000
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,10 +22,19 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        default_schema: public
 
 server:
   port: 8106
+
+ayurveda:
+  tenant:
+    routing:
+      enabled: true
+      require-hospital-schema: true
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}
 
 # eSSL / ZKTeco ADMS device settings.
 # Leave allowed-serial-numbers empty to accept any device SN during setup.

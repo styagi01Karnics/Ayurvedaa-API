@@ -6,6 +6,15 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: payment-service
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 60000
+      max-lifetime: 1800000
+      keepalive-time: 30000
+      connection-timeout: 10000
+      leak-detection-threshold: 30000
   jpa:
     hibernate:
       ddl-auto: update
@@ -31,15 +40,23 @@ spring:
 server:
   port: 8112
 
+services:
+  notification:
+    url: ${NOTIFICATION_SERVICE_URL:http://45.195.229.15:8110}
+    enabled: ${NOTIFICATION_SERVICE_ENABLED:true}
+
 ayurveda:
   kafka:
     enabled: ${KAFKA_ENABLED:true}
+  payment:
+    pay-page-base-url: ${PAY_PAGE_BASE_URL:http://localhost:5173}
   tenant:
     routing:
       enabled: true
       require-hospital-schema: true
       skip-path-patterns:
         - /api/v1/payments/payu/**
+        - /api/v1/payments/public/**
 
 auth:
   jwt:
@@ -50,8 +67,8 @@ payu:
   merchant-key: ${PAYU_MERCHANT_KEY:}
   merchant-salt: ${PAYU_MERCHANT_SALT:}
   payment-url: ${PAYU_PAYMENT_URL:https://test.payu.in/_payment}
-  success-url: ${PAYU_SUCCESS_URL:http://localhost:8112/api/v1/payments/payu/success}
-  failure-url: ${PAYU_FAILURE_URL:http://localhost:8112/api/v1/payments/payu/failure}
+  success-url: ${PAYU_SUCCESS_URL:http://45.195.229.15:8112/api/v1/payments/payu/success}
+  failure-url: ${PAYU_FAILURE_URL:http://45.195.229.15:8112/api/v1/payments/payu/failure}
 
 springdoc:
   api-docs:

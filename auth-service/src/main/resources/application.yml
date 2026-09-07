@@ -7,9 +7,18 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
+      pool-name: auth-service
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 60000
+      max-lifetime: 1800000
+      keepalive-time: 30000
+      connection-timeout: 10000
+      leak-detection-threshold: 30000
       connection-init-sql: SET search_path TO public
   jpa:
     hibernate:
+      # Never use "create" — it drops public auth tables on every restart.
       ddl-auto: update
     show-sql: true
     properties:
@@ -23,6 +32,9 @@ server:
 services:
   activity-log:
     url: http://45.195.229.15:8107
+    enabled: true
+  notification:
+    url: http://45.195.229.15:8110
     enabled: true
 
 auth:
