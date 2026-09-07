@@ -88,8 +88,13 @@ public class InvoiceController {
     }
 
     @Operation(
-            summary = "Record part payment",
-            description = "Adds a payment toward the invoice. Status becomes ONGOING until fully paid, then COMPLETED.")
+            summary = "Record cash or part payment",
+            description = """
+                    Adds a payment toward the invoice.
+                    Cash (full left amount, paymentMethod=CASH) marks the invoice COMPLETED / paid.
+                    A smaller amount leaves status ONGOING so staff can share a payment link for the balance.
+                    PayU success is applied automatically from payment-service.
+                    """)
     @PostMapping("/{invoiceId}/payments")
     public ResponseEntity<ApiResponse<InvoiceResponse>> recordPartPayment(
             @PathVariable UUID invoiceId,

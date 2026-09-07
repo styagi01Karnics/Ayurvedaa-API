@@ -10,6 +10,7 @@ ayurveda:
       require-hospital-schema: true
       skip-path-patterns:
         - /api/v1/payments/payu/**
+        - /api/v1/payments/public/**
 
 auth:
   jwt:

@@ -19,16 +19,22 @@ public class TenantAwareDataSource extends DelegatingDataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
-        Connection connection = super.getConnection();
-        applySearchPath(connection);
-        return connection;
+        return checkoutAndApplySchema(super.getConnection());
     }
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
-        Connection connection = super.getConnection(username, password);
-        applySearchPath(connection);
-        return connection;
+        return checkoutAndApplySchema(super.getConnection(username, password));
+    }
+
+    private Connection checkoutAndApplySchema(Connection connection) throws SQLException {
+        try {
+            applySearchPath(connection);
+            return connection;
+        } catch (SQLException | RuntimeException ex) {
+            closeQuietly(connection);
+            throw ex;
+        }
     }
 
     private void applySearchPath(Connection connection) throws SQLException {
@@ -41,6 +47,14 @@ public class TenantAwareDataSource extends DelegatingDataSource {
                 throw new SQLException(
                         "Hospital schema '" + schema + "' is not active (current=" + current + ")");
             }
+        }
+    }
+
+    private static void closeQuietly(Connection connection) {
+        try {
+            connection.close();
+        } catch (SQLException ignored) {
+            // returning the connection to Hikari is the goal; the original error is rethrown
         }
     }
 

@@ -33,8 +33,17 @@ public class SchemaMultiTenantConnectionProvider implements MultiTenantConnectio
     @Override
     public Connection getConnection(String tenantIdentifier) throws SQLException {
         Connection connection = getAnyConnection();
-        applySchema(connection, tenantIdentifier);
-        return connection;
+        try {
+            applySchema(connection, tenantIdentifier);
+            return connection;
+        } catch (SQLException | RuntimeException ex) {
+            try {
+                connection.close();
+            } catch (SQLException ignored) {
+                // original failure is rethrown
+            }
+            throw ex;
+        }
     }
 
     @Override

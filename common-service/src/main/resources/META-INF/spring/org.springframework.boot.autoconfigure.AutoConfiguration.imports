@@ -1,3 +1,4 @@
 com.ayurveda.common.config.CommonAutoConfiguration
+com.ayurveda.common.config.HikariPoolAutoConfiguration
 com.ayurveda.common.config.OpenApiAutoConfiguration
 com.ayurveda.common.config.TenantRoutingAutoConfiguration

@@ -11,6 +11,7 @@ import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.payment.constant.PaymentMessages;
 import com.ayurveda.payment.entity.PaymentTransaction;
 import com.ayurveda.payment.enums.PaymentStatus;
+import com.ayurveda.payment.repository.PaymentLinkRepository;
 import com.ayurveda.payment.repository.PaymentRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PayuCallbackProcessor {
 
     private final PaymentRepository paymentRepository;
+    private final PaymentLinkRepository paymentLinkRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -41,6 +43,12 @@ public class PayuCallbackProcessor {
             payment.setPaymentMode(value(params, "mode"));
             payment.setErrorMessage(firstNonBlank(value(params, "error_Message"), value(params, "error")));
             payment.setRawCallback(toJson(params));
+        }
+
+        if (mapped == PaymentStatus.SUCCESS && payment.getInvoiceId() != null) {
+            paymentLinkRepository
+                    .findByInvoiceIdAndStatusAndDeletedFalse(payment.getInvoiceId(), "OPEN")
+                    .forEach(link -> link.setStatus("PAID"));
         }
 
         log.info(
