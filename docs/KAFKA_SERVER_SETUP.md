@@ -6,6 +6,29 @@ Local smoke (Windows + Docker Desktop) already verified this path with `KAFKA_BO
 
 ---
 
+## Why payment links fail with "Unable to load invoice"
+
+`payment-service` loads the invoice from **billing-service** over Feign (`services.billing.url`).
+
+If that URL is `http://127.0.0.1:8109` (old default), the call stays inside the payment container and fails with:
+
+`Unable to load invoice from billing-service.`
+
+Compose must set Docker DNS (already in repo `docker-compose.yml`):
+
+```yaml
+BILLING_SERVICE_URL: http://ayurvedaa-api-billing-service:8109
+NOTIFICATION_SERVICE_URL: http://ayurvedaa-api-notification-service:8110
+```
+
+After pulling this change, recreate payment:
+
+```bash
+IMAGE_TAG=<build> docker compose --env-file .env up -d --force-recreate payment-service
+```
+
+---
+
 ## Why Kafka is required
 
 | Step | Service | What happens |
