@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.therapist.client.AppointmentServiceClient;
@@ -45,6 +46,9 @@ class TherapistServiceImplTest {
 
     @Mock
     private AppointmentServiceClient appointmentServiceClient;
+
+    @Mock
+    private ActivityLogPublisher activityLogPublisher;
 
     @InjectMocks
     private TherapistServiceImpl therapistService;
@@ -110,22 +114,25 @@ class TherapistServiceImplTest {
 
     @Test
     void getAllTherapists_resolvesTherapyNames() {
-        when(therapistRepository.findAllByDeletedFalse()).thenReturn(List.of(therapist));
+        when(therapistRepository.findAllByDeletedFalse(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(therapist)));
         when(appointmentServiceClient.getAllTherapies())
                 .thenReturn(ApiResponse.success(List.of(TherapyMasterClientResponse.builder()
                         .id(therapyId)
                         .name("Kayakalpa")
                         .build())));
 
-        ApiResponse<List<TherapistResponse>> response = therapistService.getAllTherapists();
+        ApiResponse<com.ayurveda.common.dto.PagedResponse<TherapistResponse>> response =
+                therapistService.getAllTherapists(0, 20);
 
-        assertEquals(1, response.getData().size());
-        assertEquals("Kayakalpa", response.getData().get(0).getAssignedTherapies().get(0).getName());
+        assertEquals(1, response.getData().getContent().size());
+        assertEquals("Kayakalpa", response.getData().getContent().get(0).getAssignedTherapies().get(0).getName());
     }
 
     @Test
     void getAllTherapists_fallsBackToGetByIdWhenBulkFails() {
-        when(therapistRepository.findAllByDeletedFalse()).thenReturn(List.of(therapist));
+        when(therapistRepository.findAllByDeletedFalse(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(therapist)));
         when(appointmentServiceClient.getAllTherapies()).thenThrow(new RuntimeException("down"));
         when(appointmentServiceClient.getTherapyById(therapyId))
                 .thenReturn(ApiResponse.success(TherapyMasterClientResponse.builder()
@@ -133,9 +140,10 @@ class TherapistServiceImplTest {
                         .name("Podikizhi")
                         .build()));
 
-        ApiResponse<List<TherapistResponse>> response = therapistService.getAllTherapists();
+        ApiResponse<com.ayurveda.common.dto.PagedResponse<TherapistResponse>> response =
+                therapistService.getAllTherapists(0, 20);
 
-        assertEquals("Podikizhi", response.getData().get(0).getAssignedTherapies().get(0).getName());
+        assertEquals("Podikizhi", response.getData().getContent().get(0).getAssignedTherapies().get(0).getName());
     }
 
     @Test

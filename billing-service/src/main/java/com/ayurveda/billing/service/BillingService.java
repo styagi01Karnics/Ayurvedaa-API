@@ -1,6 +1,5 @@
 package com.ayurveda.billing.service;
 
-import java.util.List;
 import java.util.UUID;
 
 import com.ayurveda.billing.dto.request.CreateBillingRequest;
@@ -10,6 +9,7 @@ import com.ayurveda.billing.dto.response.BillingResponse;
 import com.ayurveda.billing.dto.response.InvoiceResponse;
 import com.ayurveda.billing.enums.BillingStatus;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 
 public interface BillingService {
 
@@ -18,9 +18,11 @@ public interface BillingService {
 
     ApiResponse<BillingResponse> getBillingById(UUID billingId);
 
-    ApiResponse<List<BillingListResponse>> getBillings(BillingStatus status);
+    ApiResponse<PagedResponse<BillingListResponse>> getBillings(
+            BillingStatus status, int page, int size);
 
-    ApiResponse<List<BillingResponse>> getBillingsByPatientId(UUID patientId);
+    ApiResponse<PagedResponse<BillingResponse>> getBillingsByPatientId(
+            UUID patientId, int page, int size);
 
     /**
      * Receptionist creates invoice from PENDING billing.

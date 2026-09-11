@@ -1,5 +1,6 @@
 package com.ayurveda.payment.service.impl;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.BadRequestException;
@@ -17,9 +19,11 @@ import com.ayurveda.common.tenant.TenantContext;
 import com.ayurveda.common.tenant.TenantSchemaNames;
 import com.ayurveda.common.util.BusinessCodeGenerator;
 import com.ayurveda.common.util.BusinessCodeTypes;
+import com.ayurveda.payment.config.PayuCredentials;
 import com.ayurveda.payment.config.PayuProperties;
 import com.ayurveda.payment.constant.PaymentMessages;
 import com.ayurveda.payment.dto.request.InitiatePaymentRequest;
+import com.ayurveda.payment.dto.request.RefundPaymentRequest;
 import com.ayurveda.payment.dto.response.PaymentResponse;
 import com.ayurveda.payment.entity.PaymentTransaction;
 import com.ayurveda.payment.enums.PaymentGateway;
@@ -27,8 +31,15 @@ import com.ayurveda.payment.enums.PaymentStatus;
 import com.ayurveda.payment.kafka.PaymentEventPublisher;
 import com.ayurveda.payment.mapper.PaymentMapper;
 import com.ayurveda.payment.repository.PaymentRepository;
+import com.ayurveda.payment.service.PaymentFailureEmailService;
+import com.ayurveda.payment.service.PaymentSuccessEmailService;
+import com.ayurveda.payment.service.PaymentRefundEmailService;
 import com.ayurveda.payment.service.PaymentService;
+import com.ayurveda.payment.service.PayuDynamicQrClient;
+import com.ayurveda.payment.service.PayuGatewayResolver;
 import com.ayurveda.payment.service.PayuHashService;
+import com.ayurveda.payment.service.PayuRefundClient;
+import com.ayurveda.payment.service.UpiQrInitResult;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,15 +53,21 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMapper paymentMapper;
     private final PayuHashService payuHashService;
     private final PayuProperties payuProperties;
+    private final PayuGatewayResolver payuGatewayResolver;
     private final PayuCallbackProcessor payuCallbackProcessor;
     private final ObjectProvider<PaymentEventPublisher> paymentEventPublisher;
+    private final PaymentFailureEmailService paymentFailureEmailService;
+    private final PaymentSuccessEmailService paymentSuccessEmailService;
+    private final PayuRefundClient payuRefundClient;
+    private final PaymentRefundEmailService paymentRefundEmailService;
+    private final PayuDynamicQrClient payuDynamicQrClient;
 
     @Override
     @Transactional
     public ApiResponse<PaymentResponse> initiate(InitiatePaymentRequest request) {
-        if (!payuProperties.isConfigured()) {
-            throw new BadRequestException(PaymentMessages.PAYU_NOT_CONFIGURED);
-        }
+        String schemaName = TenantContext.getSchemaName();
+        String tenantCode = TenantContext.getTenantCode();
+        PayuCredentials payu = payuGatewayResolver.requireForTenant(tenantCode);
 
         String productInfo = blankToDefault(request.getProductInfo(), "Hospital payment");
         String paymentCode = BusinessCodeGenerator.next(
@@ -59,8 +76,6 @@ public class PaymentServiceImpl implements PaymentService {
         String txnId = toPayuTxnId(paymentCode);
         String amount = PayuHashService.formatAmount(request.getAmount());
 
-        String schemaName = TenantContext.getSchemaName();
-        String tenantCode = TenantContext.getTenantCode();
         String tenantId = TenantContext.getTenantId() != null ? TenantContext.getTenantId().toString() : "";
         String invoiceUdf = request.getInvoiceId() != null ? request.getInvoiceId().toString() : "";
 
@@ -87,6 +102,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         String udf5 = saved.getId().toString();
         String hash = payuHashService.requestHash(
+                payu.getMerchantKey(),
+                payu.getMerchantSalt(),
                 txnId,
                 amount,
                 productInfo,
@@ -100,7 +117,7 @@ public class PaymentServiceImpl implements PaymentService {
         saved.setRequestHash(hash);
 
         Map<String, String> payuParams = new LinkedHashMap<>();
-        payuParams.put("key", payuProperties.getMerchantKey());
+        payuParams.put("key", payu.getMerchantKey());
         payuParams.put("txnid", txnId);
         payuParams.put("amount", amount);
         payuParams.put("productinfo", productInfo);
@@ -116,10 +133,66 @@ public class PaymentServiceImpl implements PaymentService {
         payuParams.put("udf5", udf5);
         payuParams.put("hash", hash);
 
-        log.info("PayU payment initiated. paymentId={}, txnid={}, amount={}", saved.getId(), txnId, amount);
+        log.info(
+                "PayU payment initiated. paymentId={}, txnid={}, amount={}, tenant={}, legacyFallback={}",
+                saved.getId(),
+                txnId,
+                amount,
+                tenantCode,
+                payu.isLegacyFallback());
         return ApiResponse.success(
                 PaymentMessages.PAYMENT_INITIATED,
-                paymentMapper.toResponse(saved, payuProperties.getPaymentUrl(), payuParams));
+                paymentMapper.toResponse(saved, payu.resolvedPaymentUrl(), payuParams));
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<UpiQrInitResult> initiateUpiQr(InitiatePaymentRequest request, String clientIp) {
+        ApiResponse<PaymentResponse> initiated = initiate(request);
+        PaymentResponse payment = initiated.getData();
+        PaymentTransaction saved = requireById(payment.getId());
+        PayuCredentials payu = payuGatewayResolver.requireForTenant(TenantContext.getTenantCode());
+
+        String schemaName = blankToEmpty(TenantContext.getSchemaName());
+        String tenantCode = blankToEmpty(TenantContext.getTenantCode());
+        String tenantId = TenantContext.getTenantId() != null ? TenantContext.getTenantId().toString() : "";
+        String invoiceUdf = request.getInvoiceId() != null ? request.getInvoiceId().toString() : "";
+        String udf5 = saved.getId().toString();
+
+        PayuDynamicQrClient.Result qr = payuDynamicQrClient.createUpiQr(
+                payu,
+                saved.getPayuTxnId(),
+                saved.getAmount(),
+                saved.getProductInfo(),
+                saved.getFirstName(),
+                saved.getEmail(),
+                saved.getPhone(),
+                schemaName,
+                tenantCode,
+                invoiceUdf,
+                tenantId,
+                udf5,
+                saved.getRequestHash(),
+                clientIp,
+                "Ayurvedaa-POS-QR");
+
+        saved.setStatus(PaymentStatus.PENDING);
+        saved.setPaymentMode("UPI_QR");
+        paymentRepository.save(saved);
+
+        log.info(
+                "PayU UPI QR created. paymentId={} txnid={} payuPaymentId={}",
+                saved.getId(),
+                saved.getPayuTxnId(),
+                qr.payuPaymentId());
+
+        return ApiResponse.success(
+                PaymentMessages.UPI_QR_CREATED,
+                UpiQrInitResult.builder()
+                        .payment(paymentMapper.toResponse(saved))
+                        .qrPayload(qr.qrString())
+                        .payuPaymentId(qr.payuPaymentId())
+                        .build());
     }
 
     @Override
@@ -151,15 +224,79 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public String handlePayuCallback(Map<String, String> params, boolean successEndpoint) {
-        if (!payuHashService.verifyResponse(params)) {
-            log.warn("PayU callback hash mismatch. txnid={}", value(params, "txnid"));
-            return htmlPage("Payment verification failed", PaymentMessages.INVALID_PAYU_HASH, false);
+    @Transactional
+    public ApiResponse<PaymentResponse> refund(UUID paymentId, RefundPaymentRequest request) {
+        PaymentTransaction payment = requireById(paymentId);
+        PaymentStatus status = payment.getStatus();
+        if (status != PaymentStatus.SUCCESS && status != PaymentStatus.PARTIALLY_REFUNDED) {
+            throw new BadRequestException(PaymentMessages.REFUND_NOT_ALLOWED);
+        }
+        if (!StringUtils.hasText(payment.getMihpayid())) {
+            throw new BadRequestException(PaymentMessages.REFUND_REQUIRES_MIHPAYID);
         }
 
+        BigDecimal alreadyRefunded = payment.getRefundedAmount() != null
+                ? payment.getRefundedAmount()
+                : BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal remaining = payment.getAmount()
+                .subtract(alreadyRefunded)
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(PaymentMessages.NOTHING_TO_REFUND);
+        }
+
+        BigDecimal refundAmount = request != null && request.getAmount() != null
+                ? request.getAmount().setScale(2, java.math.RoundingMode.HALF_UP)
+                : remaining;
+        if (refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(PaymentMessages.NOTHING_TO_REFUND);
+        }
+        if (refundAmount.compareTo(remaining) > 0) {
+            throw new BadRequestException(
+                    PaymentMessages.REFUND_EXCEEDS_AMOUNT + remaining.toPlainString());
+        }
+
+        PayuCredentials payu = payuGatewayResolver.requireForTenant(payment.getTenantCode());
+        String refundToken = UUID.randomUUID().toString().replace("-", "");
+        PayuRefundClient.Result result = payuRefundClient.refund(
+                payu, payment.getMihpayid(), refundToken, refundAmount);
+
+        BigDecimal newRefunded = alreadyRefunded.add(refundAmount);
+        payment.setRefundedAmount(newRefunded);
+        payment.setLastRefundToken(refundToken);
+        payment.setLastRefundRequestId(StringUtils.hasText(result.requestId())
+                ? result.requestId()
+                : refundToken);
+        payment.setStatus(newRefunded.compareTo(payment.getAmount()) >= 0
+                ? PaymentStatus.REFUNDED
+                : PaymentStatus.PARTIALLY_REFUNDED);
+
+        PaymentTransaction saved = paymentRepository.save(payment);
+
+        PaymentEvent event = toEvent(saved);
+        event.setAmount(refundAmount);
+        event.setRefundRequestId(saved.getLastRefundRequestId());
+        paymentEventPublisher.ifAvailable(publisher -> publisher.publish(event));
+
+        paymentRefundEmailService.notifyRefund(
+                saved,
+                refundAmount,
+                request != null ? request.getReason() : null);
+
+        return ApiResponse.success(PaymentMessages.REFUND_INITIATED, paymentMapper.toResponse(saved));
+    }
+
+    @Override
+    public String handlePayuCallback(Map<String, String> params, boolean successEndpoint) {
         String schemaName = value(params, "udf1");
         String tenantCode = value(params, "udf2");
         String tenantIdRaw = value(params, "udf4");
+
+        PayuCredentials payu = payuGatewayResolver.findForTenant(tenantCode).orElse(null);
+        if (payu == null || !payuHashService.verifyResponse(payu.getMerchantSalt(), params)) {
+            log.warn("PayU callback hash mismatch. txnid={}", value(params, "txnid"));
+            return htmlPage("Payment verification failed", PaymentMessages.INVALID_PAYU_HASH, false);
+        }
         if (!TenantSchemaNames.isHospitalSchema(schemaName) || tenantCode.isBlank()) {
             log.warn("PayU callback missing hospital context. txnid={}", value(params, "txnid"));
             return htmlPage("Payment error", PaymentMessages.INVALID_CALLBACK_TENANT, false);
@@ -178,6 +315,10 @@ public class PaymentServiceImpl implements PaymentService {
         try {
             PayuCallbackProcessor.CallbackResult result = payuCallbackProcessor.process(params, successEndpoint);
             paymentEventPublisher.ifAvailable(publisher -> publisher.publish(toEvent(result.payment())));
+            paymentFailureEmailService.notifyIfNeeded(
+                    result.payment(), result.previousStatus(), result.status());
+            paymentSuccessEmailService.notifyIfNeeded(
+                    result.payment(), result.previousStatus(), result.status());
             if (result.redirectUrl() != null) {
                 return "REDIRECT:" + result.redirectUrl();
             }

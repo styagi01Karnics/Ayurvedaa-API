@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.medicine.dto.request.CreateMedicineRequest;
 import com.ayurveda.medicine.dto.request.CreateMedicineRequestList;
 import com.ayurveda.medicine.dto.request.StockAdjustRequest;
@@ -64,15 +65,18 @@ public class MedicineController {
     }
 
     @Operation(
-            summary = "List medicines",
-            description = "Supports search by medicine name and filters for category and stock status.")
+            summary = "List medicines (paginated)",
+            description = "Supports search by medicine name and filters for category and stock status. page/size supported.")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<MedicineResponse>>> getMedicines(
+    public ResponseEntity<ApiResponse<PagedResponse<MedicineResponse>>> getMedicines(
             @RequestParam(required = false) String medicineName,
             @RequestParam(required = false) MedicineCategory category,
-            @RequestParam(required = false) MedicineStockStatus stockStatus) {
+            @RequestParam(required = false) MedicineStockStatus stockStatus,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(medicineService.getMedicines(medicineName, category, stockStatus));
+        return ResponseEntity.ok(
+                medicineService.getMedicines(medicineName, category, stockStatus, page, size));
     }
 
     @Operation(summary = "Total stock summary by category")
@@ -89,10 +93,12 @@ public class MedicineController {
         return ResponseEntity.ok(medicineService.getStockCountByCategory(category));
     }
 
-    @Operation(summary = "Get low stock medicine details")
+    @Operation(summary = "Get low stock medicine details (paginated)")
     @GetMapping("/low-stock")
-    public ResponseEntity<ApiResponse<List<MedicineResponse>>> getLowStockMedicines() {
-        return ResponseEntity.ok(medicineService.getLowStockMedicines());
+    public ResponseEntity<ApiResponse<PagedResponse<MedicineResponse>>> getLowStockMedicines(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(medicineService.getLowStockMedicines(page, size));
     }
 
     @Operation(summary = "List medicine categories (dropdown)")

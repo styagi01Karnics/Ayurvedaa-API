@@ -17,11 +17,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.billing.dto.request.CreateInvoiceRequest;
 import com.ayurveda.billing.dto.request.PartPaymentRequest;
+import com.ayurveda.billing.dto.request.RefundInvoiceRequest;
 import com.ayurveda.billing.dto.response.InvoiceListResponse;
 import com.ayurveda.billing.dto.response.InvoiceResponse;
 import com.ayurveda.billing.enums.InvoiceStatus;
 import com.ayurveda.billing.service.InvoiceService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,25 +62,29 @@ public class InvoiceController {
     }
 
     @Operation(
-            summary = "List invoices",
-            description = "Search by patient ID / code and filter by payment status (UNPAID, ONGOING, COMPLETED).")
+            summary = "List invoices (paginated)",
+            description = "Search by patient ID / code and filter by payment status (UNPAID, ONGOING, COMPLETED). page/size supported.")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<InvoiceListResponse>>> getInvoices(
+    public ResponseEntity<ApiResponse<PagedResponse<InvoiceListResponse>>> getInvoices(
             @RequestParam(required = false) String patientId,
-            @RequestParam(required = false) InvoiceStatus status) {
+            @RequestParam(required = false) InvoiceStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(invoiceService.getInvoices(patientId, status));
+        return ResponseEntity.ok(invoiceService.getInvoices(patientId, status, page, size));
     }
 
     @Operation(
-            summary = "List invoices by patient id",
-            description = "Fetches all invoices for the given patient UUID. Optional status filter: UNPAID, ONGOING, COMPLETED.")
+            summary = "List invoices by patient id (paginated)",
+            description = "Fetches invoices for the given patient UUID. Optional status filter: UNPAID, ONGOING, COMPLETED.")
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<ApiResponse<List<InvoiceListResponse>>> getInvoicesByPatientId(
+    public ResponseEntity<ApiResponse<PagedResponse<InvoiceListResponse>>> getInvoicesByPatientId(
             @PathVariable UUID patientId,
-            @RequestParam(required = false) InvoiceStatus status) {
+            @RequestParam(required = false) InvoiceStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(invoiceService.getInvoicesByPatientId(patientId, status));
+        return ResponseEntity.ok(invoiceService.getInvoicesByPatientId(patientId, status, page, size));
     }
 
     @Operation(summary = "Get invoice by id")
@@ -90,10 +96,11 @@ public class InvoiceController {
     @Operation(
             summary = "Record cash or part payment",
             description = """
-                    Adds a payment toward the invoice.
-                    Cash (full left amount, paymentMethod=CASH) marks the invoice COMPLETED / paid.
-                    A smaller amount leaves status ONGOING so staff can share a payment link for the balance.
-                    PayU success is applied automatically from payment-service.
+                    Adds an in-hand cash payment toward the invoice.
+                    Cash (paymentMethod=CASH; omit amount or send full left) marks the invoice COMPLETED.
+                    A smaller cash amount leaves status ONGOING — then use payment-service for Online/QR balance.
+                    ONLINE and QR are not accepted here; create a PayU payment link (email or shop qrPayload).
+                    PayU success is applied automatically from payment-service (paymentMethod=PAYU).
                     """)
     @PostMapping("/{invoiceId}/payments")
     public ResponseEntity<ApiResponse<InvoiceResponse>> recordPartPayment(
@@ -101,6 +108,23 @@ public class InvoiceController {
             @Valid @RequestBody PartPaymentRequest request) {
 
         return ResponseEntity.ok(invoiceService.recordPartPayment(invoiceId, request));
+    }
+
+    @Operation(
+            summary = "Record cash refund",
+            description = """
+                    Returns cash in-hand to the patient and reduces invoice paidAmount.
+                    Omit amount to refund the full paid balance. Recalculates leftAmount and status
+                    (COMPLETED → PARTIAL / UNPAID). Optional patientEmail sends a refund confirmation
+                    via the hospital mailbox. For Online/QR PayU refunds use payment-service
+                    POST /api/v1/payments/{paymentId}/refund.
+                    """)
+    @PostMapping("/{invoiceId}/refunds")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> recordCashRefund(
+            @PathVariable UUID invoiceId,
+            @Valid @RequestBody RefundInvoiceRequest request) {
+
+        return ResponseEntity.ok(invoiceService.recordCashRefund(invoiceId, request));
     }
 
     @Operation(summary = "Soft delete invoice")

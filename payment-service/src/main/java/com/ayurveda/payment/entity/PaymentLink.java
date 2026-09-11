@@ -62,6 +62,14 @@ public class PaymentLink extends BaseEntity {
     @Column(length = 20)
     private String status;
 
+    /** PayU UPI Dynamic QR payload ({@code upi://pay?...&am=...}). Null when link-only. */
+    @Column(columnDefinition = "TEXT")
+    private String upiQrPayload;
+
+    /** PayU txnid used for the UPI QR (for status / callback matching). */
+    @Column(length = 25)
+    private String payuTxnId;
+
     @PrePersist
     void prePersist() {
         if (getDeleted() == null) {

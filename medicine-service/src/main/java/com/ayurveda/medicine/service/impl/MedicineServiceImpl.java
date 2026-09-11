@@ -12,8 +12,10 @@ import org.springframework.util.StringUtils;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.util.PageRequests;
 import com.ayurveda.medicine.constant.MedicineMessages;
 import com.ayurveda.medicine.dto.request.CreateMedicineRequest;
 import com.ayurveda.medicine.dto.request.StockAdjustRequest;
@@ -106,11 +108,15 @@ public class MedicineServiceImpl implements MedicineService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<MedicineResponse>> getMedicines(
-            String medicineName, MedicineCategory category, MedicineStockStatus stockStatus) {
+    public ApiResponse<PagedResponse<MedicineResponse>> getMedicines(
+            String medicineName,
+            MedicineCategory category,
+            MedicineStockStatus stockStatus,
+            int page,
+            int size) {
 
-        log.info("Fetching medicines. Name: {}, Category: {}, StockStatus: {}",
-                medicineName, category, stockStatus);
+        log.info("Fetching medicines. Name: {}, Category: {}, StockStatus: {}, page={}, size={}",
+                medicineName, category, stockStatus, page, size);
 
         String nameFilter = StringUtils.hasText(medicineName) ? medicineName.trim() : null;
 
@@ -120,9 +126,12 @@ public class MedicineServiceImpl implements MedicineService {
                 .map(medicineMapper::toResponse)
                 .toList();
 
-        log.info("Successfully fetched {} medicines", medicines.size());
+        long total = medicines.size();
+        log.info("Successfully fetched {} medicines (total={})", Math.min(size, (int) total), total);
 
-        return ApiResponse.success(MedicineMessages.MEDICINES_FETCHED_SUCCESSFULLY, medicines);
+        return ApiResponse.success(
+                MedicineMessages.MEDICINES_FETCHED_SUCCESSFULLY,
+                PagedResponse.of(PageRequests.slice(medicines, page, size), page, size, total));
     }
 
     @Override
@@ -227,8 +236,8 @@ public class MedicineServiceImpl implements MedicineService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<MedicineResponse>> getLowStockMedicines() {
-        log.info("Fetching low stock medicines");
+    public ApiResponse<PagedResponse<MedicineResponse>> getLowStockMedicines(int page, int size) {
+        log.info("Fetching low stock medicines page={} size={}", page, size);
 
         List<MedicineResponse> medicines = medicineRepository
                 .findByStockStatusAndDeletedFalseOrderByQuantityAsc(MedicineStockStatus.LOW_STOCK)
@@ -236,9 +245,12 @@ public class MedicineServiceImpl implements MedicineService {
                 .map(medicineMapper::toResponse)
                 .toList();
 
-        log.info("Successfully fetched {} low stock medicines", medicines.size());
+        long total = medicines.size();
+        log.info("Successfully fetched {} low stock medicines (total={})", Math.min(size, (int) total), total);
 
-        return ApiResponse.success(MedicineMessages.LOW_STOCK_MEDICINES_FETCHED, medicines);
+        return ApiResponse.success(
+                MedicineMessages.LOW_STOCK_MEDICINES_FETCHED,
+                PagedResponse.of(PageRequests.slice(medicines, page, size), page, size, total));
     }
 
     @Override

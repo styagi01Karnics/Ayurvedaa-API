@@ -37,6 +37,8 @@ public class PaymentResponse {
     private String mihpayid;
     private String paymentMode;
     private String errorMessage;
+    private BigDecimal refundedAmount;
+    private String lastRefundRequestId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -57,6 +57,9 @@ public final class AppMessages {
     public static final String DASHBOARD_TODAY_SCHEDULE_FETCHED =
             "Dashboard today's schedule fetched successfully.";
 
+    public static final String DASHBOARD_PATIENT_TRENDS_FETCHED =
+            "Dashboard patient trends fetched successfully.";
+
     public static final String APPOINTMENT_RESCHEDULED =
             "Appointment rescheduled successfully.";
 

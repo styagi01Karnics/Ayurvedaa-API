@@ -1,6 +1,5 @@
 package com.ayurveda.appointment.controller;
 
-import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -12,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.appointment.dto.request.CreateFollowUpRequest;
@@ -19,6 +19,7 @@ import com.ayurveda.appointment.dto.request.UpdateFollowUpStatusRequest;
 import com.ayurveda.appointment.dto.response.FollowUpResponse;
 import com.ayurveda.appointment.service.FollowUpService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,20 +51,24 @@ public class FollowUpController {
     }
 
     @Operation(
-            summary = "List all follow-ups",
-            description = "Returns non-deleted follow-ups ordered by appointment date (All Follow Ups tab).")
+            summary = "List all follow-ups (paginated)",
+            description = "Returns non-deleted follow-ups ordered by appointment date. page/size supported.")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<FollowUpResponse>>> getAllFollowUps() {
-        return ResponseEntity.ok(followUpService.getAllFollowUps());
+    public ResponseEntity<ApiResponse<PagedResponse<FollowUpResponse>>> getAllFollowUps(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(followUpService.getAllFollowUps(page, size));
     }
 
     @Operation(
-            summary = "List follow-ups by patient",
+            summary = "List follow-ups by patient (paginated)",
             description = "Returns non-deleted follow-ups for the given patient id.")
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<ApiResponse<List<FollowUpResponse>>> getFollowUpsByPatientId(
-            @PathVariable UUID patientId) {
-        return ResponseEntity.ok(followUpService.getFollowUpsByPatientId(patientId));
+    public ResponseEntity<ApiResponse<PagedResponse<FollowUpResponse>>> getFollowUpsByPatientId(
+            @PathVariable UUID patientId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(followUpService.getFollowUpsByPatientId(patientId, page, size));
     }
 
     @Operation(

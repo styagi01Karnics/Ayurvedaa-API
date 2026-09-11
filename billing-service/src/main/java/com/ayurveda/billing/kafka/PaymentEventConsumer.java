@@ -23,6 +23,7 @@ public class PaymentEventConsumer {
 
     private final ObjectMapper objectMapper;
     private final PayuInvoicePaymentApplier payuInvoicePaymentApplier;
+    private final PayuInvoiceRefundApplier payuInvoiceRefundApplier;
 
     @KafkaListener(topics = KafkaTopics.PAYMENTS, groupId = "billing-service")
     public void onPaymentEvent(String payload) {
@@ -34,7 +35,14 @@ public class PaymentEventConsumer {
             return;
         }
 
-        if (event.getInvoiceId() == null || !"SUCCESS".equalsIgnoreCase(event.getStatus())) {
+        if (event.getInvoiceId() == null || event.getStatus() == null) {
+            return;
+        }
+
+        String status = event.getStatus().trim().toUpperCase();
+        boolean isSuccess = "SUCCESS".equals(status);
+        boolean isRefund = "REFUNDED".equals(status) || "PARTIALLY_REFUNDED".equals(status);
+        if (!isSuccess && !isRefund) {
             return;
         }
         if (!TenantSchemaNames.isHospitalSchema(event.getSchemaName())
@@ -46,11 +54,15 @@ public class PaymentEventConsumer {
 
         TenantContext.set(event.getTenantId(), event.getTenantCode(), event.getSchemaName());
         try {
-            payuInvoicePaymentApplier.apply(event);
+            if (isRefund) {
+                payuInvoiceRefundApplier.apply(event);
+            } else {
+                payuInvoicePaymentApplier.apply(event);
+            }
         } catch (ResourceNotFoundException | BadRequestException ex) {
-            log.warn("Did not apply PayU payment to invoice {}: {}", event.getInvoiceId(), ex.getMessage());
+            log.warn("Did not apply payment event to invoice {}: {}", event.getInvoiceId(), ex.getMessage());
         } catch (RuntimeException ex) {
-            log.error("Failed applying PayU payment to invoice {}: {}", event.getInvoiceId(), ex.getMessage(), ex);
+            log.error("Failed applying payment event to invoice {}: {}", event.getInvoiceId(), ex.getMessage(), ex);
             throw ex;
         } finally {
             TenantContext.clear();

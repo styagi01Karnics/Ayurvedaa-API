@@ -29,4 +29,8 @@ public class SendEmailRequest {
     @Size(max = 10000)
     private String body;
 
+    /** Hospital tenantCode so SMTP uses that hospital mailbox. */
+    @Size(max = 50)
+    private String tenantCode;
+
 }

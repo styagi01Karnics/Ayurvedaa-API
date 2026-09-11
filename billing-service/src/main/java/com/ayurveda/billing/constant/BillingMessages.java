@@ -35,9 +35,15 @@ public final class BillingMessages {
 
     public static final String PART_PAYMENT_RECORDED_SUCCESSFULLY =
             "Part payment recorded successfully.";
+    public static final String REFUND_RECORDED_SUCCESSFULLY =
+            "Refund recorded successfully.";
     public static final String INVOICE_DELETED_SUCCESSFULLY = "Invoice deleted successfully.";
 
     public static final String INVOICE_ALREADY_FULLY_PAID = "Invoice is already fully paid.";
+    public static final String NOTHING_TO_REFUND =
+            "Invoice has no paid amount to refund.";
+    public static final String REFUND_EXCEEDS_PAID_AMOUNT =
+            "Refund amount cannot exceed paid amount of ";
     public static final String PAYMENT_EXCEEDS_LEFT_AMOUNT =
             "Payment amount cannot exceed left amount of ";
     public static final String INVOICE_SECTION_REQUIRED =
@@ -48,6 +54,10 @@ public final class BillingMessages {
             "Discount cannot be greater than bill total.";
     public static final String PAYMENT_AMOUNT_MUST_BE_POSITIVE =
             "Payment amount must be greater than 0.";
+    public static final String INVALID_PAYMENT_METHOD =
+            "Payment method must be CASH, ONLINE, or QR.";
+    public static final String ONLINE_QR_USE_PAYMENT_LINK =
+            "ONLINE and QR are collected via PayU payment link / shop QR, not as a direct invoice payment.";
     public static final String INVOICE_NOT_FOUND_WITH_ID = "Invoice not found with id: ";
     public static final String MEDICINE_NOT_FOUND_FOR_ID = "Medicine not found for id: ";
     public static final String MEDICINE_NOT_FOUND_IN_INVENTORY = "Medicine not found in inventory: ";

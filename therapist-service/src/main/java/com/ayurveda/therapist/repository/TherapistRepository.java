@@ -16,6 +16,9 @@ public interface TherapistRepository extends JpaRepository<Therapist, UUID> {
 
     List<Therapist> findAllByDeletedFalse();
 
+    org.springframework.data.domain.Page<Therapist> findAllByDeletedFalse(
+            org.springframework.data.domain.Pageable pageable);
+
     boolean existsByTherapistCodeAndDeletedFalse(String therapistCode);
 
     boolean existsByEmailAndDeletedFalse(String email);

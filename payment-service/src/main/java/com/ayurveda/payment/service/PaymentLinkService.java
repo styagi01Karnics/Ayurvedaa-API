@@ -1,5 +1,6 @@
 package com.ayurveda.payment.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -13,8 +14,10 @@ import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.notification.EmailNotificationPublisher;
 import com.ayurveda.common.tenant.TenantContext;
 import com.ayurveda.common.tenant.TenantSchemaNames;
+import com.ayurveda.payment.client.BillingServiceClient;
 import com.ayurveda.payment.config.PaymentLinkProperties;
 import com.ayurveda.payment.constant.PaymentMessages;
+import com.ayurveda.payment.dto.client.InvoiceClientResponse;
 import com.ayurveda.payment.dto.request.CreatePaymentLinkRequest;
 import com.ayurveda.payment.dto.request.InitiatePaymentRequest;
 import com.ayurveda.payment.dto.response.PaymentLinkResponse;
@@ -22,8 +25,11 @@ import com.ayurveda.payment.dto.response.PaymentResponse;
 import com.ayurveda.payment.entity.PaymentLink;
 import com.ayurveda.payment.repository.PaymentLinkRepository;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentLinkService {
@@ -39,10 +45,12 @@ public class PaymentLinkService {
     private final PaymentService paymentService;
     private final PaymentLinkProperties paymentLinkProperties;
     private final EmailNotificationPublisher emailNotificationPublisher;
+    private final BillingServiceClient billingServiceClient;
 
     @Transactional
     public ApiResponse<PaymentLinkResponse> create(CreatePaymentLinkRequest request) {
         requireHospitalSchema();
+        assertAmountWithinLeft(request.getInvoiceId(), request.getAmount());
 
         PaymentLink existing = paymentLinkRepository
                 .findFirstByInvoiceIdAndStatusAndDeletedFalseOrderByCreatedAtDesc(
@@ -80,12 +88,21 @@ public class PaymentLinkService {
             saved = paymentLinkRepository.save(link);
         }
 
+        if (Boolean.TRUE.equals(request.getUpiQr())
+                && (saved.getUpiQrPayload() == null || saved.getUpiQrPayload().isBlank())) {
+            attachUpiQr(saved, request);
+            saved = paymentLinkRepository.save(saved);
+        }
+
         boolean emailed = false;
         if (Boolean.TRUE.equals(request.getSendEmail())) {
             emailed = emailLink(saved, request.getPayPageBaseUrl(), saved.getEmail());
         }
 
-        String message = emailed ? PaymentMessages.PAYMENT_LINK_EMAILED : PaymentMessages.PAYMENT_LINK_CREATED;
+        boolean hasUpi = saved.getUpiQrPayload() != null && !saved.getUpiQrPayload().isBlank();
+        String message = emailed
+                ? PaymentMessages.PAYMENT_LINK_EMAILED
+                : (hasUpi ? PaymentMessages.UPI_QR_CREATED : PaymentMessages.PAYMENT_LINK_CREATED);
         return ApiResponse.success(message, toResponse(saved, request.getPayPageBaseUrl(), emailed));
     }
 
@@ -197,17 +214,19 @@ public class PaymentLinkService {
         emailNotificationPublisher.sendEmail(
                 to,
                 "Payment link for invoice " + invoiceLabel,
-                body);
+                body,
+                link.getTenantCode());
         return true;
     }
 
     private PaymentLinkResponse toResponse(PaymentLink link, String payPageBaseUrl, boolean emailSent) {
         String payUrl = resolvePayPageBase(payPageBaseUrl) + "/pay/" + link.getToken();
+        boolean upiQr = link.getUpiQrPayload() != null && !link.getUpiQrPayload().isBlank();
         return PaymentLinkResponse.builder()
                 .id(link.getId())
                 .token(link.getToken())
                 .payUrl(payUrl)
-                .qrPayload(payUrl)
+                .qrPayload(upiQr ? link.getUpiQrPayload() : payUrl)
                 .invoiceId(link.getInvoiceId())
                 .invoiceNumber(link.getInvoiceNumber())
                 .patientId(link.getPatientId())
@@ -218,7 +237,27 @@ public class PaymentLinkService {
                 .expiresAt(link.getExpiresAt())
                 .status(link.getStatus())
                 .emailSent(emailSent)
+                .upiQr(upiQr)
                 .build();
+    }
+
+    private void attachUpiQr(PaymentLink link, CreatePaymentLinkRequest request) {
+        InitiatePaymentRequest initiate = InitiatePaymentRequest.builder()
+                .amount(link.getAmount())
+                .productInfo("Invoice " + (link.getInvoiceNumber() != null
+                        ? link.getInvoiceNumber()
+                        : link.getInvoiceId()))
+                .firstName(link.getFirstName())
+                .email(link.getEmail())
+                .phone(link.getPhone())
+                .invoiceId(link.getInvoiceId())
+                .patientId(link.getPatientId())
+                .build();
+        UpiQrInitResult result = paymentService.initiateUpiQr(initiate, "127.0.0.1").getData();
+        link.setUpiQrPayload(result.getQrPayload());
+        if (result.getPayment() != null) {
+            link.setPayuTxnId(result.getPayment().getPayuTxnId());
+        }
     }
 
     private String resolvePayPageBase(String payPageBaseUrl) {
@@ -227,9 +266,35 @@ public class PaymentLinkService {
             base = trimSlash(paymentLinkProperties.getPayPageBaseUrl());
         }
         if (base == null || base.isBlank()) {
-            return "http://localhost:5173";
+            return "http://45.195.229.15:8112";
         }
         return base;
+    }
+
+    private void assertAmountWithinLeft(UUID invoiceId, BigDecimal amount) {
+        InvoiceClientResponse invoice = loadInvoice(invoiceId);
+        BigDecimal left = invoice.getLeftAmount() != null ? invoice.getLeftAmount() : BigDecimal.ZERO;
+        if (amount.compareTo(left) > 0) {
+            throw new BadRequestException(
+                    PaymentMessages.PAYMENT_LINK_AMOUNT_EXCEEDS_LEFT + left.toPlainString());
+        }
+    }
+
+    private InvoiceClientResponse loadInvoice(UUID invoiceId) {
+        try {
+            ApiResponse<InvoiceClientResponse> response = billingServiceClient.getInvoiceById(invoiceId);
+            if (response == null || response.getData() == null) {
+                throw new ResourceNotFoundException(PaymentMessages.INVOICE_NOT_FOUND);
+            }
+            return response.getData();
+        } catch (ResourceNotFoundException | BadRequestException ex) {
+            throw ex;
+        } catch (FeignException.NotFound ex) {
+            throw new ResourceNotFoundException(PaymentMessages.INVOICE_NOT_FOUND);
+        } catch (FeignException ex) {
+            log.error("Billing invoice lookup failed for {}: {}", invoiceId, ex.getMessage());
+            throw new BadRequestException(PaymentMessages.INVOICE_LOOKUP_FAILED);
+        }
     }
 
     private static void requireHospitalSchema() {

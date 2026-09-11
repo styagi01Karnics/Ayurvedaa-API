@@ -22,6 +22,7 @@ import com.ayurveda.billing.dto.response.InvoiceResponse;
 import com.ayurveda.billing.enums.BillingStatus;
 import com.ayurveda.billing.service.BillingService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,20 +49,24 @@ public class BillingController {
                 .body(billingService.createBilling(request));
     }
 
-    @Operation(summary = "List billings", description = "Filter: PENDING or COMPLETED")
+    @Operation(summary = "List billings (paginated)", description = "Filter: PENDING or COMPLETED. page/size supported.")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<BillingListResponse>>> getBillings(
-            @RequestParam(required = false) BillingStatus status) {
+    public ResponseEntity<ApiResponse<PagedResponse<BillingListResponse>>> getBillings(
+            @RequestParam(required = false) BillingStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(billingService.getBillings(status));
+        return ResponseEntity.ok(billingService.getBillings(status, page, size));
     }
 
-    @Operation(summary = "Get billings by patient id")
+    @Operation(summary = "Get billings by patient id (paginated)")
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<ApiResponse<List<BillingResponse>>> getBillingsByPatientId(
-            @PathVariable UUID patientId) {
+    public ResponseEntity<ApiResponse<PagedResponse<BillingResponse>>> getBillingsByPatientId(
+            @PathVariable UUID patientId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(billingService.getBillingsByPatientId(patientId));
+        return ResponseEntity.ok(billingService.getBillingsByPatientId(patientId, page, size));
     }
 
     @Operation(summary = "Get billing by id")

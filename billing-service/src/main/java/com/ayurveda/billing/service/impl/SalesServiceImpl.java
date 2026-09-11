@@ -28,6 +28,7 @@ import com.ayurveda.billing.repository.InvoiceRepository;
 import com.ayurveda.billing.service.SalesService;
 import com.ayurveda.billing.util.InvoiceCalculationUtil;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.util.PageRequests;
 
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -43,17 +44,25 @@ public class SalesServiceImpl implements SalesService {
     private final AppointmentServiceClient appointmentServiceClient;
 
     @Override
-    public ApiResponse<SalesPageResponse> getSales(String serviceType, LocalDate dateCreated) {
-        log.info("Fetching sales with serviceType={}, dateCreated={}", serviceType, dateCreated);
+    public ApiResponse<SalesPageResponse> getSales(
+            String serviceType, LocalDate dateCreated, int page, int size) {
+        log.info("Fetching sales with serviceType={}, dateCreated={}, page={}, size={}",
+                serviceType, dateCreated, page, size);
 
         String serviceFilter = StringUtils.hasText(serviceType) ? serviceType.trim() : null;
 
         List<Invoice> invoices = invoiceRepository.searchSales(serviceFilter, dateCreated);
         Map<UUID, String> categoryCache = new HashMap<>();
 
-        List<SalesInvoiceResponse> sales = invoices.stream()
+        List<SalesInvoiceResponse> allSales = invoices.stream()
                 .map(invoice -> toSalesRow(invoice, categoryCache))
                 .toList();
+
+        long total = allSales.size();
+        List<SalesInvoiceResponse> sales = PageRequests.slice(allSales, page, size);
+        int safeSize = size <= 0 ? PageRequests.DEFAULT_SIZE : Math.min(size, PageRequests.MAX_SIZE);
+        int safePage = Math.max(page, 0);
+        int totalPages = safeSize == 0 ? 0 : (int) Math.ceil((double) total / (double) safeSize);
 
         YearMonth currentMonth = YearMonth.now();
         LocalDate from = currentMonth.atDay(1);
@@ -66,9 +75,14 @@ public class SalesServiceImpl implements SalesService {
                 .revenueFrom(from)
                 .revenueTo(to)
                 .sales(sales)
+                .page(safePage)
+                .size(safeSize)
+                .totalElements(total)
+                .totalPages(totalPages)
                 .build();
 
-        log.info("Successfully fetched {} sales rows. Revenue this month: {}", sales.size(), revenue);
+        log.info("Successfully fetched {} sales rows (total={}). Revenue this month: {}",
+                sales.size(), total, revenue);
 
         return ApiResponse.success(BillingMessages.SALES_FETCHED_SUCCESSFULLY, response);
     }

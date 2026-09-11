@@ -2,6 +2,7 @@ package com.ayurveda.appointment.service.impl;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -63,8 +64,11 @@ import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.notification.EmailNotificationPublisher;
+import com.ayurveda.common.util.PageRequests;
 import com.ayurveda.common.validation.IdProofValidator;
 
 import lombok.RequiredArgsConstructor;
@@ -89,6 +93,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     private final PatientServiceClient patientServiceClient;
     private final DoctorServiceClient doctorServiceClient;
     private final ActivityLogPublisher activityLogPublisher;
+    private final EmailNotificationPublisher emailNotificationPublisher;
 
     @Override
     @Transactional
@@ -154,6 +159,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
         response.setConsultationTypes(consultationTypes);
 
+        emailAppointmentBooked(patient, doctor, savedAppointment);
+
         return ApiResponse.success(AppMessages.PATIENT_CREATED_AND_APPOINTMENT_BOOKED, response);
     }
 
@@ -170,16 +177,18 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<PatientAppointmentListItemResponse>> getPatientList(
+    public ApiResponse<PagedResponse<PatientAppointmentListItemResponse>> getPatientList(
             PatientListTab statusTab,
             String search,
             BookingStatus bookingStatus,
             UUID consultationTypeId,
             UUID doshaId,
-            UUID doctorId) {
+            UUID doctorId,
+            int page,
+            int size) {
 
-        log.info("Fetching {} patient list. status={}, visitTypeId={}, doshaId={}, doctorId={}, search={}",
-                statusTab, bookingStatus, consultationTypeId, doshaId, doctorId, search);
+        log.info("Fetching {} patient list. status={}, visitTypeId={}, doshaId={}, doctorId={}, search={}, page={}, size={}",
+                statusTab, bookingStatus, consultationTypeId, doshaId, doctorId, search, page, size);
 
         Set<BookingStatus> statuses = resolvePatientListStatuses(statusTab, bookingStatus);
 
@@ -189,7 +198,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         bookings = filterByFollowUpForPatientListTab(statusTab, bookings);
 
         if (bookings.isEmpty()) {
-            return ApiResponse.success(AppMessages.PATIENT_LIST_FETCHED, List.of());
+            return ApiResponse.success(
+                    AppMessages.PATIENT_LIST_FETCHED, PagedResponse.of(List.of(), page, size, 0));
         }
 
         Map<UUID, List<ConsultationTypeItemResponse>> consultationTypesByBooking =
@@ -233,7 +243,10 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                     .build());
         }
 
-        return ApiResponse.success(AppMessages.PATIENT_LIST_FETCHED, items);
+        long total = items.size();
+        List<PatientAppointmentListItemResponse> pageItems = PageRequests.slice(items, page, size);
+        return ApiResponse.success(
+                AppMessages.PATIENT_LIST_FETCHED, PagedResponse.of(pageItems, page, size, total));
     }
 
     private Set<BookingStatus> resolvePatientListStatuses(
@@ -453,9 +466,10 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByPatientId(UUID patientId) {
+    public ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByPatientId(
+            UUID patientId, int page, int size) {
 
-        log.info("Fetching appointments for patient id: {}", patientId);
+        log.info("Fetching appointments for patient id: {} page={} size={}", patientId, page, size);
 
         List<AppointmentBooking> appointments =
                 appointmentBookingRepository.findByPatientId(patientId);
@@ -480,16 +494,19 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
         }).toList();
 
-        return ApiResponse.success(responses);
+        long total = responses.size();
+        return ApiResponse.success(
+                AppMessages.APPOINTMENTS_FETCHED,
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
-            BookingStatus bookingStatus) {
+    public ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
+            BookingStatus bookingStatus, int page, int size) {
 
-        log.info("Fetching appointments for booking status: {}",
-                bookingStatus == null ? "ALL" : bookingStatus);
+        log.info("Fetching appointments for booking status: {} page={} size={}",
+                bookingStatus == null ? "ALL" : bookingStatus, page, size);
 
         List<AppointmentBooking> appointments =
                 appointmentBookingRepository.findByOptionalStatusAndDeletedFalse(bookingStatus);
@@ -497,7 +514,8 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         if (appointments.isEmpty()) {
             log.info("No appointments available for status: {}",
                     bookingStatus == null ? "ALL" : bookingStatus);
-            return ApiResponse.success(AppMessages.NO_APPOINTMENTS_AVAILABLE, List.of());
+            return ApiResponse.success(
+                    AppMessages.NO_APPOINTMENTS_AVAILABLE, PagedResponse.of(List.of(), page, size, 0));
         }
 
         LocalDate today = LocalDate.now();
@@ -506,8 +524,11 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 .map(this::toResponse)
                 .toList();
 
-        log.info("Fetched {} appointments successfully", responses.size());
-        return ApiResponse.success(AppMessages.APPOINTMENTS_FETCHED, responses);
+        long total = responses.size();
+        log.info("Fetched {} appointments successfully", total);
+        return ApiResponse.success(
+                AppMessages.APPOINTMENTS_FETCHED,
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     /**
@@ -535,10 +556,10 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<AppointmentBookingResponse>> getAppointmentsByDate(
-            LocalDate registrationDate) {
+    public ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByDate(
+            LocalDate registrationDate, int page, int size) {
 
-        log.info("Fetching appointments for date: {}", registrationDate);
+        log.info("Fetching appointments for date: {} page={} size={}", registrationDate, page, size);
 
         List<AppointmentBooking> appointments =
                 appointmentBookingRepository.findByRegistrationDateAndDeletedFalse(registrationDate);
@@ -551,7 +572,10 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 .map(this::toResponse)
                 .toList();
 
-        return ApiResponse.success(responses);
+        long total = responses.size();
+        return ApiResponse.success(
+                AppMessages.APPOINTMENTS_FETCHED,
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     @Override
@@ -594,9 +618,10 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<AppointmentBookingResponse>> getCancelledAppointments() {
+    public ApiResponse<PagedResponse<AppointmentBookingResponse>> getCancelledAppointments(
+            int page, int size) {
 
-        log.info("Fetching cancelled appointments with patient details");
+        log.info("Fetching cancelled appointments with patient details page={} size={}", page, size);
 
         List<AppointmentBooking> appointments =
                 appointmentBookingRepository.findByBookingStatusAndDeletedFalse(
@@ -606,16 +631,20 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 .map(this::toResponse)
                 .toList();
 
-        return ApiResponse.success(AppMessages.CANCELLED_APPOINTMENTS_FETCHED, responses);
+        long total = responses.size();
+        return ApiResponse.success(
+                AppMessages.CANCELLED_APPOINTMENTS_FETCHED,
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<AppointmentBookingResponse>> getTodayAppointmentsByConsultationType(
-            UUID consultationTypeId) {
+    public ApiResponse<PagedResponse<AppointmentBookingResponse>> getTodayAppointmentsByConsultationType(
+            UUID consultationTypeId, int page, int size) {
 
         LocalDate today = LocalDate.now();
-        log.info("Fetching today's appointments for consultation type: {}", consultationTypeId);
+        log.info("Fetching today's appointments for consultation type: {} page={} size={}",
+                consultationTypeId, page, size);
 
         consultationTypeMasterRepository.findByIdAndDeletedFalse(consultationTypeId)
                 .orElseThrow(() -> new ResourceNotFoundException(Constants.CONSULTATION_TYPE_NOT_FOUND));
@@ -628,9 +657,10 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 .map(this::toResponse)
                 .toList();
 
+        long total = responses.size();
         return ApiResponse.success(
                 AppMessages.TODAY_APPOINTMENTS_BY_CONSULTATION_TYPE_FETCHED + consultationTypeId + ".",
-                responses);
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     @Override
@@ -885,6 +915,9 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
         log.info("Appointment {} rescheduled successfully. Previous status: {}, new status: RESCHEDULED",
                 bookingId, currentStatus);
+
+        emailAppointmentRescheduled(patient, doctor, saved);
+
         return ApiResponse.success(AppMessages.APPOINTMENT_RESCHEDULED, response);
     }
 
@@ -905,7 +938,10 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
                 null,
                 "CANCELLED");
 
-        return ApiResponse.success(AppMessages.APPOINTMENT_CANCELLED, toResponse(saved));
+        AppointmentBookingResponse response = toResponse(saved);
+        emailAppointmentCancelled(response);
+
+        return ApiResponse.success(AppMessages.APPOINTMENT_CANCELLED, response);
     }
 
     @Override
@@ -1020,6 +1056,120 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
             return LocalDateTime.of(booking.getRegistrationDate(), booking.getSlotTime());
         }
         return booking.getCreatedAt();
+    }
+
+    private void emailAppointmentBooked(
+            PatientSummaryResponse patient,
+            DoctorSummaryResponse doctor,
+            AppointmentBooking appointment) {
+        if (patient == null || !StringUtils.hasText(patient.getEmail())) {
+            return;
+        }
+        String name = patientDisplayName(patient);
+        String doctorName = doctorDisplayName(doctor);
+        String when = formatAppointmentWhen(appointment.getRegistrationDate(), appointment.getSlotTime());
+        String body = """
+                Hello %s,
+
+                Your appointment has been booked.
+
+                Date / time: %s
+                Doctor: %s
+                Patient ID: %s
+
+                Please arrive a few minutes early. Contact the hospital if you need to reschedule.
+                """.formatted(name, when, doctorName, nullToDash(patient.getPatientCode()));
+        emailNotificationPublisher.sendEmail(
+                patient.getEmail(),
+                "Appointment booked — Ayurvedaa",
+                body);
+    }
+
+    private void emailAppointmentRescheduled(
+            PatientSummaryResponse patient,
+            DoctorSummaryResponse doctor,
+            AppointmentBooking appointment) {
+        if (patient == null || !StringUtils.hasText(patient.getEmail())) {
+            return;
+        }
+        String name = patientDisplayName(patient);
+        String doctorName = doctorDisplayName(doctor);
+        String when = formatAppointmentWhen(appointment.getRegistrationDate(), appointment.getSlotTime());
+        String body = """
+                Hello %s,
+
+                Your appointment has been rescheduled.
+
+                New date / time: %s
+                Doctor: %s
+                Patient ID: %s
+
+                Please contact the hospital if this timing does not work for you.
+                """.formatted(name, when, doctorName, nullToDash(patient.getPatientCode()));
+        emailNotificationPublisher.sendEmail(
+                patient.getEmail(),
+                "Appointment rescheduled — Ayurvedaa",
+                body);
+    }
+
+    private void emailAppointmentCancelled(AppointmentBookingResponse response) {
+        if (response == null || response.getPatient() == null
+                || !StringUtils.hasText(response.getPatient().getEmail())) {
+            return;
+        }
+        PatientSummaryResponse patient = response.getPatient();
+        String name = patientDisplayName(patient);
+        String doctorName = doctorDisplayName(response.getAssignedDoctor());
+        String when = formatAppointmentWhen(response.getRegistrationDate(), response.getSlotTime());
+        String body = """
+                Hello %s,
+
+                Your appointment has been cancelled.
+
+                Was scheduled: %s
+                Doctor: %s
+                Patient ID: %s
+
+                Contact the hospital to book a new slot if needed.
+                """.formatted(name, when, doctorName, nullToDash(patient.getPatientCode()));
+        emailNotificationPublisher.sendEmail(
+                patient.getEmail(),
+                "Appointment cancelled — Ayurvedaa",
+                body);
+    }
+
+    private static String patientDisplayName(PatientSummaryResponse patient) {
+        if (patient == null) {
+            return "Patient";
+        }
+        if (StringUtils.hasText(patient.getFullName())) {
+            return patient.getFullName().trim();
+        }
+        String combined = ((patient.getFirstName() != null ? patient.getFirstName() : "")
+                + " "
+                + (patient.getLastName() != null ? patient.getLastName() : "")).trim();
+        return StringUtils.hasText(combined) ? combined : "Patient";
+    }
+
+    private static String doctorDisplayName(DoctorSummaryResponse doctor) {
+        if (doctor == null || !StringUtils.hasText(doctor.getName())) {
+            return "your doctor";
+        }
+        return doctor.getName().trim();
+    }
+
+    private static String formatAppointmentWhen(LocalDate date, LocalTime time) {
+        if (date == null && time == null) {
+            return "to be confirmed";
+        }
+        if (date != null && time != null) {
+            return date + " at " + time;
+        }
+        return date != null ? date.toString() : String.valueOf(time);
+    }
+
+    private static String nullToDash(String value) {
+        return StringUtils.hasText(value) ? value.trim() : "-";
     }
 
     private PatientSummaryResponse fetchPatient(UUID patientId) {

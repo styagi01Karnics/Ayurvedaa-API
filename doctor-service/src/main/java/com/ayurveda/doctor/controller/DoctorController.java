@@ -1,6 +1,7 @@
 package com.ayurveda.doctor.controller;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -19,9 +20,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Doctor", description = "Doctor master APIs")
@@ -40,10 +41,14 @@ public class DoctorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(doctorService.createDoctor(request));
     }
 
-    @Operation(summary = "List active doctors only")
+    @Operation(
+            summary = "List active doctors only (paginated)",
+            description = "page default 0, size default 20 (max 100). Use size=100 for dropdowns.")
     @GetMapping("/active")
-    public ResponseEntity<ApiResponse<List<DoctorResponse>>> getActiveDoctors() {
-        return ResponseEntity.ok(doctorService.getActiveDoctors());
+    public ResponseEntity<ApiResponse<PagedResponse<DoctorResponse>>> getActiveDoctors(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(doctorService.getActiveDoctors(page, size));
     }
 
     @Operation(summary = "Get doctor by ID")
@@ -52,10 +57,14 @@ public class DoctorController {
         return ResponseEntity.ok(doctorService.getDoctorById(doctorId));
     }
 
-    @Operation(summary = "List doctors")
+    @Operation(
+            summary = "List doctors (paginated)",
+            description = "page default 0, size default 20 (max 100). Response: data.content")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<DoctorResponse>>> getAllDoctors() {
-        return ResponseEntity.ok(doctorService.getAllDoctors());
+    public ResponseEntity<ApiResponse<PagedResponse<DoctorResponse>>> getAllDoctors(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(doctorService.getAllDoctors(page, size));
     }
 
     @Operation(

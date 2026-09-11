@@ -35,10 +35,13 @@ spring:
 
 server:
   port: 8110
+  forward-headers-strategy: framework
 
 ayurveda:
   kafka:
     enabled: ${KAFKA_ENABLED:true}
+  security:
+    require-https: ${REQUIRE_HTTPS:false}
   tenant:
     routing:
       enabled: true
@@ -50,13 +53,53 @@ auth:
   jwt:
     secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}
 
-# Optional SMTP — when host is unset, EmailServiceImpl logs the message instead of sending.
-# Do not commit real SMTP passwords. Prefer env vars in deployed environments:
-#   SPRING_MAIL_HOST / SPRING_MAIL_USERNAME / SPRING_MAIL_PASSWORD
+# SMTP is only in notification-service. Auth/payment call POST /api/v1/notifications/email.
+# Do not put real passwords in this file. Set env on the host, then restart notification-service.
+#
+# Provider switch:
+#   NOTIFICATION_MAIL_PROVIDER=gmail|microsoft
+#
+# Gmail (STARTTLS 587, or port 465 SSL):
+#   NOTIFICATION_MAIL_PROVIDER=gmail
+#   NOTIFICATION_MAIL_GMAIL_USERNAME=your.account@gmail.com
+#   NOTIFICATION_MAIL_GMAIL_PASSWORD=<gmail-app-password>
+#   NOTIFICATION_MAIL_FROM=your.account@gmail.com
+#   optional: NOTIFICATION_MAIL_GMAIL_PORT=465
+#
+# Microsoft / Outlook / M365 (STARTTLS 587):
+#   NOTIFICATION_MAIL_PROVIDER=microsoft
+#   NOTIFICATION_MAIL_MICROSOFT_USERNAME=your.account@outlook.com
+#   NOTIFICATION_MAIL_MICROSOFT_PASSWORD=<account-password-or-app-password>
+#   NOTIFICATION_MAIL_FROM=your.account@outlook.com
+#   optional host: NOTIFICATION_MAIL_MICROSOFT_HOST=smtp-mail.outlook.com
+#
+# Generic override (wins when all three are set):
+#   SPRING_MAIL_HOST / SPRING_MAIL_PORT / SPRING_MAIL_USERNAME / SPRING_MAIL_PASSWORD
 notification:
   mail:
-    enabled: true
-    from: ${NOTIFICATION_MAIL_FROM:noreply@ayurvedaa.local}
+    enabled: ${NOTIFICATION_MAIL_ENABLED:true}
+    provider: ${NOTIFICATION_MAIL_PROVIDER:gmail}
+    from: ${NOTIFICATION_MAIL_FROM:${SPRING_MAIL_USERNAME:}}
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    starttls: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+    auth: true
+    gmail:
+      host: ${NOTIFICATION_MAIL_GMAIL_HOST:smtp.gmail.com}
+      port: ${NOTIFICATION_MAIL_GMAIL_PORT:587}
+      username: ${NOTIFICATION_MAIL_GMAIL_USERNAME:}
+      password: ${NOTIFICATION_MAIL_GMAIL_PASSWORD:}
+      starttls: true
+      auth: true
+    microsoft:
+      host: ${NOTIFICATION_MAIL_MICROSOFT_HOST:smtp.office365.com}
+      port: ${NOTIFICATION_MAIL_MICROSOFT_PORT:587}
+      username: ${NOTIFICATION_MAIL_MICROSOFT_USERNAME:}
+      password: ${NOTIFICATION_MAIL_MICROSOFT_PASSWORD:}
+      starttls: true
+      auth: true
 
 springdoc:
   api-docs:
@@ -74,6 +117,7 @@ logging:
   level:
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+    com.ayurveda.notification: INFO
 
 management:
   endpoints:

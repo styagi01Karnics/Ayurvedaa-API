@@ -25,18 +25,22 @@ import com.ayurveda.appointment.dto.response.TreatmentCategoryResponse;
 import com.ayurveda.appointment.entity.AppointmentTherapy;
 import com.ayurveda.appointment.entity.AppointmentTherapyRecommendation;
 import com.ayurveda.appointment.entity.TherapyMaster;
+import com.ayurveda.appointment.entity.Treatment;
 import com.ayurveda.appointment.entity.TreatmentCategoryMaster;
 import com.ayurveda.appointment.enums.TherapyStatus;
+import com.ayurveda.appointment.enums.TreatmentStatus;
 import com.ayurveda.appointment.mapper.AppointmentTherapyMapper;
 import com.ayurveda.appointment.repository.AppointmentBookingRepository;
 import com.ayurveda.appointment.repository.AppointmentTherapyRecommendationRepository;
 import com.ayurveda.appointment.repository.AppointmentTherapyRepository;
 import com.ayurveda.appointment.repository.TherapyRepository;
 import com.ayurveda.appointment.repository.TreatmentCategoryRepository;
+import com.ayurveda.appointment.repository.TreatmentRepository;
 import com.ayurveda.appointment.service.AppointmentTherapyService;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
+import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -51,6 +55,7 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
     private final AppointmentTherapyRepository appointmentTherapyRepository;
     private final AppointmentTherapyRecommendationRepository appointmentTherapyRecommendationRepository;
     private final AppointmentBookingRepository appointmentBookingRepository;
+    private final TreatmentRepository treatmentRepository;
     private final TreatmentCategoryRepository treatmentCategoryRepository;
     private final TherapyRepository therapyRepository;
     private final TherapistServiceClient therapistServiceClient;
@@ -135,8 +140,12 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
 
         AppointmentTherapy therapy = appointmentTherapyRepository
                 .findByIdAndDeletedFalse(appointmentTherapyId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        Constants.APPOINTMENT_THERAPY_NOT_FOUND_WITH_ID + appointmentTherapyId));
+                .orElse(null);
+
+        if (therapy == null) {
+            // Treatments page lists /treatments rows and sends treatments.id on this endpoint.
+            return updateStatusForTreatmentId(appointmentTherapyId, request);
+        }
 
         therapy.setTherapyStatus(request.getTherapyStatus());
         AppointmentTherapy saved = appointmentTherapyRepository.save(therapy);
@@ -154,6 +163,78 @@ public class AppointmentTherapyServiceImpl implements AppointmentTherapyService 
         return ApiResponse.success(
                 Constants.APPOINTMENT_THERAPY_STATUS_UPDATED,
                 toEnrichedResponse(saved));
+    }
+
+    /**
+     * Accepts {@code treatments.id} because the hospital UI complete action sends that
+     * identifier (TreatmentResponse has no appointmentTherapyId).
+     */
+    private ApiResponse<AppointmentTherapyResponse> updateStatusForTreatmentId(
+            UUID treatmentId, UpdateAppointmentTherapyStatusRequest request) {
+
+        Treatment treatment = treatmentRepository.findByIdAndDeletedFalse(treatmentId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        Constants.APPOINTMENT_THERAPY_NOT_FOUND_WITH_ID + treatmentId));
+
+        TreatmentStatus treatmentStatus = toTreatmentStatus(request.getTherapyStatus());
+        treatment.setTreatmentStatus(treatmentStatus);
+        if (treatmentStatus == TreatmentStatus.COMPLETED) {
+            treatment.setCompletedSessions(treatment.getTotalSessions());
+            treatment.setRemainingSessions(0);
+        }
+        treatmentRepository.save(treatment);
+
+        log.info("Resolved status id {} as treatment; status updated to {}",
+                treatmentId, treatmentStatus);
+
+        activityLogPublisher.record(
+                "Treatments",
+                ActivityActionType.UPDATED,
+                "Treatment " + treatmentId,
+                null,
+                String.valueOf(treatmentStatus));
+
+        return ApiResponse.success(
+                Constants.APPOINTMENT_THERAPY_STATUS_UPDATED,
+                toResponseFromTreatment(treatment, request.getTherapyStatus()));
+    }
+
+    private static TreatmentStatus toTreatmentStatus(TherapyStatus therapyStatus) {
+        return switch (therapyStatus) {
+            case SCHEDULED -> TreatmentStatus.SCHEDULED;
+            case IN_PROGRESS -> TreatmentStatus.ONGOING;
+            case COMPLETED -> TreatmentStatus.COMPLETED;
+            case CANCELLED -> throw new BadRequestException(
+                    "CANCELLED is not a valid treatment status");
+        };
+    }
+
+    private AppointmentTherapyResponse toResponseFromTreatment(
+            Treatment treatment, TherapyStatus therapyStatus) {
+        TherapistSummaryResponse therapist = null;
+        try {
+            therapist = fetchTherapist(treatment.getAssignedTherapistId());
+        } catch (Exception ex) {
+            log.warn("Therapist unavailable for treatment {}: {} ({})",
+                    treatment.getId(), treatment.getAssignedTherapistId(), ex.getMessage());
+        }
+
+        PatientSummaryResponse patient = null;
+        try {
+            patient = patientServiceClient.getPatientById(treatment.getPatientId()).getData();
+        } catch (Exception ex) {
+            log.warn("Patient unavailable for treatment {}: {}",
+                    treatment.getId(), ex.getMessage());
+        }
+
+        return AppointmentTherapyResponse.builder()
+                .therapyId(treatment.getId())
+                .patient(patient)
+                .assignedTherapist(therapist)
+                .scheduleDate(treatment.getStartDate())
+                .sessionFrequency(treatment.getTotalSessions())
+                .therapyStatus(therapyStatus)
+                .build();
     }
 
     @Override

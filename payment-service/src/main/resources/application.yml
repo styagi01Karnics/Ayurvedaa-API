@@ -16,6 +16,7 @@ spring:
       connection-timeout: 10000
       leak-detection-threshold: 30000
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -41,15 +42,18 @@ server:
   port: 8112
 
 services:
+  billing:
+    url: ${BILLING_SERVICE_URL:http://127.0.0.1:8109}
   notification:
-    url: ${NOTIFICATION_SERVICE_URL:http://45.195.229.15:8110}
+    # Email SMTP is in notification-service only; payment publishes via HTTP.
+    url: ${NOTIFICATION_SERVICE_URL:http://127.0.0.1:8110}
     enabled: ${NOTIFICATION_SERVICE_ENABLED:true}
 
 ayurveda:
   kafka:
     enabled: ${KAFKA_ENABLED:true}
   payment:
-    pay-page-base-url: ${PAY_PAGE_BASE_URL:http://localhost:5173}
+    pay-page-base-url: ${PAY_PAGE_BASE_URL:http://45.195.229.15:8112}
   tenant:
     routing:
       enabled: true
@@ -57,16 +61,31 @@ ayurveda:
       skip-path-patterns:
         - /api/v1/payments/payu/**
         - /api/v1/payments/public/**
+        - /pay/**
 
 auth:
   jwt:
     secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}
 
-# Set PAYU_MERCHANT_KEY and PAYU_MERCHANT_SALT from the PayU dashboard (test or live).
+# Single-tenant PayU (one hospital for now). Set on the server — do NOT commit live values.
+# Super Admin per-tenant payment-gateway API is not used by payment-service.
+#
+# Example LIVE on server:
+#   PAYU_MERCHANT_KEY=...
+#   PAYU_MERCHANT_SALT=...
+#   PAYU_MODE=LIVE
+#   PAYU_PAYMENT_URL=https://secure.payu.in/_payment
+# Optional OAuth (not required for hosted checkout hash):
+#   PAYU_CLIENT_ID=...
+#   PAYU_CLIENT_SECRET=...
 payu:
   merchant-key: ${PAYU_MERCHANT_KEY:}
   merchant-salt: ${PAYU_MERCHANT_SALT:}
+  client-id: ${PAYU_CLIENT_ID:}
+  client-secret: ${PAYU_CLIENT_SECRET:}
+  mode: ${PAYU_MODE:TEST}
   payment-url: ${PAYU_PAYMENT_URL:https://test.payu.in/_payment}
+  postservice-url: ${PAYU_POSTSERVICE_URL:}
   success-url: ${PAYU_SUCCESS_URL:http://45.195.229.15:8112/api/v1/payments/payu/success}
   failure-url: ${PAYU_FAILURE_URL:http://45.195.229.15:8112/api/v1/payments/payu/failure}
 

@@ -1,6 +1,7 @@
 package com.ayurveda.therapist.controller;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.therapist.dto.request.CreateTherapistRequest;
 import com.ayurveda.therapist.dto.request.UpdateTherapistRequest;
 import com.ayurveda.therapist.dto.request.UpdateTherapistStatusRequest;
@@ -67,10 +68,14 @@ public class TherapistController {
         return ResponseEntity.ok(therapistService.getTherapistById(therapistId));
     }
 
-    @Operation(summary = "List therapists")
+    @Operation(
+            summary = "List therapists (paginated)",
+            description = "page default 0, size default 20 (max 100). Response: data.content")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TherapistResponse>>> getAllTherapists() {
-        return ResponseEntity.ok(therapistService.getAllTherapists());
+    public ResponseEntity<ApiResponse<PagedResponse<TherapistResponse>>> getAllTherapists(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(therapistService.getAllTherapists(page, size));
     }
 
     @Operation(

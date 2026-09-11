@@ -19,7 +19,11 @@ import com.ayurveda.auth.dto.request.CreateHospitalAdminRequest;
 import com.ayurveda.auth.dto.request.OnboardHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalStatusRequest;
+import com.ayurveda.auth.dto.request.UpsertHospitalMailRequest;
+import com.ayurveda.auth.dto.request.UpsertTenantPaymentGatewayRequest;
+import com.ayurveda.auth.dto.response.HospitalMailResponse;
 import com.ayurveda.auth.dto.response.HospitalOnboardResponse;
+import com.ayurveda.auth.dto.response.TenantPaymentGatewayResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
 import com.ayurveda.auth.dto.response.UserResponse;
 import com.ayurveda.auth.service.PlatformService;
@@ -59,6 +63,8 @@ public class PlatformController {
                     No tenantId in body. All form fields (except password) save to tenants;
                     auth_users gets fullName, mobileNumber, email, password→passwordHash.
                     logoUrl / photoUrl are optional URLs after upload-then-URL (stored on tenant).
+                    Hospital sending mailbox is configured separately:
+                    PUT /api/v1/platform/hospitals/{hospitalId}/mail
                     """,
             security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/hospitals")
@@ -132,6 +138,57 @@ public class PlatformController {
     public ResponseEntity<ApiResponse<TenantResponse>> retryHospitalProvision(
             @PathVariable UUID hospitalId) {
         return ResponseEntity.ok(platformService.retryHospitalProvision(hospitalId));
+    }
+
+    @Operation(
+            summary = "Save hospital sending mailbox (Super Admin)",
+            description = """
+                    Email + password for the mailbox used to email patients (Gmail or Microsoft).
+                    Not the admin login. Password is SMTP / Gmail App Password.
+                    Call this after POST /hospitals. Body: email (required) + password
+                    (required on first save; omit later to keep the stored secret).
+                    Password is encrypted at rest. In production use HTTPS
+                    (REQUIRE_HTTPS=true / ayurveda.security.require-https=true).
+                    """,
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/hospitals/{hospitalId}/mail")
+    public ResponseEntity<ApiResponse<HospitalMailResponse>> upsertHospitalMail(
+            @PathVariable UUID hospitalId,
+            @Valid @RequestBody UpsertHospitalMailRequest request) {
+        return ResponseEntity.ok(platformService.upsertHospitalMail(hospitalId, request));
+    }
+
+    @Operation(
+            summary = "Get hospital sending mailbox (Super Admin, password masked)",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/hospitals/{hospitalId}/mail")
+    public ResponseEntity<ApiResponse<HospitalMailResponse>> getHospitalMail(
+            @PathVariable UUID hospitalId) {
+        return ResponseEntity.ok(platformService.getHospitalMail(hospitalId));
+    }
+
+    @Operation(
+            summary = "Save per-tenant PayU payment gateway (disabled)",
+            description = """
+                    Disabled for single-tenant setup. Configure PayU in payment-service
+                    application.yml / env: PAYU_MERCHANT_KEY, PAYU_MERCHANT_SALT, PAYU_MODE.
+                    """,
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/tenants/{tenantCode}/payment-gateway")
+    public ResponseEntity<ApiResponse<TenantPaymentGatewayResponse>> upsertPaymentGateway(
+            @PathVariable String tenantCode,
+            @Valid @RequestBody UpsertTenantPaymentGatewayRequest request) {
+        return ResponseEntity.ok(platformService.upsertPaymentGateway(tenantCode, request));
+    }
+
+    @Operation(
+            summary = "Get per-tenant PayU payment gateway (disabled)",
+            description = "Disabled for single-tenant setup. See payment-service payu.* config.",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/tenants/{tenantCode}/payment-gateway")
+    public ResponseEntity<ApiResponse<TenantPaymentGatewayResponse>> getPaymentGateway(
+            @PathVariable String tenantCode) {
+        return ResponseEntity.ok(platformService.getPaymentGateway(tenantCode));
     }
 
 }

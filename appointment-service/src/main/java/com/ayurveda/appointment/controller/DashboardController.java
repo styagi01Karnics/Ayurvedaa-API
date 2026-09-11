@@ -9,8 +9,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ayurveda.appointment.dto.response.DashboardPatientTrendsResponse;
 import com.ayurveda.appointment.dto.response.DashboardTodaysScheduleResponse;
 import com.ayurveda.appointment.service.AppointmentBookingService;
+import com.ayurveda.appointment.service.DashboardPatientTrendsService;
 import com.ayurveda.common.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 public class DashboardController {
 
     private final AppointmentBookingService appointmentBookingService;
+    private final DashboardPatientTrendsService dashboardPatientTrendsService;
 
     @Operation(
             summary = "Dashboard – Today's Schedule card",
@@ -46,6 +49,23 @@ public class DashboardController {
             @RequestParam(required = false) UUID doctorId) {
 
         return ResponseEntity.ok(appointmentBookingService.getDashboardTodaysSchedule(doctorId));
+    }
+
+    @Operation(
+            summary = "Dashboard – Total Patients chart",
+            description = """
+                    Monthly New Patients vs Follow Ups for the Dashboard Total Patients widget.
+
+                    - newPatients: patients registered that month (patient-service)
+                    - followUps: follow-up visits scheduled/recorded that month
+                    - points: 12 months (Jan–Dec), zeros when empty
+
+                    Optional year defaults to the current year.
+                    """)
+    @GetMapping("/patient-trends")
+    public ResponseEntity<ApiResponse<DashboardPatientTrendsResponse>> getPatientTrends(
+            @RequestParam(required = false) Integer year) {
+        return ResponseEntity.ok(dashboardPatientTrendsService.getPatientTrends(year));
     }
 
 }

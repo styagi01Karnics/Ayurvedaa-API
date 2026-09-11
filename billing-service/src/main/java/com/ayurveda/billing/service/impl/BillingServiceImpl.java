@@ -34,8 +34,10 @@ import com.ayurveda.billing.service.BillingService;
 import com.ayurveda.billing.service.InvoiceService;
 import com.ayurveda.billing.util.InvoiceCalculationUtil;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.util.PageRequests;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,7 +83,8 @@ public class BillingServiceImpl implements BillingService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<BillingListResponse>> getBillings(BillingStatus status) {
+    public ApiResponse<PagedResponse<BillingListResponse>> getBillings(
+            BillingStatus status, int page, int size) {
         List<Billing> billings = billingRepository.findAllByStatusOptional(status);
         Map<UUID, List<BillingServiceItem>> itemsByBilling = loadItemsGrouped(billings);
 
@@ -102,12 +105,16 @@ public class BillingServiceImpl implements BillingService {
                 })
                 .toList();
 
-        return ApiResponse.success(BillingMessages.BILLINGS_FETCHED, responses);
+        long total = responses.size();
+        return ApiResponse.success(
+                BillingMessages.BILLINGS_FETCHED,
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<BillingResponse>> getBillingsByPatientId(UUID patientId) {
+    public ApiResponse<PagedResponse<BillingResponse>> getBillingsByPatientId(
+            UUID patientId, int page, int size) {
         List<Billing> billings = billingRepository
                 .findAllByPatientIdAndDeletedFalseOrderByBillingDateDescCreatedAtDesc(patientId);
         Map<UUID, List<BillingServiceItem>> itemsByBilling = loadItemsGrouped(billings);
@@ -117,7 +124,10 @@ public class BillingServiceImpl implements BillingService {
                         billing, itemsByBilling.getOrDefault(billing.getId(), List.of())))
                 .toList();
 
-        return ApiResponse.success(BillingMessages.BILLINGS_FETCHED, responses);
+        long total = responses.size();
+        return ApiResponse.success(
+                BillingMessages.BILLINGS_FETCHED,
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     @Override

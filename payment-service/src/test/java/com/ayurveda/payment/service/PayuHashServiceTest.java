@@ -84,5 +84,38 @@ class PayuHashServiceTest {
         params.put("key", "gtKFFx");
         params.put("hash", PayuHashService.sha512(raw));
         assertTrue(hashService.verifyResponse(params));
+        assertTrue(hashService.verifyResponse("eCwWELxi", params));
+    }
+
+    @Test
+    void requestHashUsesProvidedTenantSalt() {
+        String hashA = hashService.requestHash(
+                "keyA",
+                "saltA",
+                "TXN1",
+                "10.00",
+                "Hospital payment",
+                "Admin",
+                "admin@gmail.com",
+                "hosp_gan_dl",
+                "GAN-DL",
+                "",
+                "",
+                "11111111-1111-1111-1111-111111111111");
+        String hashB = hashService.requestHash(
+                "keyA",
+                "saltB",
+                "TXN1",
+                "10.00",
+                "Hospital payment",
+                "Admin",
+                "admin@gmail.com",
+                "hosp_gan_dl",
+                "GAN-DL",
+                "",
+                "",
+                "11111111-1111-1111-1111-111111111111");
+        assertEquals(128, hashA.length());
+        assertTrue(!hashA.equals(hashB));
     }
 }

@@ -13,9 +13,13 @@ public class PaymentLinkResponse {
 
     private UUID id;
     private String token;
-    /** Patient pay page. Encode this as the POS QR. */
+    /** Patient web pay page (email / fallback). */
     private String payUrl;
-    /** Same as payUrl — POS / QR clients can render this string. */
+    /**
+     * Encode as on-screen QR.
+     * When {@code upiQr=true}: {@code upi://pay?...&am=...} (scan → UPI with exact amount).
+     * Otherwise same as payUrl.
+     */
     private String qrPayload;
     private UUID invoiceId;
     private String invoiceNumber;
@@ -27,4 +31,6 @@ public class PaymentLinkResponse {
     private LocalDateTime expiresAt;
     private String status;
     private boolean emailSent;
+    /** True when {@code qrPayload} is a UPI intent string (scan → pay exact amount). */
+    private boolean upiQr;
 }

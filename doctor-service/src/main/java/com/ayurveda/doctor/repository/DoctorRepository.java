@@ -2,6 +2,8 @@ package com.ayurveda.doctor.repository;
 
 import com.ayurveda.doctor.entity.Doctor;
 import com.ayurveda.doctor.enums.DoctorStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -14,7 +16,11 @@ public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
 
     List<Doctor> findAllByDeletedFalse();
 
+    Page<Doctor> findAllByDeletedFalse(Pageable pageable);
+
     List<Doctor> findAllByStatusAndDeletedFalse(DoctorStatus status);
+
+    Page<Doctor> findAllByStatusAndDeletedFalse(DoctorStatus status, Pageable pageable);
 
     boolean existsByDoctorCodeAndDeletedFalse(String doctorCode);
 

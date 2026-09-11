@@ -42,9 +42,11 @@ public class SalesController {
     @GetMapping
     public ResponseEntity<ApiResponse<SalesPageResponse>> getSales(
             @RequestParam(required = false) String serviceType,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateCreated) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateCreated,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(salesService.getSales(serviceType, dateCreated));
+        return ResponseEntity.ok(salesService.getSales(serviceType, dateCreated, page, size));
     }
 
     @Operation(

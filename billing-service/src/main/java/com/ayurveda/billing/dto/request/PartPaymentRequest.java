@@ -3,7 +3,6 @@ package com.ayurveda.billing.dto.request;
 import java.math.BigDecimal;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +17,9 @@ import lombok.Setter;
 @AllArgsConstructor
 public class PartPaymentRequest {
 
-    @NotNull(message = "Payment amount is required")
+    /**
+     * Optional when {@code paymentMethod} is CASH — omitted amount settles the full left balance.
+     */
     @DecimalMin(value = "0.01", inclusive = true, message = "Payment amount must be greater than 0")
     private BigDecimal amountPaid;
 

@@ -11,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.appointment.dto.request.CreateAppointmentBookingRequest;
 import com.ayurveda.appointment.dto.request.RescheduleAppointmentBookingRequest;
 import com.ayurveda.appointment.dto.response.AppointmentBookingResponse;
@@ -58,34 +59,39 @@ public class AppointmentBookingController {
     }
 
     @Operation(
-            summary = "Active / Inactive patients list",
+            summary = "Active / Inactive patients list (paginated)",
             description = """
                     Returns appointment rows for the patients screen.
                     ACTIVE = all booking statuses except CANCELLED/COMPLETED,
                     plus CANCELLED/COMPLETED that have a follow-up (sourceBookingId).
                     INACTIVE = CANCELLED/COMPLETED with no follow-up for that booking.
                     Optional filters: search (patient id/code/name/mobile), status, visit type, dosha, doctor.
+                    Pagination: page (default 0), size (default 20, max 100).
                     """)
     @GetMapping("/patients")
-    public ResponseEntity<ApiResponse<List<PatientAppointmentListItemResponse>>> getPatientList(
+    public ResponseEntity<ApiResponse<PagedResponse<PatientAppointmentListItemResponse>>> getPatientList(
             @RequestParam PatientListTab statusTab,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) BookingStatus bookingStatus,
             @RequestParam(required = false) UUID consultationTypeId,
             @RequestParam(required = false) UUID doshaId,
-            @RequestParam(required = false) UUID doctorId) {
+            @RequestParam(required = false) UUID doctorId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
         return ResponseEntity.ok(appointmentBookingService.getPatientList(
-                statusTab, search, bookingStatus, consultationTypeId, doshaId, doctorId));
+                statusTab, search, bookingStatus, consultationTypeId, doshaId, doctorId, page, size));
     }
 
     @Operation(
-            summary = "Get cancelled appointments",
-            description = "Cancelled appointment details including patient phone number.")
+            summary = "Get cancelled appointments (paginated)",
+            description = "Cancelled appointment details including patient phone number. page/size supported.")
     @GetMapping("/cancelled")
-    public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getCancelledAppointments() {
+    public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getCancelledAppointments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(appointmentBookingService.getCancelledAppointments());
+        return ResponseEntity.ok(appointmentBookingService.getCancelledAppointments(page, size));
     }
 
     @Operation(
@@ -105,14 +111,17 @@ public class AppointmentBookingController {
     }
 
     @Operation(
-            summary = "Get today's appointments by consultation type",
+            summary = "Get today's appointments by consultation type (paginated)",
             description = "Returns today's non-cancelled appointments for the given consultation type id, with patient details.")
     @GetMapping("/today/consultation-type/{consultationTypeId}")
-    public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getTodayAppointmentsByConsultationType(
-            @PathVariable UUID consultationTypeId) {
+    public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getTodayAppointmentsByConsultationType(
+            @PathVariable UUID consultationTypeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
         return ResponseEntity.ok(
-                appointmentBookingService.getTodayAppointmentsByConsultationType(consultationTypeId));
+                appointmentBookingService.getTodayAppointmentsByConsultationType(
+                        consultationTypeId, page, size));
     }
 
     @Operation(
@@ -146,20 +155,20 @@ public class AppointmentBookingController {
     }
 
     @Operation(
-            summary = "Get appointments by patient ID",
-            description = "Returns all appointments for the given patient.")
+            summary = "Get appointments by patient ID (paginated)",
+            description = "Returns appointments for the given patient. page/size supported.")
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getAppointmentsByPatientId(
-            @PathVariable UUID patientId) {
+    public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getAppointmentsByPatientId(
+            @PathVariable UUID patientId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        ApiResponse<List<AppointmentBookingResponse>> response =
-                appointmentBookingService.getAppointmentsByPatientId(patientId);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                appointmentBookingService.getAppointmentsByPatientId(patientId, page, size));
     }
 
     @Operation(
-            summary = "Get appointments by booking status",
+            summary = "Get appointments by booking status (paginated)",
             description = """
                     Returns non-deleted appointments for the given bookingStatus.
                     Use ALL for no status filter (all appointments).
@@ -167,12 +176,14 @@ public class AppointmentBookingController {
                     past dates after that.
                     """)
     @GetMapping("/status/{bookingStatus}")
-    public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getAppointmentsByBookingStatus(
-            @PathVariable String bookingStatus) {
+    public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getAppointmentsByBookingStatus(
+            @PathVariable String bookingStatus,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
         BookingStatus status = resolveBookingStatusFilter(bookingStatus);
         return ResponseEntity.ok(
-                appointmentBookingService.getAppointmentsByBookingStatus(status));
+                appointmentBookingService.getAppointmentsByBookingStatus(status, page, size));
     }
 
     private BookingStatus resolveBookingStatusFilter(String bookingStatus) {
@@ -188,13 +199,15 @@ public class AppointmentBookingController {
         }
     }
 
-    @Operation(summary = "Get appointments by registration date")
+    @Operation(summary = "Get appointments by registration date (paginated)")
     @GetMapping("/date/{registrationDate}")
-    public ResponseEntity<ApiResponse<List<AppointmentBookingResponse>>> getAppointmentsByDate(
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate registrationDate) {
+    public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getAppointmentsByDate(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate registrationDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
         return ResponseEntity.ok(
-                appointmentBookingService.getAppointmentsByDate(registrationDate));
+                appointmentBookingService.getAppointmentsByDate(registrationDate, page, size));
     }
 
     @Operation(

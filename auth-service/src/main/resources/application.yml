@@ -26,16 +26,23 @@ spring:
         format_sql: true
         default_schema: public
 
+ayurveda:
+  security:
+    # Production: REQUIRE_HTTPS=true and terminate TLS at nginx/ALB (X-Forwarded-Proto).
+    require-https: ${REQUIRE_HTTPS:false}
+
 server:
   port: 8111
+  forward-headers-strategy: framework
 
 services:
   activity-log:
     url: http://45.195.229.15:8107
     enabled: true
   notification:
-    url: http://45.195.229.15:8110
-    enabled: true
+    # Email SMTP is in notification-service only; auth publishes via HTTP.
+    url: ${NOTIFICATION_SERVICE_URL:http://127.0.0.1:8110}
+    enabled: ${NOTIFICATION_SERVICE_ENABLED:true}
 
 auth:
   jwt:

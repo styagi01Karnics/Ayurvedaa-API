@@ -159,4 +159,25 @@ public interface AppointmentBookingRepository
             @Param("consultationTypeId") UUID consultationTypeId,
             @Param("doshaId") UUID doshaId);
 
+    @Query("""
+            SELECT EXTRACT(MONTH FROM a.registrationDate), COUNT(a)
+            FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND a.bookingStatus <> :cancelled
+              AND a.registrationDate >= :from
+              AND a.registrationDate < :to
+              AND a.registrationDate = (
+                  SELECT MIN(b.registrationDate)
+                  FROM AppointmentBooking b
+                  WHERE b.patientId = a.patientId
+                    AND b.deleted = false
+                    AND b.bookingStatus <> :cancelled
+              )
+            GROUP BY EXTRACT(MONTH FROM a.registrationDate)
+            """)
+    List<Object[]> countFirstVisitsByMonth(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("cancelled") BookingStatus cancelled);
+
 }

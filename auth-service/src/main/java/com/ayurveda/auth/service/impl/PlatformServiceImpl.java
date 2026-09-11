@@ -16,17 +16,24 @@ import com.ayurveda.auth.dto.request.CreateHospitalAdminRequest;
 import com.ayurveda.auth.dto.request.OnboardHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalStatusRequest;
+import com.ayurveda.auth.dto.request.UpsertHospitalMailRequest;
+import com.ayurveda.auth.dto.request.UpsertTenantPaymentGatewayRequest;
+import com.ayurveda.auth.dto.response.HospitalMailResponse;
 import com.ayurveda.auth.dto.response.HospitalOnboardResponse;
+import com.ayurveda.auth.dto.response.TenantPaymentGatewayResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
 import com.ayurveda.auth.dto.response.UserResponse;
 import com.ayurveda.auth.entity.AuthUser;
 import com.ayurveda.auth.entity.Tenant;
+import com.ayurveda.auth.entity.TenantMailSettings;
 import com.ayurveda.auth.entity.TenantRole;
+import com.ayurveda.auth.enums.HospitalMailProvider;
 import com.ayurveda.auth.enums.TenantStatus;
 import com.ayurveda.auth.enums.UserRole;
 import com.ayurveda.auth.enums.UserStatus;
 import com.ayurveda.auth.mapper.AuthMapper;
 import com.ayurveda.auth.repository.AuthUserRepository;
+import com.ayurveda.auth.repository.TenantMailSettingsRepository;
 import com.ayurveda.auth.repository.TenantRepository;
 import com.ayurveda.auth.security.AuthPrincipal;
 import com.ayurveda.auth.service.HospitalOnboardActivityLogger;
@@ -37,6 +44,7 @@ import com.ayurveda.auth.service.TenantBootstrapService;
 import com.ayurveda.auth.service.TenantCodeGenerator;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.constant.AppConstants;
+import com.ayurveda.common.crypto.SecretEncryption;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ForbiddenException;
@@ -64,6 +72,8 @@ public class PlatformServiceImpl implements PlatformService {
     private final PasswordEncoder passwordEncoder;
     private final AuthMapper authMapper;
     private final HospitalOnboardActivityLogger hospitalOnboardActivityLogger;
+    private final TenantMailSettingsRepository tenantMailSettingsRepository;
+    private final SecretEncryption secretEncryption;
 
     @Override
     public ApiResponse<UserResponse> bootstrapSuperAdmin(BootstrapSuperAdminRequest request) {
@@ -170,7 +180,7 @@ public class PlatformServiceImpl implements PlatformService {
                     schemaName, hospitalName, tenantCode, currentPrincipal());
 
             HospitalOnboardResponse response = HospitalOnboardResponse.builder()
-                    .hospital(authMapper.toTenantResponse(saved))
+                    .hospital(toHospitalResponse(saved))
                     .admin(authMapper.toUserResponse(
                             savedAdmin, pageAccessService.resolvePageCodes(savedAdmin)))
                     .build();
@@ -205,7 +215,7 @@ public class PlatformServiceImpl implements PlatformService {
         List<TenantResponse> hospitals = tenantRepository
                 .findAllByPlatformFalseAndDeletedFalseOrderByCreatedAtDesc()
                 .stream()
-                .map(authMapper::toTenantResponse)
+                .map(this::toHospitalResponse)
                 .toList();
         return ApiResponse.success(AuthMessages.HOSPITALS_FETCHED_SUCCESSFULLY, hospitals);
     }
@@ -214,7 +224,7 @@ public class PlatformServiceImpl implements PlatformService {
     @Transactional(readOnly = true)
     public ApiResponse<TenantResponse> getHospital(UUID hospitalId) {
         requireSuperAdmin();
-        return ApiResponse.success(authMapper.toTenantResponse(requireHospital(hospitalId)));
+        return ApiResponse.success(toHospitalResponse(requireHospital(hospitalId)));
     }
 
     @Override
@@ -270,7 +280,7 @@ public class PlatformServiceImpl implements PlatformService {
         Tenant saved = tenantRepository.save(hospital);
         log.info("Updated hospital profile for {}", saved.getTenantCode());
 
-        return ApiResponse.success(AuthMessages.HOSPITAL_PROFILE_UPDATED, authMapper.toTenantResponse(saved));
+        return ApiResponse.success(AuthMessages.HOSPITAL_PROFILE_UPDATED, toHospitalResponse(saved));
     }
 
     @Override
@@ -340,7 +350,7 @@ public class PlatformServiceImpl implements PlatformService {
         log.info("Updated hospital {} status to {}", hospital.getTenantCode(), status);
 
         return ApiResponse.success(
-                AuthMessages.HOSPITAL_STATUS_UPDATED, authMapper.toTenantResponse(hospital));
+                AuthMessages.HOSPITAL_STATUS_UPDATED, toHospitalResponse(hospital));
     }
 
     @Override
@@ -379,7 +389,76 @@ public class PlatformServiceImpl implements PlatformService {
         }
 
         return ApiResponse.success(
-                AuthMessages.HOSPITAL_PROVISION_RETRIED, authMapper.toTenantResponse(hospital));
+                AuthMessages.HOSPITAL_PROVISION_RETRIED, toHospitalResponse(hospital));
+    }
+
+    @Override
+    public ApiResponse<TenantPaymentGatewayResponse> upsertPaymentGateway(
+            String tenantCode, UpsertTenantPaymentGatewayRequest request) {
+        requireSuperAdmin();
+        throw new BadRequestException(AuthMessages.PAYMENT_GATEWAY_API_DISABLED);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<TenantPaymentGatewayResponse> getPaymentGateway(String tenantCode) {
+        requireSuperAdmin();
+        throw new BadRequestException(AuthMessages.PAYMENT_GATEWAY_API_DISABLED);
+    }
+
+    @Override
+    public ApiResponse<HospitalMailResponse> upsertHospitalMail(
+            UUID hospitalId, UpsertHospitalMailRequest request) {
+        requireSuperAdmin();
+        Tenant hospital = requireHospital(hospitalId);
+        TenantMailSettings saved = saveHospitalMail(
+                hospital.getTenantCode(), request.getEmail(), request.getPassword());
+        log.info(
+                "Hospital mail saved for tenant={} provider={} email={}",
+                hospital.getTenantCode(),
+                saved.getProvider(),
+                saved.getFromEmail());
+        return ApiResponse.success(
+                AuthMessages.HOSPITAL_MAIL_SAVED, authMapper.toHospitalMailResponse(hospital, saved));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<HospitalMailResponse> getHospitalMail(UUID hospitalId) {
+        requireSuperAdmin();
+        Tenant hospital = requireHospital(hospitalId);
+        TenantMailSettings mail = tenantMailSettingsRepository
+                .findByTenantCodeIgnoreCaseAndDeletedFalse(hospital.getTenantCode())
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.HOSPITAL_MAIL_NOT_CONFIGURED));
+        return ApiResponse.success(
+                AuthMessages.HOSPITAL_MAIL_FETCHED, authMapper.toHospitalMailResponse(hospital, mail));
+    }
+
+    private TenantResponse toHospitalResponse(Tenant hospital) {
+        TenantMailSettings mail = tenantMailSettingsRepository
+                .findByTenantCodeIgnoreCaseAndDeletedFalse(hospital.getTenantCode())
+                .orElse(null);
+        return authMapper.toTenantResponse(hospital, mail);
+    }
+
+    private TenantMailSettings saveHospitalMail(String tenantCode, String mailEmail, String mailPassword) {
+        String email = mailEmail.trim().toLowerCase();
+        TenantMailSettings settings = tenantMailSettingsRepository
+                .findByTenantCodeIgnoreCaseAndDeletedFalse(tenantCode)
+                .orElseGet(TenantMailSettings::new);
+        boolean creating = settings.getId() == null;
+        if (creating && !StringUtils.hasText(mailPassword)) {
+            throw new BadRequestException(AuthMessages.HOSPITAL_MAIL_PASSWORD_REQUIRED);
+        }
+        settings.setTenantCode(tenantCode);
+        settings.setFromEmail(email);
+        if (StringUtils.hasText(mailPassword)) {
+            settings.setSmtpPassword(secretEncryption.encrypt(mailPassword));
+        }
+        settings.setProvider(HospitalMailProvider.fromEmail(email));
+        settings.setEnabled(true);
+        settings.setDeleted(false);
+        return tenantMailSettingsRepository.save(settings);
     }
 
     private Tenant createPlatformTenant() {
@@ -406,6 +485,19 @@ public class PlatformServiceImpl implements PlatformService {
     private Tenant requireHospital(UUID hospitalId) {
         Tenant tenant = tenantRepository.findByIdAndDeletedFalse(hospitalId)
                 .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.HOSPITAL_NOT_FOUND));
+        if (Boolean.TRUE.equals(tenant.getPlatform())) {
+            throw new BadRequestException(AuthMessages.CANNOT_MODIFY_PLATFORM_AS_HOSPITAL);
+        }
+        return tenant;
+    }
+
+    private Tenant requireHospitalByCode(String tenantCode) {
+        if (!StringUtils.hasText(tenantCode)) {
+            throw new ResourceNotFoundException(AuthMessages.TENANT_NOT_FOUND);
+        }
+        Tenant tenant = tenantRepository.findByTenantCodeIgnoreCaseAndDeletedFalse(tenantCode.trim())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        AuthMessages.TENANT_NOT_FOUND_WITH_CODE + tenantCode.trim()));
         if (Boolean.TRUE.equals(tenant.getPlatform())) {
             throw new BadRequestException(AuthMessages.CANNOT_MODIFY_PLATFORM_AS_HOSPITAL);
         }

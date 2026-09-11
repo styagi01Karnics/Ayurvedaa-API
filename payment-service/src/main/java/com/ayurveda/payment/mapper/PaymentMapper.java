@@ -36,6 +36,8 @@ public class PaymentMapper {
                 .mihpayid(payment.getMihpayid())
                 .paymentMode(payment.getPaymentMode())
                 .errorMessage(payment.getErrorMessage())
+                .refundedAmount(payment.getRefundedAmount())
+                .lastRefundRequestId(payment.getLastRefundRequestId())
                 .createdAt(payment.getCreatedAt())
                 .updatedAt(payment.getUpdatedAt())
                 .actionUrl(actionUrl)

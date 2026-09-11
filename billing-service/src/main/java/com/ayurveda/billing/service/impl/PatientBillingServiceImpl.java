@@ -16,6 +16,8 @@ import com.ayurveda.billing.service.InvoiceService;
 import com.ayurveda.billing.service.PatientBillingService;
 import com.ayurveda.billing.service.PatientPackageService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
+import com.ayurveda.common.util.PageRequests;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,12 +37,12 @@ public class PatientBillingServiceImpl implements PatientBillingService {
 
         log.info("Fetching billing data for patientId={}, status={}", patientId, status);
 
-        List<InvoiceListResponse> invoices = invoiceService
-                .getInvoicesByPatientId(patientId, status)
+        PagedResponse<InvoiceListResponse> invoicePage = invoiceService
+                .getInvoicesByPatientId(patientId, status, 0, PageRequests.MAX_SIZE)
                 .getData();
-        if (invoices == null) {
-            invoices = List.of();
-        }
+        List<InvoiceListResponse> invoices = invoicePage != null && invoicePage.getContent() != null
+                ? invoicePage.getContent()
+                : List.of();
 
         List<PatientPackageResponse> packages = patientPackageService
                 .getPackagesByPatientId(patientId)
@@ -85,7 +87,8 @@ public class PatientBillingServiceImpl implements PatientBillingService {
 
             if (invoice.getStatus() == InvoiceStatus.UNPAID) {
                 unpaidCount++;
-            } else if (invoice.getStatus() == InvoiceStatus.ONGOING) {
+            } else if (invoice.getStatus() == InvoiceStatus.ONGOING
+                    || invoice.getStatus() == InvoiceStatus.PARTIAL) {
                 ongoingCount++;
             } else if (invoice.getStatus() == InvoiceStatus.COMPLETED) {
                 completedCount++;

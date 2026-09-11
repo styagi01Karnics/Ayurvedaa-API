@@ -18,6 +18,9 @@ public final class NotificationMessages {
             "Notification deleted successfully.";
     public static final String EMAIL_SENT = "Email sent successfully.";
     public static final String EMAIL_QUEUED = "Email accepted.";
+    /** Soft failure — HTTP still 200; business APIs must not fail. */
+    public static final String EMAIL_NOT_DELIVERED =
+            "Email could not be delivered; business operation was not affected.";
 
     public static final String NOTIFICATION_NOT_FOUND_WITH_ID =
             "Notification not found with id: ";

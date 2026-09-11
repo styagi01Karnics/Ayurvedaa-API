@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.medicine.dto.request.CreateMedicineRequest;
@@ -45,6 +46,9 @@ class MedicineServiceImplTest {
 
     @Mock
     private MedicineMapper medicineMapper;
+
+    @Mock
+    private ActivityLogPublisher activityLogPublisher;
 
     @InjectMocks
     private MedicineServiceImpl medicineService;

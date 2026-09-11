@@ -40,4 +40,6 @@ public class PaymentEvent {
     private String mihpayid;
     private String firstName;
     private String email;
+    /** Present for refund events — PayU request_id or merchant refund token. */
+    private String refundRequestId;
 }

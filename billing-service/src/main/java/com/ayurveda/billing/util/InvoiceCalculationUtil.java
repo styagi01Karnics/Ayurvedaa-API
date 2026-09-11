@@ -35,7 +35,7 @@ public final class InvoiceCalculationUtil {
         if (paid.compareTo(total) >= 0) {
             return InvoiceStatus.COMPLETED;
         }
-        return InvoiceStatus.ONGOING;
+        return InvoiceStatus.PARTIAL;
     }
 
     public static BigDecimal leftAmount(BigDecimal totalAmount, BigDecimal paidAmount) {

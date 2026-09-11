@@ -95,6 +95,16 @@ public class PaymentTransaction extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String rawCallback;
 
+    @Builder.Default
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal refundedAmount = BigDecimal.ZERO;
+
+    @Column(length = 100)
+    private String lastRefundRequestId;
+
+    @Column(length = 64)
+    private String lastRefundToken;
+
     @PrePersist
     void prePersist() {
         if (getDeleted() == null) {
@@ -105,6 +115,9 @@ public class PaymentTransaction extends BaseEntity {
         }
         if (status == null) {
             status = PaymentStatus.INITIATED;
+        }
+        if (refundedAmount == null) {
+            refundedAmount = BigDecimal.ZERO;
         }
     }
 }

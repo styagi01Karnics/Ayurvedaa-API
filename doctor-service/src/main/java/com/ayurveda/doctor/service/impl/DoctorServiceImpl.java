@@ -4,7 +4,9 @@ import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.util.PageRequests;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -16,10 +18,11 @@ import com.ayurveda.doctor.service.DoctorService;
 import com.ayurveda.doctor.util.DoctorCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -75,32 +78,33 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<DoctorResponse>> getAllDoctors() {
-        log.info("Fetching all doctors");
+    public ApiResponse<PagedResponse<DoctorResponse>> getAllDoctors(int page, int size) {
+        log.info("Fetching doctors page={}, size={}", page, size);
 
-        List<DoctorResponse> doctors = doctorRepository.findAllByDeletedFalse().stream()
-                .map(DoctorMapper::toResponse)
-                .toList();
+        Page<Doctor> result = doctorRepository.findAllByDeletedFalse(
+                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "doctorName")));
+        PagedResponse<DoctorResponse> paged = PagedResponse.of(result.map(DoctorMapper::toResponse));
 
-        log.info("Successfully fetched {} doctors", doctors.size());
+        log.info("Successfully fetched {} doctors (total={})",
+                paged.getContent().size(), paged.getTotalElements());
 
-        return ApiResponse.success(AppConstants.DOCTORS_FETCHED_SUCCESSFULLY, doctors);
+        return ApiResponse.success(AppConstants.DOCTORS_FETCHED_SUCCESSFULLY, paged);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<DoctorResponse>> getActiveDoctors() {
-        log.info("Fetching active doctors");
+    public ApiResponse<PagedResponse<DoctorResponse>> getActiveDoctors(int page, int size) {
+        log.info("Fetching active doctors page={}, size={}", page, size);
 
-        List<DoctorResponse> doctors = doctorRepository
-                .findAllByStatusAndDeletedFalse(DoctorStatus.ACTIVE)
-                .stream()
-                .map(DoctorMapper::toResponse)
-                .toList();
+        Page<Doctor> result = doctorRepository.findAllByStatusAndDeletedFalse(
+                DoctorStatus.ACTIVE,
+                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "doctorName")));
+        PagedResponse<DoctorResponse> paged = PagedResponse.of(result.map(DoctorMapper::toResponse));
 
-        log.info("Successfully fetched {} active doctors", doctors.size());
+        log.info("Successfully fetched {} active doctors (total={})",
+                paged.getContent().size(), paged.getTotalElements());
 
-        return ApiResponse.success(AppConstants.ACTIVE_DOCTORS_FETCHED_SUCCESSFULLY, doctors);
+        return ApiResponse.success(AppConstants.ACTIVE_DOCTORS_FETCHED_SUCCESSFULLY, paged);
     }
 
     @Override

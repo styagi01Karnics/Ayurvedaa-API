@@ -23,6 +23,8 @@ public final class AppConstants {
     public static final String PATIENT_UPDATED_SUCCESSFULLY = "Patient updated successfully.";
     public static final String PATIENT_FETCHED_SUCCESSFULLY = "Patient fetched successfully.";
     public static final String PATIENTS_FETCHED_SUCCESSFULLY = "Patients fetched successfully.";
+    public static final String DASHBOARD_PATIENT_TRENDS_FETCHED =
+            "Dashboard patient trends fetched successfully.";
     public static final String PATIENT_DELETED_SUCCESSFULLY = "Patient deleted successfully.";
 
     public static final String PATIENT_NOT_FOUND = "Patient not found.";
@@ -177,6 +179,10 @@ public final class AppConstants {
 
     public static final String AUTHENTICATION_REQUIRED =
             "Authentication required.";
+
+    public static final String HTTPS_REQUIRED =
+            "HTTPS is required. Use https:// or terminate TLS at the reverse proxy "
+                    + "(set X-Forwarded-Proto: https).";
 
     public static final String ACCESS_DENIED =
             "Access denied.";

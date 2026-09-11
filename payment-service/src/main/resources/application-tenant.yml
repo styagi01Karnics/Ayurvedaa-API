@@ -11,6 +11,7 @@ ayurveda:
       skip-path-patterns:
         - /api/v1/payments/payu/**
         - /api/v1/payments/public/**
+        - /pay/**
 
 auth:
   jwt:

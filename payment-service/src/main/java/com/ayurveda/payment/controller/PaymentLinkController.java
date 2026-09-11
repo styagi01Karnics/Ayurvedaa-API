@@ -36,8 +36,12 @@ public class PaymentLinkController {
     @Operation(
             summary = "Create a payment link / POS QR payload for an invoice balance",
             description = """
+                    Available to any authenticated hospital user (JWT with hospital schema) — not Super Admin only.
                     Use after invoice generate (full amount) or after a partial cash payment (remaining amount).
-                    Encode `qrPayload` on the POS. Set `sendEmail=true` to email the same link to the patient.
+                    - Online / room: set sendEmail=true (patient gets payUrl).
+                    - At hospital QR: set upiQr=true — qrPayload becomes upi://pay?...&am=AMOUNT (scan opens UPI with exact amount).
+                      Requires PayU Dynamic QR (DBQR) on the merchant. payUrl remains web fallback.
+                    Amount must be <= invoice leftAmount.
                     """,
             security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping
@@ -64,7 +68,10 @@ public class PaymentLinkController {
 
     @Operation(
             summary = "Email a payment link to the patient",
-            description = "Admin / receptionist share after a partial payment. Optional body.email overrides the stored address.",
+            description = """
+                    Any authenticated hospital user can share the PayU link (hospital SMTP mailbox).
+                    Optional body.email overrides the address stored on the link.
+                    """,
             security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/{id}/email")
     public ResponseEntity<ApiResponse<PaymentLinkResponse>> email(

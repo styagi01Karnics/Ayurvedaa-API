@@ -22,11 +22,16 @@ import com.ayurveda.appointment.repository.FollowUpRepository;
 import com.ayurveda.appointment.service.FollowUpService;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.notification.EmailNotificationPublisher;
+import com.ayurveda.common.util.PageRequests;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -38,6 +43,7 @@ public class FollowUpServiceImpl implements FollowUpService {
     private final ConsultationTypeMasterRepository consultationTypeMasterRepository;
     private final PatientServiceClient patientServiceClient;
     private final DoctorServiceClient doctorServiceClient;
+    private final EmailNotificationPublisher emailNotificationPublisher;
 
     @Override
     public ApiResponse<FollowUpResponse> createFollowUp(CreateFollowUpRequest request) {
@@ -68,14 +74,16 @@ public class FollowUpServiceImpl implements FollowUpService {
         FollowUp saved = followUpRepository.save(followUp);
         log.info("Follow-up created successfully. Follow-up ID: {}", saved.getId());
 
+        emailFollowUpScheduled(patient, doctor, visitType, saved);
+
         return ApiResponse.success(
                 AppMessages.FOLLOW_UP_CREATED, toResponse(saved, patient, doctor, visitType));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<FollowUpResponse>> getAllFollowUps() {
-        log.info("Fetching all follow-ups");
+    public ApiResponse<PagedResponse<FollowUpResponse>> getAllFollowUps(int page, int size) {
+        log.info("Fetching all follow-ups page={} size={}", page, size);
 
         List<FollowUpResponse> responses = followUpRepository
                 .findAllByDeletedFalseOrderByAppointmentDateAsc()
@@ -83,24 +91,29 @@ public class FollowUpServiceImpl implements FollowUpService {
                 .map(this::toResponse)
                 .toList();
 
-        log.info("Fetched {} follow-ups successfully", responses.size());
-        return ApiResponse.success(AppMessages.FOLLOW_UPS_FETCHED, responses);
+        long total = responses.size();
+        log.info("Fetched {} follow-ups successfully", total);
+        return ApiResponse.success(
+                AppMessages.FOLLOW_UPS_FETCHED,
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<FollowUpResponse>> getFollowUpsByPatientId(UUID patientId) {
-        log.info("Fetching follow-ups for patient: {}", patientId);
+    public ApiResponse<PagedResponse<FollowUpResponse>> getFollowUpsByPatientId(
+            UUID patientId, int page, int size) {
+        log.info("Fetching follow-ups for patient: {} page={} size={}", patientId, page, size);
 
-        // Soft-deleted patient must not block reading existing follow-up rows.
         List<FollowUpResponse> responses = followUpRepository
                 .findAllByPatientIdAndDeletedFalseOrderByAppointmentDateAsc(patientId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
 
-        log.info("Fetched {} follow-ups for patient: {}", responses.size(), patientId);
-        return ApiResponse.success(AppMessages.FOLLOW_UPS_FETCHED, responses);
+        long total = responses.size();
+        return ApiResponse.success(
+                AppMessages.FOLLOW_UPS_FETCHED,
+                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
     }
 
     @Override
@@ -137,7 +150,109 @@ public class FollowUpServiceImpl implements FollowUpService {
         FollowUp saved = followUpRepository.save(followUp);
 
         log.info("Follow-up cancelled successfully. Follow-up ID: {}", followUpId);
-        return ApiResponse.success(AppMessages.FOLLOW_UP_CANCELLED, toResponse(saved));
+        PatientSummaryResponse patient = null;
+        DoctorSummaryResponse doctor = null;
+        ConsultationTypeMaster visitType = null;
+        try {
+            patient = fetchPatient(saved.getPatientId());
+        } catch (Exception ex) {
+            log.warn("Skip follow-up cancel email; patient lookup failed: {}", ex.getMessage());
+        }
+        try {
+            doctor = fetchDoctor(saved.getAssignedDoctorId());
+        } catch (Exception ignored) {
+            // optional for email body
+        }
+        try {
+            visitType = fetchConsultationType(saved.getVisitTypeId());
+        } catch (Exception ignored) {
+            // optional for email body
+        }
+        emailFollowUpCancelled(patient, doctor, visitType, saved);
+        return ApiResponse.success(
+                AppMessages.FOLLOW_UP_CANCELLED, toResponse(saved, patient, doctor, visitType));
+    }
+
+    private void emailFollowUpScheduled(
+            PatientSummaryResponse patient,
+            DoctorSummaryResponse doctor,
+            ConsultationTypeMaster visitType,
+            FollowUp followUp) {
+        if (patient == null || !StringUtils.hasText(patient.getEmail())) {
+            return;
+        }
+        String name = StringUtils.hasText(patient.getFullName()) ? patient.getFullName().trim() : "Patient";
+        String doctorName = doctor != null && StringUtils.hasText(doctor.getName())
+                ? doctor.getName().trim()
+                : "your doctor";
+        String visit = visitType != null && StringUtils.hasText(visitType.getName())
+                ? visitType.getName().trim()
+                : "Follow-up";
+        String when = followUp.getAppointmentDate() != null
+                ? followUp.getAppointmentDate().toString()
+                : "to be confirmed";
+        String body = """
+                Hello %s,
+
+                A follow-up visit has been scheduled for you.
+
+                Visit type: %s
+                Date / time: %s
+                Doctor: %s
+                Patient ID: %s
+
+                Please contact the hospital if you need to change this appointment.
+                """.formatted(
+                name,
+                visit,
+                when,
+                doctorName,
+                StringUtils.hasText(patient.getPatientCode()) ? patient.getPatientCode() : "-");
+        emailNotificationPublisher.sendEmail(
+                patient.getEmail(),
+                "Follow-up scheduled — Ayurvedaa",
+                body);
+    }
+
+    private void emailFollowUpCancelled(
+            PatientSummaryResponse patient,
+            DoctorSummaryResponse doctor,
+            ConsultationTypeMaster visitType,
+            FollowUp followUp) {
+        if (patient == null || !StringUtils.hasText(patient.getEmail())) {
+            return;
+        }
+        String name = StringUtils.hasText(patient.getFullName()) ? patient.getFullName().trim() : "Patient";
+        String doctorName = doctor != null && StringUtils.hasText(doctor.getName())
+                ? doctor.getName().trim()
+                : "your doctor";
+        String visit = visitType != null && StringUtils.hasText(visitType.getName())
+                ? visitType.getName().trim()
+                : "Follow-up";
+        String when = followUp.getAppointmentDate() != null
+                ? followUp.getAppointmentDate().toString()
+                : "to be confirmed";
+        String body = """
+                Hello %s,
+
+                Your follow-up visit has been cancelled.
+
+                Visit type: %s
+                Was scheduled: %s
+                Doctor: %s
+                Patient ID: %s
+
+                Contact the hospital to book again if needed.
+                """.formatted(
+                name,
+                visit,
+                when,
+                doctorName,
+                StringUtils.hasText(patient.getPatientCode()) ? patient.getPatientCode() : "-");
+        emailNotificationPublisher.sendEmail(
+                patient.getEmail(),
+                "Follow-up cancelled — Ayurvedaa",
+                body);
     }
 
     private PatientSummaryResponse fetchPatient(UUID patientId) {

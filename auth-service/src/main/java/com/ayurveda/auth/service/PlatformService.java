@@ -8,7 +8,11 @@ import com.ayurveda.auth.dto.request.CreateHospitalAdminRequest;
 import com.ayurveda.auth.dto.request.OnboardHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalRequest;
 import com.ayurveda.auth.dto.request.UpdateHospitalStatusRequest;
+import com.ayurveda.auth.dto.request.UpsertHospitalMailRequest;
+import com.ayurveda.auth.dto.request.UpsertTenantPaymentGatewayRequest;
+import com.ayurveda.auth.dto.response.HospitalMailResponse;
 import com.ayurveda.auth.dto.response.HospitalOnboardResponse;
+import com.ayurveda.auth.dto.response.TenantPaymentGatewayResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
 import com.ayurveda.auth.dto.response.UserResponse;
 import com.ayurveda.common.ApiResponse;
@@ -34,5 +38,14 @@ public interface PlatformService {
     ApiResponse<TenantResponse> updateHospitalStatus(UUID hospitalId, UpdateHospitalStatusRequest request);
 
     ApiResponse<TenantResponse> retryHospitalProvision(UUID hospitalId);
+
+    ApiResponse<TenantPaymentGatewayResponse> upsertPaymentGateway(
+            String tenantCode, UpsertTenantPaymentGatewayRequest request);
+
+    ApiResponse<TenantPaymentGatewayResponse> getPaymentGateway(String tenantCode);
+
+    ApiResponse<HospitalMailResponse> upsertHospitalMail(UUID hospitalId, UpsertHospitalMailRequest request);
+
+    ApiResponse<HospitalMailResponse> getHospitalMail(UUID hospitalId);
 
 }

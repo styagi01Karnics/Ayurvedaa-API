@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
@@ -37,6 +39,9 @@ class DoctorServiceImplTest {
 
     @Mock
     private DoctorCodeGenerator doctorCodeGenerator;
+
+    @Mock
+    private ActivityLogPublisher activityLogPublisher;
 
     @InjectMocks
     private DoctorServiceImpl doctorService;
@@ -91,23 +96,27 @@ class DoctorServiceImplTest {
 
     @Test
     void getAllDoctors_mapsList() {
-        when(doctorRepository.findAllByDeletedFalse()).thenReturn(List.of(doctor));
+        when(doctorRepository.findAllByDeletedFalse(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(doctor)));
 
-        ApiResponse<List<DoctorResponse>> response = doctorService.getAllDoctors();
+        ApiResponse<com.ayurveda.common.dto.PagedResponse<DoctorResponse>> response =
+                doctorService.getAllDoctors(0, 20);
 
-        assertEquals(1, response.getData().size());
-        assertEquals(doctorId, response.getData().get(0).getId());
+        assertEquals(1, response.getData().getContent().size());
+        assertEquals(doctorId, response.getData().getContent().get(0).getId());
     }
 
     @Test
     void getActiveDoctors_returnsOnlyActive() {
-        when(doctorRepository.findAllByStatusAndDeletedFalse(DoctorStatus.ACTIVE))
-                .thenReturn(List.of(doctor));
+        when(doctorRepository.findAllByStatusAndDeletedFalse(
+                eq(DoctorStatus.ACTIVE), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(doctor)));
 
-        ApiResponse<List<DoctorResponse>> response = doctorService.getActiveDoctors();
+        ApiResponse<com.ayurveda.common.dto.PagedResponse<DoctorResponse>> response =
+                doctorService.getActiveDoctors(0, 20);
 
-        assertEquals(1, response.getData().size());
-        assertEquals(DoctorStatus.ACTIVE, response.getData().get(0).getStatus());
+        assertEquals(1, response.getData().getContent().size());
+        assertEquals(DoctorStatus.ACTIVE, response.getData().getContent().get(0).getStatus());
     }
 
     @Test

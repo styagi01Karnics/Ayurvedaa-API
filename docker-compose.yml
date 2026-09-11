@@ -247,8 +247,11 @@ services:
       SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 1
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_ENABLED: "true"
-      PAYU_MERCHANT_KEY: ${PAYU_MERCHANT_KEY}
-      PAYU_MERCHANT_SALT: ${PAYU_MERCHANT_SALT}
+      # Optional legacy fallback only. Live hospital keys are configured via Super Admin API.
+      # For live env-fallback checkout, set PAYU_PAYMENT_URL=https://secure.payu.in/_payment in server .env.
+      PAYU_MERCHANT_KEY: ${PAYU_MERCHANT_KEY:-}
+      PAYU_MERCHANT_SALT: ${PAYU_MERCHANT_SALT:-}
+      PAYU_PAYMENT_URL: ${PAYU_PAYMENT_URL:-https://test.payu.in/_payment}
 
     ports:
       - "8112:8112"

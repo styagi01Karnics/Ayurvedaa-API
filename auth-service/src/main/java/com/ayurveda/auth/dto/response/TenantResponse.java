@@ -2,6 +2,7 @@ package com.ayurveda.auth.dto.response;
 
 import java.util.UUID;
 
+import com.ayurveda.auth.enums.HospitalMailProvider;
 import com.ayurveda.auth.enums.TenantStatus;
 
 import lombok.AllArgsConstructor;
@@ -33,6 +34,11 @@ public class TenantResponse {
     private String fullName;
     private String mobileNumber;
     private String email;
+    /** Hospital mailbox used to email patients (not admin login). */
+    private String mailEmail;
+    private HospitalMailProvider mailProvider;
+    /** Masked SMTP password. */
+    private String mailPasswordMasked;
     /** Primary contact / admin photo URL. */
     private String photoUrl;
     private String schemaName;

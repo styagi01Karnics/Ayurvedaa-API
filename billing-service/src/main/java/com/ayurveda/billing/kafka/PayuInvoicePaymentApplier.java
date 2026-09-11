@@ -10,8 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ayurveda.billing.dto.request.PartPaymentRequest;
 import com.ayurveda.billing.entity.Invoice;
 import com.ayurveda.billing.entity.InvoicePayment;
+import com.ayurveda.billing.enums.InvoiceStatus;
 import com.ayurveda.billing.repository.InvoiceRepository;
 import com.ayurveda.billing.service.InvoiceService;
+import com.ayurveda.billing.util.InvoiceCalculationUtil;
 import com.ayurveda.common.kafka.PaymentEvent;
 
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,12 @@ public class PayuInvoicePaymentApplier {
             return;
         }
         invoice.getPayments().size();
+
+        if (invoice.getStatus() == InvoiceStatus.COMPLETED) {
+            log.info("Invoice {} already COMPLETED; skipping PayU txnid={}", invoiceId, event.getPayuTxnId());
+            return;
+        }
+
         String remark = PAYU_REMARK_PREFIX + event.getPayuTxnId();
         boolean alreadyApplied = invoice.getPayments().stream()
                 .map(InvoicePayment::getRemarks)
@@ -46,14 +54,29 @@ public class PayuInvoicePaymentApplier {
         }
 
         BigDecimal amount = event.getAmount();
-        if (amount == null) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
+
+        BigDecimal left = InvoiceCalculationUtil.leftAmount(invoice.getTotalAmount(), invoice.getPaidAmount());
+        if (left.compareTo(BigDecimal.ZERO) <= 0) {
+            log.info("Invoice {} has no left amount; skipping PayU txnid={}", invoiceId, event.getPayuTxnId());
+            return;
+        }
+
+        // Never over-apply if PayU amount exceeds remaining due (e.g. race / rounding).
+        BigDecimal applyAmount = amount.min(left);
+
         invoiceService.recordPartPayment(invoiceId, PartPaymentRequest.builder()
-                .amountPaid(amount)
+                .amountPaid(applyAmount)
                 .paymentMethod("PAYU")
                 .remarks(remark)
                 .build());
-        log.info("Recorded PayU payment {} on invoice {}", event.getPayuTxnId(), invoiceId);
+        log.info(
+                "Recorded PayU payment {} on invoice {} amount={} leftWas={}",
+                event.getPayuTxnId(),
+                invoiceId,
+                applyAmount,
+                left);
     }
 }

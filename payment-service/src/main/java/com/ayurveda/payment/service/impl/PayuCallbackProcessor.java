@@ -35,6 +35,7 @@ public class PayuCallbackProcessor {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         PaymentMessages.PAYMENT_NOT_FOUND_WITH_TXN + txnId));
 
+        PaymentStatus previousStatus = payment.getStatus();
         PaymentStatus mapped = mapPayuStatus(value(params, "status"), successEndpoint);
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             payment.setStatus(mapped);
@@ -52,15 +53,20 @@ public class PayuCallbackProcessor {
         }
 
         log.info(
-                "PayU callback processed. txnid={}, payuStatus={}, mapped={}",
+                "PayU callback processed. txnid={}, payuStatus={}, mapped={}, previous={}",
                 txnId,
                 payment.getPayuStatus(),
-                payment.getStatus());
+                payment.getStatus(),
+                previousStatus);
 
-        return new CallbackResult(mapped, resolveFrontendRedirect(payment, mapped), payment);
+        return new CallbackResult(mapped, resolveFrontendRedirect(payment, mapped), payment, previousStatus);
     }
 
-    public record CallbackResult(PaymentStatus status, String redirectUrl, PaymentTransaction payment) {
+    public record CallbackResult(
+            PaymentStatus status,
+            String redirectUrl,
+            PaymentTransaction payment,
+            PaymentStatus previousStatus) {
     }
 
     private static PaymentStatus mapPayuStatus(String payuStatus, boolean successEndpoint) {

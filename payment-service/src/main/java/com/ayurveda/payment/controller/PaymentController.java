@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.payment.dto.request.InitiatePaymentRequest;
+import com.ayurveda.payment.dto.request.RefundPaymentRequest;
 import com.ayurveda.payment.dto.response.PaymentResponse;
 import com.ayurveda.payment.service.PaymentService;
 
@@ -63,5 +64,22 @@ public class PaymentController {
     @GetMapping("/{paymentId}")
     public ResponseEntity<ApiResponse<PaymentResponse>> getById(@PathVariable UUID paymentId) {
         return ResponseEntity.ok(paymentService.getById(paymentId));
+    }
+
+    @Operation(
+            summary = "Refund a successful PayU payment (Online / QR)",
+            description = """
+                    Calls PayU cancel_refund_transaction (full or partial).
+                    Any authenticated hospital user may refund.
+                    On acceptance: updates payment refundedAmount/status, publishes Kafka so billing
+                    recalculates invoice left amount, and emails the patient.
+                    Cash refunds use billing POST /api/v1/invoices/{invoiceId}/refunds.
+                    """)
+    @PostMapping("/{paymentId}/refund")
+    public ResponseEntity<ApiResponse<PaymentResponse>> refund(
+            @PathVariable UUID paymentId,
+            @RequestBody(required = false) @Valid RefundPaymentRequest request) {
+        return ResponseEntity.ok(paymentService.refund(
+                paymentId, request != null ? request : new RefundPaymentRequest()));
     }
 }

@@ -4,8 +4,10 @@ import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.util.PageRequests;
 import com.ayurveda.therapist.client.AppointmentServiceClient;
 import com.ayurveda.therapist.dto.client.TherapyMasterClientResponse;
 import com.ayurveda.therapist.dto.request.CreateTherapistRequest;
@@ -21,6 +23,8 @@ import com.ayurveda.therapist.service.TherapistService;
 import com.ayurveda.therapist.util.TherapistCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -112,19 +116,22 @@ public class TherapistServiceImpl implements TherapistService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<TherapistResponse>> getAllTherapists() {
-        log.info("Fetching all therapists");
+    public ApiResponse<PagedResponse<TherapistResponse>> getAllTherapists(int page, int size) {
+        log.info("Fetching therapists page={}, size={}", page, size);
 
         Map<UUID, String> therapyNames = loadTherapyNameMap();
-        List<TherapistResponse> therapists = therapistRepository.findAllByDeletedFalse().stream()
-                .map(therapist -> TherapistMapper.toResponse(
+        Page<Therapist> result = therapistRepository.findAllByDeletedFalse(
+                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "therapistName")));
+
+        PagedResponse<TherapistResponse> paged = PagedResponse.of(result.map(therapist ->
+                TherapistMapper.toResponse(
                         therapist,
-                        resolveAssignedTherapies(therapist.getAssignedTherapyIds(), therapyNames)))
-                .toList();
+                        resolveAssignedTherapies(therapist.getAssignedTherapyIds(), therapyNames))));
 
-        log.info("Successfully fetched {} therapists", therapists.size());
+        log.info("Successfully fetched {} therapists (total={})",
+                paged.getContent().size(), paged.getTotalElements());
 
-        return ApiResponse.success(AppConstants.THERAPISTS_FETCHED_SUCCESSFULLY, therapists);
+        return ApiResponse.success(AppConstants.THERAPISTS_FETCHED_SUCCESSFULLY, paged);
     }
 
     @Override

@@ -56,6 +56,9 @@ services:
   activity-log:
     url: http://45.195.229.15:8107
     enabled: true
+  notification:
+    url: ${NOTIFICATION_SERVICE_URL:http://45.195.229.15:8110}
+    enabled: ${NOTIFICATION_SERVICE_ENABLED:true}
 
 billing:
   default-cgst-percent: 3

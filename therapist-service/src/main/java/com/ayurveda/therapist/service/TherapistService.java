@@ -1,6 +1,7 @@
 package com.ayurveda.therapist.service;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.therapist.dto.request.CreateTherapistRequest;
 import com.ayurveda.therapist.dto.request.UpdateTherapistRequest;
 import com.ayurveda.therapist.dto.request.UpdateTherapistStatusRequest;
@@ -20,8 +21,8 @@ public interface TherapistService {
     /** Fetches a therapist by ID. */
     ApiResponse<TherapistResponse> getTherapistById(UUID therapistId);
 
-    /** Lists all non-deleted therapists. */
-    ApiResponse<List<TherapistResponse>> getAllTherapists();
+    /** Lists non-deleted therapists (paginated). */
+    ApiResponse<PagedResponse<TherapistResponse>> getAllTherapists(int page, int size);
 
     /** Lists therapists assigned to any of the given therapy IDs. */
     ApiResponse<List<TherapistResponse>> getTherapistsByTherapyIds(List<UUID> therapyIds);

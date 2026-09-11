@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.ayurveda.appointment.dto.request.CreatePatientClientRequest;
+import com.ayurveda.appointment.dto.response.MonthlyNewPatientsClientResponse;
 import com.ayurveda.appointment.dto.response.PatientSummaryResponse;
 import com.ayurveda.common.ApiResponse;
 
@@ -20,5 +22,9 @@ public interface PatientServiceClient {
 
     @GetMapping("/api/v1/patients/get-patient/{patientId}")
     ApiResponse<PatientSummaryResponse> getPatientById(@PathVariable("patientId") UUID patientId);
+
+    @GetMapping("/api/v1/dashboard/new-patients-by-month")
+    ApiResponse<MonthlyNewPatientsClientResponse> getNewPatientsByMonth(
+            @RequestParam(value = "year", required = false) Integer year);
 
 }

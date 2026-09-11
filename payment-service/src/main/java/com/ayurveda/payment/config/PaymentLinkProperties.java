@@ -10,6 +10,6 @@ import lombok.Setter;
 @ConfigurationProperties(prefix = "ayurveda.payment")
 public class PaymentLinkProperties {
 
-    /** Public UI origin used to build /pay/{token}. */
-    private String payPageBaseUrl = "http://localhost:5173";
+    /** Public payment-service host used to build /pay/{token} and qrPayload (not localhost). */
+    private String payPageBaseUrl = "http://45.195.229.15:8112";
 }

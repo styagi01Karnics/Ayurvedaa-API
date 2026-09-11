@@ -33,9 +33,37 @@ public class PayuHashService {
             String udf3,
             String udf4,
             String udf5) {
+        return requestHash(
+                payuProperties.getMerchantKey(),
+                payuProperties.getMerchantSalt(),
+                txnId,
+                amount,
+                productInfo,
+                firstName,
+                email,
+                udf1,
+                udf2,
+                udf3,
+                udf4,
+                udf5);
+    }
+
+    public String requestHash(
+            String merchantKey,
+            String merchantSalt,
+            String txnId,
+            String amount,
+            String productInfo,
+            String firstName,
+            String email,
+            String udf1,
+            String udf2,
+            String udf3,
+            String udf4,
+            String udf5) {
 
         String raw = String.join("|",
-                blankToEmpty(payuProperties.getMerchantKey()),
+                blankToEmpty(merchantKey),
                 blankToEmpty(txnId),
                 blankToEmpty(amount),
                 blankToEmpty(productInfo),
@@ -51,7 +79,7 @@ public class PayuHashService {
                 "",
                 "",
                 "",
-                blankToEmpty(payuProperties.getMerchantSalt()));
+                blankToEmpty(merchantSalt));
         return sha512(raw);
     }
 
@@ -60,12 +88,16 @@ public class PayuHashService {
      * sha512(SALT|status||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key)
      */
     public boolean verifyResponse(Map<String, String> params) {
+        return verifyResponse(payuProperties.getMerchantSalt(), params);
+    }
+
+    public boolean verifyResponse(String merchantSalt, Map<String, String> params) {
         String received = blankToEmpty(first(params, "hash"));
         if (received.isBlank()) {
             return false;
         }
         String raw = String.join("|",
-                blankToEmpty(payuProperties.getMerchantSalt()),
+                blankToEmpty(merchantSalt),
                 blankToEmpty(first(params, "status")),
                 "",
                 "",

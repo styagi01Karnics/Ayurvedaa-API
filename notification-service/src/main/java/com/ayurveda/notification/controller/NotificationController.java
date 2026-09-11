@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.notification.dto.request.CreateNotificationRequest;
 import com.ayurveda.notification.dto.request.SendEmailRequest;
+import com.ayurveda.notification.dto.response.EmailSendResponse;
 import com.ayurveda.notification.dto.response.NotificationResponse;
 import com.ayurveda.notification.dto.response.UnreadCountResponse;
 import com.ayurveda.notification.enums.NotificationType;
@@ -40,9 +41,11 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final EmailService emailService;
 
-    @Operation(summary = "Send an email (internal / service-to-service)")
+    @Operation(summary = "Send an email (internal / service-to-service)",
+            description = "SMTP failures are soft: HTTP 200 with deliveryStatus FAILED/SKIPPED. Never fails business callers.")
     @PostMapping("/email")
-    public ResponseEntity<ApiResponse<Void>> sendEmail(@Valid @RequestBody SendEmailRequest request) {
+    public ResponseEntity<ApiResponse<EmailSendResponse>> sendEmail(
+            @Valid @RequestBody SendEmailRequest request) {
         return ResponseEntity.ok(emailService.sendEmail(request));
     }
 

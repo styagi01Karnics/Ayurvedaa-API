@@ -9,6 +9,7 @@ import java.util.UUID;
 import com.ayurveda.billing.enums.VisitType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -35,6 +36,11 @@ public class CreateInvoiceRequest {
 
     @Size(max = 20)
     private String contactNumber;
+
+    /** Optional. When set, invoice confirmation is emailed via hospital SMTP. */
+    @Email
+    @Size(max = 150)
+    private String patientEmail;
 
     @NotNull(message = "Invoice date is required")
     private LocalDate invoiceDate;
@@ -73,10 +79,15 @@ public class CreateInvoiceRequest {
     @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal sgstPercent;
 
-    /** Optional first payment when generating the invoice (supports part payment). */
+    /**
+     * Optional first payment when generating the invoice.
+     * With paymentMethod=CASH and amount omitted/0, full total is marked paid (cash in hand).
+     * With ONLINE or QR, amount is ignored — invoice stays unpaid until PayU settles.
+     */
     @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal amountPaid;
 
+    /** Collection mode: CASH (in hand), ONLINE (PayU email link), or QR (shop scanner). */
     @Size(max = 50)
     private String paymentMethod;
 

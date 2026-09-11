@@ -1,6 +1,7 @@
 package com.ayurveda.patient.controller;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
 import com.ayurveda.patient.dto.response.PatientCountResponse;
 import com.ayurveda.patient.dto.response.PatientResponse;
@@ -21,9 +22,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -57,13 +58,17 @@ public class PatientController {
         return ResponseEntity.ok(patientService.getPatientById(patientId));
     }
 
-    @Operation(summary = "Get All Patients")
+    @Operation(
+            summary = "Get All Patients (paginated)",
+            description = "Query params: page (default 0), size (default 20, max 100). Response data.content holds rows.")
     @GetMapping("/get-all-patients")
-    public ResponseEntity<ApiResponse<List<PatientResponse>>> getAllPatients() {
+    public ResponseEntity<ApiResponse<PagedResponse<PatientResponse>>> getAllPatients(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        log.info("Received request to fetch all patients.");
+        log.info("Received request to fetch patients page={}, size={}", page, size);
 
-        return ResponseEntity.ok(patientService.getAllPatients());
+        return ResponseEntity.ok(patientService.getAllPatients(page, size));
     }
 
     @Operation(summary = "Get Patient Counts")
@@ -91,4 +96,3 @@ public class PatientController {
     }
 
 }
-

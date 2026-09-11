@@ -22,4 +22,9 @@ public class SalesPageResponse {
     private LocalDate revenueTo;
     private List<SalesInvoiceResponse> sales;
 
+    private int page;
+    private int size;
+    private long totalElements;
+    private int totalPages;
+
 }

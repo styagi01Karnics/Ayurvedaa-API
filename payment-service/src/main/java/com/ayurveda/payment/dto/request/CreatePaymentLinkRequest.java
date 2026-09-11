@@ -46,4 +46,11 @@ public class CreatePaymentLinkRequest {
 
     /** When true, emails the pay URL to {@code email} (use after a partial payment). */
     private Boolean sendEmail;
+
+    /**
+     * When true, calls PayU Dynamic QR (DBQR) and sets {@code qrPayload} to
+     * {@code upi://pay?...&am=...} so scanning opens UPI with the exact amount.
+     * {@code payUrl} remains the web fallback / email link.
+     */
+    private Boolean upiQr;
 }

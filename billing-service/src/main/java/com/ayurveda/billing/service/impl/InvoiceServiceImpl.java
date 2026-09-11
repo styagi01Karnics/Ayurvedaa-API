@@ -19,6 +19,7 @@ import com.ayurveda.billing.dto.client.MedicineClientResponse;
 import com.ayurveda.billing.dto.client.StockAdjustClientRequest;
 import com.ayurveda.billing.dto.request.CreateInvoiceRequest;
 import com.ayurveda.billing.dto.request.PartPaymentRequest;
+import com.ayurveda.billing.dto.request.RefundInvoiceRequest;
 import com.ayurveda.billing.dto.response.InvoiceListResponse;
 import com.ayurveda.billing.dto.response.InvoiceResponse;
 import com.ayurveda.billing.entity.Invoice;
@@ -28,6 +29,7 @@ import com.ayurveda.billing.entity.PackageMaster;
 import com.ayurveda.billing.enums.BillSection;
 import com.ayurveda.billing.enums.InvoiceItemType;
 import com.ayurveda.billing.enums.InvoiceStatus;
+import com.ayurveda.billing.enums.PaymentCollectionMode;
 import com.ayurveda.billing.mapper.InvoiceMapper;
 import com.ayurveda.billing.repository.InvoiceRepository;
 import com.ayurveda.billing.repository.PackageMasterRepository;
@@ -38,8 +40,12 @@ import com.ayurveda.billing.util.InvoiceNumberGenerator;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.notification.EmailNotificationPublisher;
+import com.ayurveda.common.tenant.TenantContext;
+import com.ayurveda.common.util.PageRequests;
 
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +63,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final InvoiceNumberGenerator invoiceNumberGenerator;
     private final MedicineServiceClient medicineServiceClient;
     private final ActivityLogPublisher activityLogPublisher;
+    private final EmailNotificationPublisher emailNotificationPublisher;
 
     @Value("${billing.default-cgst-percent:3}")
     private BigDecimal defaultCgstPercent;
@@ -106,9 +113,22 @@ public class InvoiceServiceImpl implements InvoiceService {
         validateMedicineStockAgainstRequest(invoice.getItems());
         applyTotals(invoice, request.getCgstPercent(), request.getSgstPercent());
 
+        String paymentMethod = normalizePaymentMethod(request.getPaymentMethod(), false);
+        PaymentCollectionMode mode = PaymentCollectionMode.fromRaw(paymentMethod);
         BigDecimal initialPaid = InvoiceCalculationUtil.money(request.getAmountPaid());
-        if (initialPaid.compareTo(BigDecimal.ZERO) > 0) {
-            applyPayment(invoice, initialPaid, request.getPaymentMethod(), request.getPaymentRemarks());
+
+        // ONLINE / QR leave the invoice unpaid until PayU settles (email link or POS QR machine).
+        if (mode == PaymentCollectionMode.ONLINE || mode == PaymentCollectionMode.QR) {
+            invoice.setPaidAmount(BigDecimal.ZERO.setScale(2));
+            invoice.setLeftAmount(InvoiceCalculationUtil.leftAmount(invoice.getTotalAmount(), invoice.getPaidAmount()));
+            invoice.setStatus(InvoiceCalculationUtil.resolveStatus(invoice.getTotalAmount(), invoice.getPaidAmount()));
+        } else if (mode == PaymentCollectionMode.CASH && initialPaid.compareTo(BigDecimal.ZERO) <= 0) {
+            applyPayment(invoice, invoice.getTotalAmount(), PaymentCollectionMode.CASH.name(),
+                    request.getPaymentRemarks());
+        } else if (initialPaid.compareTo(BigDecimal.ZERO) > 0) {
+            applyPayment(invoice, initialPaid,
+                    paymentMethod != null ? paymentMethod : PaymentCollectionMode.CASH.name(),
+                    request.getPaymentRemarks());
         } else {
             invoice.setPaidAmount(BigDecimal.ZERO.setScale(2));
             invoice.setLeftAmount(InvoiceCalculationUtil.leftAmount(invoice.getTotalAmount(), invoice.getPaidAmount()));
@@ -133,6 +153,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                 ActivityActionType.CREATED,
                 "Invoice " + saved.getInvoiceNumber());
 
+        emailInvoiceCreated(saved, request.getPatientEmail());
+
         return ApiResponse.success(BillingMessages.INVOICE_GENERATED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
     }
 
@@ -153,8 +175,10 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<InvoiceListResponse>> getInvoices(String patientId, InvoiceStatus status) {
-        log.info("Fetching invoices with patientId={}, status={}", patientId, status);
+    public ApiResponse<PagedResponse<InvoiceListResponse>> getInvoices(
+            String patientId, InvoiceStatus status, int page, int size) {
+        log.info("Fetching invoices with patientId={}, status={}, page={}, size={}",
+                patientId, status, page, size);
 
         UUID parsedPatientId = null;
         String patientSearch = null;
@@ -174,16 +198,20 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .map(invoiceMapper::toListResponse)
                 .toList();
 
-        log.info("Successfully fetched {} invoices.", invoices.size());
+        long total = invoices.size();
+        log.info("Successfully fetched {} invoices (total before page={}).", total, total);
 
-        return ApiResponse.success(BillingMessages.INVOICES_FETCHED_SUCCESSFULLY, invoices);
+        return ApiResponse.success(
+                BillingMessages.INVOICES_FETCHED_SUCCESSFULLY,
+                PagedResponse.of(PageRequests.slice(invoices, page, size), page, size, total));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<InvoiceListResponse>> getInvoicesByPatientId(
-            UUID patientId, InvoiceStatus status) {
-        log.info("Fetching invoices for patientId={}, status={}", patientId, status);
+    public ApiResponse<PagedResponse<InvoiceListResponse>> getInvoicesByPatientId(
+            UUID patientId, InvoiceStatus status, int page, int size) {
+        log.info("Fetching invoices for patientId={}, status={}, page={}, size={}",
+                patientId, status, page, size);
 
         List<InvoiceListResponse> invoices = invoiceRepository
                 .search(patientId, null, status)
@@ -191,9 +219,12 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .map(invoiceMapper::toListResponse)
                 .toList();
 
-        log.info("Successfully fetched {} invoices for patientId={}.", invoices.size(), patientId);
+        long total = invoices.size();
+        log.info("Successfully fetched {} invoices for patientId={}.", total, patientId);
 
-        return ApiResponse.success(BillingMessages.INVOICES_FETCHED_SUCCESSFULLY, invoices);
+        return ApiResponse.success(
+                BillingMessages.INVOICES_FETCHED_SUCCESSFULLY,
+                PagedResponse.of(PageRequests.slice(invoices, page, size), page, size, total));
     }
 
     @Override
@@ -206,14 +237,28 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new BadRequestException(BillingMessages.INVOICE_ALREADY_FULLY_PAID);
         }
 
-        BigDecimal paymentAmount = InvoiceCalculationUtil.money(request.getAmountPaid());
+        String paymentMethod = normalizePaymentMethod(request.getPaymentMethod(), true);
+        PaymentCollectionMode mode = PaymentCollectionMode.fromRaw(paymentMethod);
+        // ONLINE / QR must go through payment-service (email link or shop QR); only CASH/PAYU settle here.
+        if (mode == PaymentCollectionMode.ONLINE || mode == PaymentCollectionMode.QR) {
+            throw new BadRequestException(BillingMessages.ONLINE_QR_USE_PAYMENT_LINK);
+        }
+
         BigDecimal left = InvoiceCalculationUtil.leftAmount(invoice.getTotalAmount(), invoice.getPaidAmount());
+
+        BigDecimal paymentAmount;
+        if (request.getAmountPaid() == null
+                && mode == PaymentCollectionMode.CASH) {
+            paymentAmount = left;
+        } else {
+            paymentAmount = InvoiceCalculationUtil.money(request.getAmountPaid());
+        }
 
         if (paymentAmount.compareTo(left) > 0) {
             throw new BadRequestException(BillingMessages.PAYMENT_EXCEEDS_LEFT_AMOUNT + left);
         }
 
-        applyPayment(invoice, paymentAmount, request.getPaymentMethod(), request.getRemarks());
+        applyPayment(invoice, paymentAmount, paymentMethod, request.getRemarks());
         Invoice saved = invoiceRepository.save(invoice);
 
         saved.getItems().size();
@@ -224,6 +269,62 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         return ApiResponse.success(
                 BillingMessages.PART_PAYMENT_RECORDED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
+    }
+
+    @Override
+    public ApiResponse<InvoiceResponse> recordCashRefund(UUID invoiceId, RefundInvoiceRequest request) {
+        Invoice invoice = findActive(invoiceId);
+        BigDecimal paid = InvoiceCalculationUtil.money(invoice.getPaidAmount());
+        if (paid.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(BillingMessages.NOTHING_TO_REFUND);
+        }
+
+        BigDecimal refundAmount = request.getAmount() == null
+                ? paid
+                : InvoiceCalculationUtil.money(request.getAmount());
+        String remarks = StringUtils.hasText(request.getReason())
+                ? request.getReason().trim()
+                : "Cash refund";
+
+        Invoice saved = applyRefundInternal(invoice, refundAmount, "REFUND_CASH", remarks);
+        emailCashRefundIfPossible(saved, refundAmount, request.getPatientEmail());
+
+        activityLogPublisher.record(
+                "Billing",
+                ActivityActionType.UPDATED,
+                "Cash refund " + refundAmount.toPlainString() + " on " + saved.getInvoiceNumber());
+
+        return ApiResponse.success(
+                BillingMessages.REFUND_RECORDED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
+    }
+
+    @Override
+    public ApiResponse<InvoiceResponse> recordGatewayRefund(
+            UUID invoiceId,
+            BigDecimal amount,
+            String paymentMethod,
+            String remarks) {
+        Invoice invoice = findActive(invoiceId);
+        invoice.getPayments().size();
+
+        if (StringUtils.hasText(remarks)) {
+            boolean already = invoice.getPayments().stream()
+                    .map(InvoicePayment::getRemarks)
+                    .anyMatch(value -> remarks.equals(value));
+            if (already) {
+                log.info("Refund already applied for remarks={} invoice={}", remarks, invoiceId);
+                return ApiResponse.success(
+                        BillingMessages.REFUND_RECORDED_SUCCESSFULLY, invoiceMapper.toResponse(invoice));
+            }
+        }
+
+        Invoice saved = applyRefundInternal(
+                invoice,
+                InvoiceCalculationUtil.money(amount),
+                StringUtils.hasText(paymentMethod) ? paymentMethod : "REFUND_PAYU",
+                remarks);
+        return ApiResponse.success(
+                BillingMessages.REFUND_RECORDED_SUCCESSFULLY, invoiceMapper.toResponse(saved));
     }
 
     @Override
@@ -494,6 +595,131 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setPaidAmount(InvoiceCalculationUtil.money(newPaid));
         invoice.setLeftAmount(InvoiceCalculationUtil.leftAmount(invoice.getTotalAmount(), newPaid));
         invoice.setStatus(InvoiceCalculationUtil.resolveStatus(invoice.getTotalAmount(), newPaid));
+    }
+
+    private Invoice applyRefundInternal(
+            Invoice invoice, BigDecimal refundAmount, String paymentMethod, String remarks) {
+        BigDecimal refund = InvoiceCalculationUtil.money(refundAmount);
+        if (refund.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(BillingMessages.PAYMENT_AMOUNT_MUST_BE_POSITIVE);
+        }
+
+        BigDecimal paid = InvoiceCalculationUtil.money(invoice.getPaidAmount());
+        if (paid.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(BillingMessages.NOTHING_TO_REFUND);
+        }
+        if (refund.compareTo(paid) > 0) {
+            throw new BadRequestException(BillingMessages.REFUND_EXCEEDS_PAID_AMOUNT + paid);
+        }
+
+        BigDecimal newPaid = paid.subtract(refund);
+        InvoicePayment refundRecord = InvoicePayment.builder()
+                .invoice(invoice)
+                .amountPaid(refund.negate())
+                .paymentDate(LocalDateTime.now())
+                .paymentMethod(paymentMethod)
+                .remarks(remarks)
+                .build();
+
+        invoice.getPayments().add(refundRecord);
+        invoice.setPaidAmount(InvoiceCalculationUtil.money(newPaid));
+        invoice.setLeftAmount(InvoiceCalculationUtil.leftAmount(invoice.getTotalAmount(), newPaid));
+        invoice.setStatus(InvoiceCalculationUtil.resolveStatus(invoice.getTotalAmount(), newPaid));
+
+        Invoice saved = invoiceRepository.save(invoice);
+        saved.getItems().size();
+        saved.getPayments().size();
+        log.info(
+                "Refund recorded. invoiceId={} amount={} method={} paidNow={} left={}",
+                saved.getId(),
+                refund,
+                paymentMethod,
+                saved.getPaidAmount(),
+                saved.getLeftAmount());
+        return saved;
+    }
+
+    private void emailInvoiceCreated(Invoice invoice, String patientEmail) {
+        if (invoice == null || !StringUtils.hasText(patientEmail)) {
+            return;
+        }
+        String name = StringUtils.hasText(invoice.getPatientName())
+                ? invoice.getPatientName().trim()
+                : "Patient";
+        String body = """
+                Hello %s,
+
+                An invoice has been generated for your visit.
+
+                Invoice number: %s
+                Invoice date: %s
+                Total amount: INR %s
+                Amount paid: INR %s
+                Amount due: INR %s
+                Status: %s
+
+                Please contact the hospital for payment or clarification.
+                """.formatted(
+                name,
+                invoice.getInvoiceNumber(),
+                invoice.getInvoiceDate(),
+                InvoiceCalculationUtil.money(invoice.getTotalAmount()).toPlainString(),
+                InvoiceCalculationUtil.money(invoice.getPaidAmount()).toPlainString(),
+                InvoiceCalculationUtil.money(invoice.getLeftAmount()).toPlainString(),
+                invoice.getStatus() != null ? invoice.getStatus().name() : "-");
+        emailNotificationPublisher.sendEmail(
+                patientEmail.trim(),
+                "Invoice " + invoice.getInvoiceNumber() + " — Ayurvedaa",
+                body,
+                TenantContext.getTenantCode());
+    }
+
+    private void emailCashRefundIfPossible(Invoice invoice, BigDecimal refundAmount, String patientEmail) {
+        if (!StringUtils.hasText(patientEmail)) {
+            return;
+        }
+        String name = StringUtils.hasText(invoice.getPatientName())
+                ? invoice.getPatientName().trim()
+                : "Patient";
+        String subject = "Refund processed — Ayurvedaa";
+        String body = """
+                Hello %s,
+
+                A cash refund of INR %s has been processed for invoice %s.
+
+                Paid amount now: INR %s
+                Remaining due: INR %s
+
+                If you have questions, please contact the hospital.
+                """.formatted(
+                name,
+                refundAmount.toPlainString(),
+                invoice.getInvoiceNumber(),
+                InvoiceCalculationUtil.money(invoice.getPaidAmount()).toPlainString(),
+                InvoiceCalculationUtil.money(invoice.getLeftAmount()).toPlainString());
+        emailNotificationPublisher.sendEmail(
+                patientEmail.trim(), subject, body, TenantContext.getTenantCode());
+    }
+
+    /**
+     * Maps UI/API aliases to CASH / ONLINE / QR. PayU Kafka settlements keep {@code PAYU}.
+     */
+    private String normalizePaymentMethod(String raw, boolean required) {
+        if (!StringUtils.hasText(raw)) {
+            if (required) {
+                throw new BadRequestException(BillingMessages.INVALID_PAYMENT_METHOD);
+            }
+            return null;
+        }
+        String trimmed = raw.trim();
+        PaymentCollectionMode mode = PaymentCollectionMode.fromRaw(trimmed);
+        if (mode != null) {
+            return mode.name();
+        }
+        if ("PAYU".equalsIgnoreCase(trimmed)) {
+            return "PAYU";
+        }
+        throw new BadRequestException(BillingMessages.INVALID_PAYMENT_METHOD);
     }
 
     private Invoice findActive(UUID invoiceId) {
