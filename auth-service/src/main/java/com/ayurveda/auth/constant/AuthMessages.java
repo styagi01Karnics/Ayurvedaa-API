@@ -12,6 +12,8 @@ public final class AuthMessages {
     public static final String PLATFORM_BOOTSTRAPPED_SUCCESSFULLY =
             "Platform super admin bootstrapped successfully.";
     public static final String HOSPITALS_FETCHED_SUCCESSFULLY = "Hospitals fetched successfully.";
+    public static final String PUBLIC_TENANT_LOCATIONS_FETCHED =
+            "Tenant locations fetched successfully.";
     public static final String HOSPITAL_STATUS_UPDATED = "Hospital status updated successfully.";
     public static final String ROLE_CREATED_SUCCESSFULLY = "Role created successfully.";
     public static final String ROLE_UPDATED_SUCCESSFULLY = "Role updated successfully.";
@@ -104,5 +106,21 @@ public final class AuthMessages {
             "Retry provision is only allowed when hospital status is FAILED.";
     public static final String TENANT_REQUIRED_FOR_HOSPITAL_FORGOT_PASSWORD =
             "tenantCode is required for hospital user forgot-password.";
+    public static final String PAYMENT_GATEWAY_SAVED = "Payment gateway saved successfully.";
+    public static final String PAYMENT_GATEWAY_FETCHED = "Payment gateway fetched successfully.";
+    public static final String PAYMENT_GATEWAY_NOT_CONFIGURED =
+            "Payment gateway is not configured for this hospital.";
+    public static final String PAYMENT_GATEWAY_SALT_REQUIRED =
+            "Merchant salt is required when configuring a new payment gateway.";
+    public static final String PAYMENT_GATEWAY_API_DISABLED =
+            "Per-tenant payment gateway API is disabled. Configure PayU in payment-service "
+                    + "application.yml / env (PAYU_MERCHANT_KEY, PAYU_MERCHANT_SALT, PAYU_MODE).";
+    public static final String UNSUPPORTED_PAYMENT_PROVIDER = "Only PAYU is supported.";
+    public static final String HOSPITAL_MAIL_SAVED = "Hospital mail saved successfully.";
+    public static final String HOSPITAL_MAIL_FETCHED = "Hospital mail fetched successfully.";
+    public static final String HOSPITAL_MAIL_NOT_CONFIGURED =
+            "Hospital sending mailbox is not configured.";
+    public static final String HOSPITAL_MAIL_PASSWORD_REQUIRED =
+            "Hospital mail password is required when configuring the mailbox for the first time.";
 
 }

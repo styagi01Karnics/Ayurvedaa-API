@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
+import com.ayurveda.auth.dto.response.PublicTenantLocationResponse;
 import com.ayurveda.auth.dto.response.TenantResponse;
 import com.ayurveda.auth.dto.response.TenantRoleResponse;
 import com.ayurveda.auth.dto.response.UiPageResponse;
@@ -41,6 +42,17 @@ public class AuthMapper {
                 .platform(tenant.getPlatform())
                 .status(tenant.getStatus())
                 .provisionMessage(tenant.getProvisionMessage())
+                .build();
+    }
+
+    public PublicTenantLocationResponse toPublicTenantLocationResponse(Tenant tenant) {
+        if (tenant == null) {
+            return null;
+        }
+        return PublicTenantLocationResponse.builder()
+                .tenantCode(tenant.getTenantCode())
+                .state(tenant.getState())
+                .city(tenant.getCity())
                 .build();
     }
 
