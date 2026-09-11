@@ -15,6 +15,14 @@ target/
 .classpath
 .project
 .settings/
+.factorypath
+
+# Local smoke / temp test artifacts
+docs/_svc_logs/
+docs/_wipe_tmp/
+docs/db/
+docs/api.zip
+docs/_appt_restart.err
 
 # VS Code
 .vscode/
