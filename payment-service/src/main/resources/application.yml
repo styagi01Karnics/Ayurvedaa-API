@@ -43,10 +43,12 @@ server:
 
 services:
   billing:
-    url: ${BILLING_SERVICE_URL:http://127.0.0.1:8109}
+    # Default matches sibling services. In Docker Compose prefer container DNS
+    # (BILLING_SERVICE_URL=http://ayurvedaa-api-billing-service:8109).
+    url: ${BILLING_SERVICE_URL:http://45.195.229.15:8109}
   notification:
     # Email SMTP is in notification-service only; payment publishes via HTTP.
-    url: ${NOTIFICATION_SERVICE_URL:http://127.0.0.1:8110}
+    url: ${NOTIFICATION_SERVICE_URL:http://45.195.229.15:8110}
     enabled: ${NOTIFICATION_SERVICE_ENABLED:true}
 
 ayurveda:
