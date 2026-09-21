@@ -367,8 +367,7 @@ REMOTE_SCRIPT
         }
 
 
-        stage('Cleanup Old Ayurvedaa Images') {
-
+        stage('Application Server Cleanup') {
             when {
                 anyOf {
                     branch 'fixes-development'
@@ -377,7 +376,6 @@ REMOTE_SCRIPT
             }
 
             steps {
-
                 withCredentials([
                     usernamePassword(
                         credentialsId: "${SSH_CREDENTIALS}",
@@ -385,8 +383,7 @@ REMOTE_SCRIPT
                         passwordVariable: 'SSH_PASSWORD'
                     )
                 ]) {
-
-                    sh '''
+                    sh """ 
                         set -e
 
                         export SSHPASS="${SSH_PASSWORD}"
@@ -395,12 +392,15 @@ REMOTE_SCRIPT
                             -o StrictHostKeyChecking=no \
                             -o UserKnownHostsFile=/dev/null \
                             "${SSH_USER}@${APP_SERVER}" \
-                            'bash -s' <<'REMOTE_CLEANUP'
+                            "IMAGE_TAG='${IMAGE_TAG}' APP_DIR='${APP_DIR}' bash -s" <<'REMOTE_CLEANUP'
 
 set -e
 
 echo "=============================================="
-echo "AYURVEDAA IMAGE CLEANUP"
+echo "AYURVEDAA APPLICATION SERVER IMAGE CLEANUP"
+echo "=============================================="
+echo "Current pipeline image: ${IMAGE_TAG}"
+echo "Policy: current + previous 2"
 echo "=============================================="
 
 SERVICES="
@@ -418,92 +418,199 @@ auth-service
 payment-service
 "
 
+cd "${APP_DIR}"
+
 for SERVICE in ${SERVICES}
 do
-
     REPOSITORY="sunardock/ayurvedaa-api-${SERVICE}"
+    CURRENT_IMAGE="${REPOSITORY}:${IMAGE_TAG}"
+    KEEP_FILE="/tmp/${SERVICE}-ayurvedaa-keep.txt"
 
     echo ""
     echo "----------------------------------------------"
-    echo "Service: ${SERVICE}"
-    echo "Repository: ${REPOSITORY}"
+    echo "Service    : ${SERVICE}"
+    echo "Repository : ${REPOSITORY}"
+    echo "Current    : ${CURRENT_IMAGE}"
     echo "----------------------------------------------"
+
+    if ! docker image inspect "${CURRENT_IMAGE}" >/dev/null 2>&1; then
+        echo "WARNING: Current image is not available."
+        echo "         ${CURRENT_IMAGE}"
+        echo "Skipping cleanup for ${SERVICE}."
+        continue
+    fi
+
+    : > "${KEEP_FILE}"
+    echo "${CURRENT_IMAGE}" >> "${KEEP_FILE}"
 
     docker image ls "${REPOSITORY}" \
         --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' \
         | sort -r \
-        > "/tmp/${SERVICE}-ayurvedaa-images.txt"
-
-    COUNT=0
-
-    while IFS='|' read -r CREATED IMAGE
+        | cut -d'|' -f2 \
+        | while read -r IMAGE
     do
+        [ -z "${IMAGE}" ] && continue
 
-        if [ -z "${IMAGE}" ]
-        then
+        if grep -Fxq "${IMAGE}" "${KEEP_FILE}"; then
             continue
         fi
 
-        COUNT=$((COUNT + 1))
+        KEEP_COUNT=$(wc -l < "${KEEP_FILE}")
 
-        if [ "${COUNT}" -le 3 ]
-        then
+        if [ "${KEEP_COUNT}" -lt 3 ]; then
+            echo "${IMAGE}" >> "${KEEP_FILE}"
+        fi
+    done
 
+    echo "Images to keep:"
+    cat "${KEEP_FILE}"
+
+    echo ""
+    echo "Cleaning old images..."
+
+    docker image ls "${REPOSITORY}" \
+        --format '{{.Repository}}:{{.Tag}}' \
+        | while read -r IMAGE
+    do
+        [ -z "${IMAGE}" ] && continue
+
+        if grep -Fxq "${IMAGE}" "${KEEP_FILE}"; then
             echo "KEEP   : ${IMAGE}"
-
         else
-
             RUNNING=$(docker ps \
                 --filter "ancestor=${IMAGE}" \
                 --format '{{.Names}}' \
-                | head -n 1)
+                | head -n 1 || true)
 
-            if [ -n "${RUNNING}" ]
-            then
-
+            if [ -n "${RUNNING}" ]; then
                 echo "SKIP   : ${IMAGE}"
                 echo "         Running container: ${RUNNING}"
-
             else
-
                 echo "REMOVE : ${IMAGE}"
-
                 docker image rm "${IMAGE}" || true
-
             fi
         fi
+    done
 
-    done < "/tmp/${SERVICE}-ayurvedaa-images.txt"
-
-    rm -f "/tmp/${SERVICE}-ayurvedaa-images.txt"
-
+    rm -f "${KEEP_FILE}"
 done
 
 echo ""
 echo "=============================================="
-echo "CLEANUP COMPLETED"
+echo "APPLICATION SERVER CLEANUP COMPLETED"
 echo "=============================================="
 
-echo ""
-echo "Remaining Ayurvedaa images:"
-
 docker images \
-    --format '{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}' \
+    --format '{{.Repository}}:{{.Tag}}' \
     | grep '^sunardock/ayurvedaa-api-' \
-    | sort
+    | sort || true
 
 echo ""
 echo "No other application images were touched."
 
 REMOTE_CLEANUP
-
-                        unset SSHPASS
-                    '''
+                    """
                 }
             }
         }
-    }
 
+
+        stage('DevOps Server Cleanup') {
+            when {
+                anyOf {
+                    branch 'fixes-development'
+                    branch 'dev-sonarqube-common'
+                }
+            }
+
+            steps {
+                sh """
+                    set -e
+
+                    echo "=============================================="
+                    echo "DEVOPS SERVER AYURVEDAA IMAGE CLEANUP"
+                    echo "=============================================="
+                    echo "Current pipeline image: ${IMAGE_TAG}"
+                    echo "Policy: current image only"
+                    echo "=============================================="
+
+                    SERVICES="
+patient-service
+doctor-service
+appointment-service
+therapist-service
+file-upload-service
+attendance-service
+activity-log-service
+medicine-service
+billing-service
+notification-service
+auth-service
+payment-service
+"
+
+                    for SERVICE in ${SERVICES}
+                    do
+                        REPOSITORY="${IMAGE_PREFIX}-${SERVICE}"
+                        CURRENT_IMAGE="${REPOSITORY}:${IMAGE_TAG}"
+
+                        echo ""
+                        echo "----------------------------------------------"
+                        echo "Service    : ${SERVICE}"
+                        echo "Repository : ${REPOSITORY}"
+                        echo "Current    : ${CURRENT_IMAGE}"
+                        echo "----------------------------------------------"
+
+                        if ! docker image inspect "${CURRENT_IMAGE}" >/dev/null 2>&1; then
+                            echo "WARNING: Current image is not available."
+                            echo "         ${CURRENT_IMAGE}"
+                            echo "Skipping cleanup for ${SERVICE}."
+                            continue
+                        fi
+
+                        docker image ls "${REPOSITORY}" \
+                            --format '{{.Repository}}:{{.Tag}}' \
+                            | while read -r IMAGE
+                        do
+                            [ -z "${IMAGE}" ] && continue
+
+                            if [ "${IMAGE}" = "${CURRENT_IMAGE}" ]; then
+                                echo "KEEP   : ${IMAGE}"
+                            else
+                                RUNNING=$(docker ps \
+                                    --filter "ancestor=${IMAGE}" \
+                                    --format '{{.Names}}' \
+                                    | head -n 1 || true)
+
+                                if [ -n "${RUNNING}" ]; then
+                                    echo "SKIP   : ${IMAGE}"
+                                    echo "         Running container: ${RUNNING}"
+                                else
+                                    echo "REMOVE : ${IMAGE}"
+                                    docker image rm "${IMAGE}" || true
+                                fi
+                            fi
+                        done
+                    done
+
+                    echo ""
+                    echo "=============================================="
+                    echo "DEVOPS SERVER CLEANUP COMPLETED"
+                    echo "=============================================="
+
+                    echo ""
+                    echo "Remaining Ayurvedaa API images:"
+
+                    docker images \
+                        --format '{{.Repository}}:{{.Tag}}' \
+                        | grep '^sunardock/ayurvedaa-api-' \
+                        | sort || true
+
+                    echo ""
+                    echo "No other application images were touched."
+                """
+            }
+        }
 
     post {
 
