@@ -4,21 +4,9 @@ pipeline {
 
     options {
         timestamps()
-
-        /*
-         * Prevent two builds of the SAME branch from running together.
-         *
-         * Deployment itself is additionally protected by flock on the
-         * application server so different branch jobs cannot deploy
-         * simultaneously.
-         */
         disableConcurrentBuilds()
-
         skipDefaultCheckout(true)
 
-        /*
-         * Keep Jenkins build history under control.
-         */
         buildDiscarder(
             logRotator(
                 numToKeepStr: '20',
@@ -29,112 +17,44 @@ pipeline {
 
     environment {
 
-        /*
-         * ============================================================
-         * DOCKER HUB
-         * ============================================================
-         */
-
         IMAGE_PREFIX = 'sunardock/ayurvedaa-api'
 
         DOCKER_CREDENTIALS = 'dockerhub-creds'
 
-
-        /*
-         * ============================================================
-         * APPLICATION SERVER
-         * ============================================================
-         */
-
         APP_SERVER = '45.195.229.15'
         APP_DIR = '/root/ayurvedaa'
 
-
-        /*
-         * Jenkins Username/Password credential used to SSH
-         * into the application server.
-         */
         SSH_CREDENTIALS = 'new-server-ssh'
     }
 
-
     stages {
 
-
-        // ============================================================
-        // 1. INITIALIZE
-        // ============================================================
-
         stage('Initialize') {
-
             steps {
-
                 script {
-
-                    /*
-                     * Jenkins Multibranch automatically provides
-                     * BRANCH_NAME.
-                     *
-                     * Examples:
-                     *
-                     * fixes-development
-                     * dev-sonarqube-common
-                     */
 
                     env.SAFE_BRANCH = (env.BRANCH_NAME ?: 'unknown')
                         .replaceAll(/[^A-Za-z0-9_.-]/, '-')
 
+                    env.IMAGE_TAG = "${env.SAFE_BRANCH}-${env.BUILD_NUMBER}"
 
-                    /*
-                     * Branch-specific image tag.
-                     *
-                     * Example:
-                     *
-                     * fixes-development-25
-                     * dev-sonarqube-common-12
-                     *
-                     * IMPORTANT:
-                     *
-                     * Containers are NOT branch-specific.
-                     * Only the image tag is branch-specific.
-                     */
-
-                    env.IMAGE_TAG =
-                        "${env.SAFE_BRANCH}-${env.BUILD_NUMBER}"
-
-
-                    echo "================================================"
+                    echo "=============================================="
                     echo "AYURVEDAA MULTIBRANCH PIPELINE"
-                    echo "================================================"
+                    echo "=============================================="
                     echo "Branch       : ${env.BRANCH_NAME}"
                     echo "Safe Branch  : ${env.SAFE_BRANCH}"
                     echo "Build Number : ${env.BUILD_NUMBER}"
                     echo "Image Tag    : ${env.IMAGE_TAG}"
-                    echo "================================================"
+                    echo "=============================================="
                 }
             }
         }
 
 
-        // ============================================================
-        // 2. CHECKOUT
-        // ============================================================
-
         stage('Checkout') {
-
             steps {
 
-                /*
-                 * IMPORTANT:
-                 *
-                 * Do not specify a branch manually.
-                 *
-                 * checkout scm automatically checks out the branch
-                 * selected by the Multibranch Pipeline.
-                 */
-
                 checkout scm
-
 
                 sh '''
                     set -e
@@ -154,18 +74,12 @@ pipeline {
         }
 
 
-        // ============================================================
-        // 3. ENVIRONMENT CHECK
-        // ============================================================
-
         stage('Environment Check') {
-
             steps {
-
                 sh '''
                     set -e
 
-                    echo "Checking Jenkins build environment..."
+                    echo "Checking required commands..."
 
                     command -v java
                     command -v mvn
@@ -179,34 +93,18 @@ pipeline {
         }
 
 
-        // ============================================================
-        // 4. MAVEN TEST + PACKAGE
-        // ============================================================
-
         stage('Maven Test & Package') {
-
             steps {
-
                 sh '''
                     set -e
 
-                    echo "Running Maven clean test package..."
-
                     mvn clean test package -DskipTests=false
-
-                    echo ""
-                    echo "Maven build completed successfully."
                 '''
             }
         }
 
 
-        // ============================================================
-        // 5. SONARQUBE
-        // ============================================================
-
         stage('SonarQube Analysis') {
-
             steps {
 
                 withSonarQubeEnv('sonarqube') {
@@ -214,30 +112,18 @@ pipeline {
                     sh '''
                         set -e
 
-                        echo "Running SonarQube analysis..."
-
                         mvn sonar:sonar
-
-                        echo ""
-                        echo "SonarQube analysis completed."
                     '''
                 }
             }
         }
 
 
-        // ============================================================
-        // 6. VERIFY DOCKERFILES
-        // ============================================================
-
         stage('Verify Dockerfiles') {
-
             steps {
 
                 sh '''
                     set -e
-
-                    echo "Checking Ayurvedaa Dockerfiles..."
 
                     test -f patient-service/Dockerfile
                     test -f doctor-service/Dockerfile
@@ -252,29 +138,20 @@ pipeline {
                     test -f auth-service/Dockerfile
                     test -f payment-service/Dockerfile
 
-                    echo ""
-                    echo "All required Dockerfiles found."
+                    echo "All Dockerfiles found."
                 '''
             }
         }
 
 
-        // ============================================================
-        // 7. DOCKER BUILD
-        // ============================================================
-
         stage('Docker Build') {
-
             steps {
 
                 sh '''
                     set -e
 
-                    echo "================================================"
-                    echo "BUILDING DOCKER IMAGES"
-                    echo "================================================"
-
-                    echo "Image tag: ${IMAGE_TAG}"
+                    echo "Building Ayurvedaa images..."
+                    echo "IMAGE_TAG=${IMAGE_TAG}"
 
                     docker build \
                         -t ${IMAGE_PREFIX}-patient-service:${IMAGE_TAG} \
@@ -324,19 +201,13 @@ pipeline {
                         -t ${IMAGE_PREFIX}-payment-service:${IMAGE_TAG} \
                         ./payment-service
 
-                    echo ""
-                    echo "Docker build completed successfully."
+                    echo "Docker build completed."
                 '''
             }
         }
 
 
-        // ============================================================
-        // 8. DOCKER PUSH
-        // ============================================================
-
         stage('Docker Push') {
-
             steps {
 
                 withCredentials([
@@ -350,96 +221,42 @@ pipeline {
                     sh '''
                         set -e
 
-                        echo "Logging into Docker Hub..."
-
                         echo "${DOCKER_PASSWORD}" | docker login \
                             --username "${DOCKER_USERNAME}" \
                             --password-stdin
 
-
-                        echo ""
-                        echo "Pushing Ayurvedaa images..."
-
-
-                        docker push \
-                            ${IMAGE_PREFIX}-patient-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-doctor-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-appointment-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-therapist-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-file-upload-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-attendance-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-activity-log-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-medicine-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-billing-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-notification-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-auth-service:${IMAGE_TAG}
-
-                        docker push \
-                            ${IMAGE_PREFIX}-payment-service:${IMAGE_TAG}
-
+                        docker push ${IMAGE_PREFIX}-patient-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-doctor-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-appointment-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-therapist-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-file-upload-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-attendance-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-activity-log-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-medicine-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-billing-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-notification-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-auth-service:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-payment-service:${IMAGE_TAG}
 
                         docker logout
 
-
-                        echo ""
-                        echo "Docker push completed successfully."
+                        echo "Docker push completed."
                     '''
                 }
             }
         }
 
 
-        // ============================================================
-        // 9. DEPLOY
-        // ============================================================
-
         stage('Deploy') {
 
-            /*
-             * Only your currently used branches deploy.
-             *
-             * Both branches use the SAME deployment.
-             *
-             * There is NOT one container set for each branch.
-             */
-
             when {
-
                 anyOf {
-
                     branch 'fixes-development'
-
                     branch 'dev-sonarqube-common'
                 }
             }
 
-
             steps {
-
-                /*
-                 * Your new-server-ssh credential is Username/Password,
-                 * therefore we use usernamePassword instead of sshagent.
-                 */
 
                 withCredentials([
                     usernamePassword(
@@ -452,188 +269,60 @@ pipeline {
                     sh '''
                         set -e
 
-                        echo "================================================"
+                        echo "=============================================="
                         echo "AYURVEDAA DEPLOYMENT"
-                        echo "================================================"
+                        echo "=============================================="
                         echo "Branch    : ${BRANCH_NAME}"
                         echo "Image Tag : ${IMAGE_TAG}"
                         echo "Server    : ${APP_SERVER}"
-                        echo "================================================"
-
-
-                        /*
-                         * SSHPASS is passed through the environment so
-                         * the password is not placed directly in the
-                         * SSH command.
-                         */
+                        echo "=============================================="
 
                         export SSHPASS="${SSH_PASSWORD}"
-
 
                         sshpass -e ssh \
                             -o StrictHostKeyChecking=no \
                             -o UserKnownHostsFile=/dev/null \
-                            ${SSH_USER}@${APP_SERVER} \
+                            "${SSH_USER}@${APP_SERVER}" \
                             "IMAGE_TAG='${IMAGE_TAG}' APP_DIR='${APP_DIR}' bash -s" <<'REMOTE_SCRIPT'
 
-                            set -e
+set -e
 
+exec 9>/var/lock/ayurvedaa-api-deployment.lock
+flock 9
 
-                            # ==================================================
-                            # GLOBAL DEPLOYMENT LOCK
-                            # ==================================================
-                            #
-                            # This lock is on the application server.
-                            #
-                            # If fixes-development and
-                            # dev-sonarqube-common jobs start together,
-                            # only ONE deployment runs at a time.
-                            #
-                            # This is important because both branches deploy
-                            # to the SAME Ayurvedaa containers.
-                            # ==================================================
+echo "Deployment lock acquired."
 
-                            exec 9>/var/lock/ayurvedaa-api-deployment.lock
+cd "${APP_DIR}"
 
-                            flock 9
+echo ""
+echo "Current Ayurvedaa containers:"
+docker ps \
+    --filter "name=ayurvedaa" \
+    --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
 
+echo ""
+echo "Stopping and removing current Ayurvedaa deployment..."
 
-                            echo ""
-                            echo "Deployment lock acquired."
+docker compose down --remove-orphans
 
+echo ""
+echo "Pulling new images..."
+IMAGE_TAG="${IMAGE_TAG}" docker compose pull
 
-                            cd "${APP_DIR}"
+echo ""
+echo "Starting new Ayurvedaa deployment..."
+IMAGE_TAG="${IMAGE_TAG}" docker compose up -d --remove-orphans
 
+echo ""
+echo "New Ayurvedaa containers:"
+docker ps \
+    --filter "name=ayurvedaa" \
+    --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
 
-                            # ==================================================
-                            # CURRENT DEPLOYMENT
-                            # ==================================================
-
-                            echo ""
-                            echo "Current Ayurvedaa containers:"
-                            docker ps \
-                                --filter "name=ayurvedaa" \
-                                --format "table {{.Names}}\\t{{.Image}}\\t{{.Status}}"
-
-
-                            # ==================================================
-                            # STOP AND REMOVE OLD CONTAINERS
-                            # ==================================================
-                            #
-                            # This is NOT branch-specific.
-                            #
-                            # Whatever branch is currently running will be
-                            # stopped and removed.
-                            #
-                            # Then the new branch version will start.
-                            # ==================================================
-
-                            echo ""
-                            echo "Stopping current Ayurvedaa deployment..."
-
-                            docker compose down --remove-orphans
-
-
-                            # ==================================================
-                            # PULL NEW IMAGES
-                            # ==================================================
-
-                            echo ""
-                            echo "Pulling images with IMAGE_TAG=${IMAGE_TAG}..."
-
-                            IMAGE_TAG="${IMAGE_TAG}" \
-                                docker compose pull
-
-
-                            # ==================================================
-                            # START NEW DEPLOYMENT
-                            # ==================================================
-
-                            echo ""
-                            echo "Starting new Ayurvedaa deployment..."
-
-                            IMAGE_TAG="${IMAGE_TAG}" \
-                                docker compose up -d --remove-orphans
-
-
-                            # ==================================================
-                            # VERIFY CONTAINERS
-                            # ==================================================
-
-                            echo ""
-                            echo "New Ayurvedaa containers:"
-
-                            docker ps \
-                                --filter "name=ayurvedaa" \
-                                --format "table {{.Names}}\\t{{.Image}}\\t{{.Status}}"
-
-
-                            echo ""
-                            echo "Deployment completed."
-
-
-                            # ==================================================
-                            # SHOW DEPLOYED IMAGE TAG
-                            # ==================================================
-
-                            echo ""
-                            echo "Images currently deployed:"
-
-                            docker ps \
-                                --filter "name=ayurvedaa" \
-                                --format "{{.Names}} -> {{.Image}}"
-
-
-                            echo ""
-                            echo "Deployment lock released when SSH session exits."
+echo ""
+echo "Deployment completed successfully."
 
 REMOTE_SCRIPT
-
-                    unset SSHPASS
-                }
-            }
-        }
-
-
-        // ============================================================
-        // 10. DEPLOYMENT VERIFICATION
-        // ============================================================
-
-        stage('Deployment Verification') {
-
-            when {
-
-                anyOf {
-
-                    branch 'fixes-development'
-
-                    branch 'dev-sonarqube-common'
-                }
-            }
-
-
-            steps {
-
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: "${SSH_CREDENTIALS}",
-                        usernameVariable: 'SSH_USER',
-                        passwordVariable: 'SSH_PASSWORD'
-                    )
-                ]) {
-
-                    sh '''
-                        set -e
-
-                        export SSHPASS="${SSH_PASSWORD}"
-
-
-                        sshpass -e ssh \
-                            -o StrictHostKeyChecking=no \
-                            -o UserKnownHostsFile=/dev/null \
-                            ${SSH_USER}@${APP_SERVER} \
-                            "cd ${APP_DIR} && docker compose ps"
-
 
                         unset SSHPASS
                     '''
@@ -642,22 +331,14 @@ REMOTE_SCRIPT
         }
 
 
-        // ============================================================
-        // 11. CLEANUP OLD AYURVEDAA IMAGES
-        // ============================================================
-
-        stage('Cleanup Old Ayurvedaa Images') {
+        stage('Deployment Verification') {
 
             when {
-
                 anyOf {
-
                     branch 'fixes-development'
-
                     branch 'dev-sonarqube-common'
                 }
             }
-
 
             steps {
 
@@ -674,156 +355,148 @@ REMOTE_SCRIPT
 
                         export SSHPASS="${SSH_PASSWORD}"
 
+                        sshpass -e ssh \
+                            -o StrictHostKeyChecking=no \
+                            -o UserKnownHostsFile=/dev/null \
+                            "${SSH_USER}@${APP_SERVER}" \
+                            "cd ${APP_DIR} && docker compose ps"
+
+                        unset SSHPASS
+                    '''
+                }
+            }
+        }
+
+
+        stage('Cleanup Old Ayurvedaa Images') {
+
+            when {
+                anyOf {
+                    branch 'fixes-development'
+                    branch 'dev-sonarqube-common'
+                }
+            }
+
+            steps {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: "${SSH_CREDENTIALS}",
+                        usernameVariable: 'SSH_USER',
+                        passwordVariable: 'SSH_PASSWORD'
+                    )
+                ]) {
+
+                    sh '''
+                        set -e
+
+                        export SSHPASS="${SSH_PASSWORD}"
 
                         sshpass -e ssh \
                             -o StrictHostKeyChecking=no \
                             -o UserKnownHostsFile=/dev/null \
-                            ${SSH_USER}@${APP_SERVER} \
+                            "${SSH_USER}@${APP_SERVER}" \
                             'bash -s' <<'REMOTE_CLEANUP'
 
-                            set -e
+set -e
 
+echo "=============================================="
+echo "AYURVEDAA IMAGE CLEANUP"
+echo "=============================================="
 
-                            echo "================================================"
-                            echo "AYURVEDAA DOCKER IMAGE CLEANUP"
-                            echo "================================================"
+SERVICES="
+patient-service
+doctor-service
+appointment-service
+therapist-service
+file-upload-service
+attendance-service
+activity-log-service
+medicine-service
+billing-service
+notification-service
+auth-service
+payment-service
+"
 
-                            /*
-                             * IMPORTANT:
-                             *
-                             * Cleanup is ONLY for these repositories:
-                             *
-                             * sunardock/ayurvedaa-api-*
-                             *
-                             * Nothing else is touched.
-                             */
+for SERVICE in ${SERVICES}
+do
 
+    REPOSITORY="sunardock/ayurvedaa-api-${SERVICE}"
 
-                            SERVICES="
-                            patient-service
-                            doctor-service
-                            appointment-service
-                            therapist-service
-                            file-upload-service
-                            attendance-service
-                            activity-log-service
-                            medicine-service
-                            billing-service
-                            notification-service
-                            auth-service
-                            payment-service
-                            "
+    echo ""
+    echo "----------------------------------------------"
+    echo "Service: ${SERVICE}"
+    echo "Repository: ${REPOSITORY}"
+    echo "----------------------------------------------"
 
+    docker image ls "${REPOSITORY}" \
+        --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' \
+        | sort -r \
+        > "/tmp/${SERVICE}-ayurvedaa-images.txt"
 
-                            for SERVICE in ${SERVICES}
-                            do
+    COUNT=0
 
-                                REPOSITORY="sunardock/ayurvedaa-api-${SERVICE}"
+    while IFS='|' read -r CREATED IMAGE
+    do
 
+        if [ -z "${IMAGE}" ]
+        then
+            continue
+        fi
 
-                                echo ""
-                                echo "--------------------------------------------"
-                                echo "Service: ${SERVICE}"
-                                echo "Repository: ${REPOSITORY}"
-                                echo "--------------------------------------------"
+        COUNT=$((COUNT + 1))
 
+        if [ "${COUNT}" -le 3 ]
+        then
 
-                                /*
-                                 * Get images ordered by Docker creation time.
-                                 *
-                                 * The newest 3 are retained.
-                                 *
-                                 * Older images are removed unless currently
-                                 * used by a running container.
-                                 */
+            echo "KEEP   : ${IMAGE}"
 
+        else
 
-                                docker image ls "${REPOSITORY}" \
-                                    --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}|{{.ID}}' \
-                                    | sort -r \
-                                    > /tmp/ayurvedaa-${SERVICE}-images.txt
+            RUNNING=$(docker ps \
+                --filter "ancestor=${IMAGE}" \
+                --format '{{.Names}}' \
+                | head -n 1)
 
+            if [ -n "${RUNNING}" ]
+            then
 
-                                COUNT=0
+                echo "SKIP   : ${IMAGE}"
+                echo "         Running container: ${RUNNING}"
 
+            else
 
-                                while IFS='|' read -r CREATED IMAGE IMAGE_ID
-                                do
+                echo "REMOVE : ${IMAGE}"
 
-                                    if [ -z "${IMAGE}" ]
-                                    then
-                                        continue
-                                    fi
+                docker image rm "${IMAGE}" || true
 
+            fi
+        fi
 
-                                    COUNT=$((COUNT + 1))
+    done < "/tmp/${SERVICE}-ayurvedaa-images.txt"
 
+    rm -f "/tmp/${SERVICE}-ayurvedaa-images.txt"
 
-                                    if [ "${COUNT}" -le 3 ]
-                                    then
+done
 
-                                        echo "KEEP : ${IMAGE}"
+echo ""
+echo "=============================================="
+echo "CLEANUP COMPLETED"
+echo "=============================================="
 
-                                        continue
+echo ""
+echo "Remaining Ayurvedaa images:"
 
-                                    fi
+docker images \
+    --format '{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}' \
+    | grep '^sunardock/ayurvedaa-api-' \
+    | sort
 
-
-                                    /*
-                                     * Check whether this exact image is
-                                     * currently being used by a running
-                                     * container.
-                                     */
-
-                                    RUNNING_CONTAINER=$(docker ps \
-                                        --filter "ancestor=${IMAGE}" \
-                                        --format '{{.Names}}' \
-                                        | head -n 1)
-
-
-                                    if [ -n "${RUNNING_CONTAINER}" ]
-                                    then
-
-                                        echo "SKIP : ${IMAGE}"
-                                        echo "       Currently used by: ${RUNNING_CONTAINER}"
-
-                                    else
-
-                                        echo "REMOVE: ${IMAGE}"
-
-                                        docker image rm "${IMAGE}" || true
-
-                                    fi
-
-                                done < /tmp/ayurvedaa-${SERVICE}-images.txt
-
-
-                                rm -f /tmp/ayurvedaa-${SERVICE}-images.txt
-
-                            done
-
-
-                            echo ""
-                            echo "================================================"
-                            echo "CLEANUP COMPLETED"
-                            echo "================================================"
-
-
-                            echo ""
-                            echo "Remaining Ayurvedaa images:"
-
-
-                            docker images \
-                                --format '{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}' \
-                                | grep '^sunardock/ayurvedaa-api-' \
-                                | sort
-
-
-                            echo ""
-                            echo "Other application images were NOT touched."
+echo ""
+echo "No other application images were touched."
 
 REMOTE_CLEANUP
-
 
                         unset SSHPASS
                     '''
@@ -833,46 +506,31 @@ REMOTE_CLEANUP
     }
 
 
-    // ================================================================
-    // POST ACTIONS
-    // ================================================================
-
     post {
 
         success {
-
             echo ""
-            echo "================================================"
+            echo "=============================================="
             echo "AYURVEDAA PIPELINE SUCCESS"
-            echo "================================================"
+            echo "=============================================="
             echo "Branch    : ${env.BRANCH_NAME}"
             echo "Build     : ${env.BUILD_NUMBER}"
             echo "Image Tag : ${env.IMAGE_TAG}"
-            echo ""
-            echo "The shared Ayurvedaa deployment now uses this build."
-            echo "================================================"
+            echo "=============================================="
         }
-
 
         failure {
-
             echo ""
-            echo "================================================"
+            echo "=============================================="
             echo "AYURVEDAA PIPELINE FAILED"
-            echo "================================================"
+            echo "=============================================="
             echo "Branch : ${env.BRANCH_NAME}"
             echo "Build  : ${env.BUILD_NUMBER}"
-            echo ""
-            echo "Check the Jenkins Console Output."
-            echo "================================================"
+            echo "=============================================="
         }
 
-
         always {
-
-            echo ""
-            echo "Pipeline completed."
-            echo "Branch: ${env.BRANCH_NAME}"
+            echo "Pipeline completed for branch: ${env.BRANCH_NAME}"
         }
     }
 }
