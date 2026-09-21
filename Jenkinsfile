@@ -383,7 +383,7 @@ REMOTE_SCRIPT
                         passwordVariable: 'SSH_PASSWORD'
                     )
                 ]) {
-                    sh """ 
+                    sh '''
                         set -e
 
                         export SSHPASS="${SSH_PASSWORD}"
@@ -509,7 +509,7 @@ echo ""
 echo "No other application images were touched."
 
 REMOTE_CLEANUP
-                    """
+                    '''
                 }
             }
         }
@@ -524,7 +524,7 @@ REMOTE_CLEANUP
             }
 
             steps {
-                sh """
+                sh '''
                     set -e
 
                     echo "=============================================="
@@ -608,7 +608,7 @@ payment-service
 
                     echo ""
                     echo "No other application images were touched."
-                """
+                '''
             }
         }
 
