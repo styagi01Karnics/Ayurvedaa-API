@@ -368,6 +368,7 @@ REMOTE_SCRIPT
 
 
         stage('Application Server Cleanup') {
+
             when {
                 anyOf {
                     branch 'fixes-development'
@@ -376,6 +377,7 @@ REMOTE_SCRIPT
             }
 
             steps {
+
                 withCredentials([
                     usernamePassword(
                         credentialsId: "${SSH_CREDENTIALS}",
@@ -383,6 +385,7 @@ REMOTE_SCRIPT
                         passwordVariable: 'SSH_PASSWORD'
                     )
                 ]) {
+
                     sh '''
                         set -e
 
@@ -422,6 +425,7 @@ cd "${APP_DIR}"
 
 for SERVICE in ${SERVICES}
 do
+
     REPOSITORY="sunardock/ayurvedaa-api-${SERVICE}"
     CURRENT_IMAGE="${REPOSITORY}:${IMAGE_TAG}"
     KEEP_FILE="/tmp/${SERVICE}-ayurvedaa-keep.txt"
@@ -433,14 +437,19 @@ do
     echo "Current    : ${CURRENT_IMAGE}"
     echo "----------------------------------------------"
 
-    if ! docker image inspect "${CURRENT_IMAGE}" >/dev/null 2>&1; then
+    if ! docker image inspect "${CURRENT_IMAGE}" >/dev/null 2>&1
+    then
+
         echo "WARNING: Current image is not available."
         echo "         ${CURRENT_IMAGE}"
         echo "Skipping cleanup for ${SERVICE}."
+
         continue
+
     fi
 
     : > "${KEEP_FILE}"
+
     echo "${CURRENT_IMAGE}" >> "${KEEP_FILE}"
 
     docker image ls "${REPOSITORY}" \
@@ -449,17 +458,21 @@ do
         | cut -d'|' -f2 \
         | while read -r IMAGE
     do
+
         [ -z "${IMAGE}" ] && continue
 
-        if grep -Fxq "${IMAGE}" "${KEEP_FILE}"; then
+        if grep -Fxq "${IMAGE}" "${KEEP_FILE}"
+        then
             continue
         fi
 
         KEEP_COUNT=$(wc -l < "${KEEP_FILE}")
 
-        if [ "${KEEP_COUNT}" -lt 3 ]; then
+        if [ "${KEEP_COUNT}" -lt 3 ]
+        then
             echo "${IMAGE}" >> "${KEEP_FILE}"
         fi
+
     done
 
     echo "Images to keep:"
@@ -472,27 +485,39 @@ do
         --format '{{.Repository}}:{{.Tag}}' \
         | while read -r IMAGE
     do
+
         [ -z "${IMAGE}" ] && continue
 
-        if grep -Fxq "${IMAGE}" "${KEEP_FILE}"; then
+        if grep -Fxq "${IMAGE}" "${KEEP_FILE}"
+        then
+
             echo "KEEP   : ${IMAGE}"
+
         else
+
             RUNNING=$(docker ps \
                 --filter "ancestor=${IMAGE}" \
                 --format '{{.Names}}' \
                 | head -n 1 || true)
 
-            if [ -n "${RUNNING}" ]; then
+            if [ -n "${RUNNING}" ]
+            then
+
                 echo "SKIP   : ${IMAGE}"
                 echo "         Running container: ${RUNNING}"
+
             else
+
                 echo "REMOVE : ${IMAGE}"
                 docker image rm "${IMAGE}" || true
+
             fi
         fi
+
     done
 
     rm -f "${KEEP_FILE}"
+
 done
 
 echo ""
@@ -516,6 +541,7 @@ REMOTE_CLEANUP
 
 
         stage('DevOps Server Cleanup') {
+
             when {
                 anyOf {
                     branch 'fixes-development'
@@ -524,6 +550,7 @@ REMOTE_CLEANUP
             }
 
             steps {
+
                 sh '''
                     set -e
 
@@ -551,6 +578,7 @@ payment-service
 
                     for SERVICE in ${SERVICES}
                     do
+
                         REPOSITORY="${IMAGE_PREFIX}-${SERVICE}"
                         CURRENT_IMAGE="${REPOSITORY}:${IMAGE_TAG}"
 
@@ -561,36 +589,53 @@ payment-service
                         echo "Current    : ${CURRENT_IMAGE}"
                         echo "----------------------------------------------"
 
-                        if ! docker image inspect "${CURRENT_IMAGE}" >/dev/null 2>&1; then
+                        if ! docker image inspect "${CURRENT_IMAGE}" >/dev/null 2>&1
+                        then
+
                             echo "WARNING: Current image is not available."
                             echo "         ${CURRENT_IMAGE}"
                             echo "Skipping cleanup for ${SERVICE}."
+
                             continue
+
                         fi
 
                         docker image ls "${REPOSITORY}" \
                             --format '{{.Repository}}:{{.Tag}}' \
                             | while read -r IMAGE
                         do
+
                             [ -z "${IMAGE}" ] && continue
 
-                            if [ "${IMAGE}" = "${CURRENT_IMAGE}" ]; then
+                            if [ "${IMAGE}" = "${CURRENT_IMAGE}" ]
+                            then
+
                                 echo "KEEP   : ${IMAGE}"
+
                             else
+
                                 RUNNING=$(docker ps \
                                     --filter "ancestor=${IMAGE}" \
                                     --format '{{.Names}}' \
                                     | head -n 1 || true)
 
-                                if [ -n "${RUNNING}" ]; then
+                                if [ -n "${RUNNING}" ]
+                                then
+
                                     echo "SKIP   : ${IMAGE}"
                                     echo "         Running container: ${RUNNING}"
+
                                 else
+
                                     echo "REMOVE : ${IMAGE}"
                                     docker image rm "${IMAGE}" || true
+
                                 fi
+
                             fi
+
                         done
+
                     done
 
                     echo ""
@@ -612,9 +657,12 @@ payment-service
             }
         }
 
+    }
+
     post {
 
         success {
+
             echo ""
             echo "=============================================="
             echo "AYURVEDAA PIPELINE SUCCESS"
@@ -626,6 +674,7 @@ payment-service
         }
 
         failure {
+
             echo ""
             echo "=============================================="
             echo "AYURVEDAA PIPELINE FAILED"
@@ -636,6 +685,7 @@ payment-service
         }
 
         always {
+
             echo "Pipeline completed for branch: ${env.BRANCH_NAME}"
         }
     }
