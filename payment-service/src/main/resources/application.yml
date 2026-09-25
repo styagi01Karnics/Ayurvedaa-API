@@ -29,10 +29,11 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
-        max.block.ms: 3000
-        request.timeout.ms: 3000
-        retries: 1
-        acks: 1
+        max.block.ms: 10000
+        request.timeout.ms: 10000
+        delivery.timeout.ms: 30000
+        retries: 3
+        acks: all
     admin:
       fail-fast: false
     listener:

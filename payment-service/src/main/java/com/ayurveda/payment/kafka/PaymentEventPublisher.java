@@ -30,7 +30,7 @@ public class PaymentEventPublisher {
             kafkaTemplate.send(KafkaTopics.PAYMENTS, event.getPayuTxnId(), payload)
                     .whenComplete((result, ex) -> {
                         if (ex != null) {
-                            log.warn("Kafka publish failed for txnid={}: {}", event.getPayuTxnId(), ex.getMessage());
+                            log.error("Kafka publish failed for txnid={}: {}", event.getPayuTxnId(), ex.getMessage(), ex);
                         } else {
                             log.info(
                                     "Published {} to {} for txnid={}",
