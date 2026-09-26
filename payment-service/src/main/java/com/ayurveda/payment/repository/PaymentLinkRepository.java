@@ -9,12 +9,11 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import com.ayurveda.payment.entity.PaymentLink;
 
-public interface PaymentLinkRepository extends JpaRepository<PaymentLink, UUID> {
+public interface PaymentLinkRepository extends JpaRepository<PaymentLink, UUID>, JpaSpecificationExecutor<PaymentLink> {
 
     Optional<PaymentLink> findByTokenAndDeletedFalse(String token);
 
@@ -33,29 +32,5 @@ public interface PaymentLinkRepository extends JpaRepository<PaymentLink, UUID> 
     List<PaymentLink> findByStatusInAndExpiresAtBeforeAndDeletedFalse(
             Collection<String> statuses, LocalDateTime cutoff);
 
-    @Query("""
-            SELECT l FROM PaymentLink l
-            WHERE l.deleted = false
-              AND (
-                    :status IS NULL
-                    OR (UPPER(:status) = 'SHARED' AND UPPER(l.status) IN ('SHARED', 'OPEN'))
-                    OR UPPER(l.status) = UPPER(:status)
-                  )
-              AND (:patientId IS NULL OR l.patientId = :patientId)
-              AND (:invoiceId IS NULL OR l.invoiceId = :invoiceId)
-              AND (
-                    :search IS NULL OR :search = ''
-                    OR LOWER(l.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(l.email) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(l.phone, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(l.invoiceNumber, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                  )
-            ORDER BY l.createdAt DESC
-            """)
-    Page<PaymentLink> search(
-            @Param("status") String status,
-            @Param("patientId") UUID patientId,
-            @Param("invoiceId") UUID invoiceId,
-            @Param("search") String search,
-            Pageable pageable);
+    Page<PaymentLink> findByDeletedFalseOrderByCreatedAtDesc(Pageable pageable);
 }

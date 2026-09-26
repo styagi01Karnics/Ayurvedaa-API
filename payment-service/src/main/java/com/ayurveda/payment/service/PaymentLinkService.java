@@ -4,11 +4,14 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,7 @@ import com.ayurveda.payment.enums.PaymentLinkStatus;
 import com.ayurveda.payment.repository.PaymentLinkRepository;
 
 import feign.FeignException;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,7 +72,8 @@ public class PaymentLinkService {
 
         PaymentLink saved;
         if (existing != null) {
-            saved = existing;
+            existing.setExpiresAt(LocalDateTime.now().plusMinutes(LINK_TTL_MINUTES));
+            saved = paymentLinkRepository.save(existing);
         } else {
             paymentLinkRepository
                     .findByInvoiceIdAndStatusInAndDeletedFalse(request.getInvoiceId(), ACTIVE_STATUSES)
@@ -131,11 +136,42 @@ public class PaymentLinkService {
         PageRequest pageable = PageRequest.of(safePage, safeSize);
 
         String searchTerm = search != null && !search.isBlank() ? search.trim() : null;
-        Page<PaymentLink> result = paymentLinkRepository.search(
-                statusFilter, patientId, invoiceId, searchTerm, pageable);
+        Specification<PaymentLink> spec = buildListSpec(statusFilter, patientId, invoiceId, searchTerm);
+        Page<PaymentLink> result = paymentLinkRepository.findAll(spec, pageable);
 
         Page<PaymentLinkResponse> mapped = result.map(link -> toResponse(link, null, link.getSharedAt() != null));
         return ApiResponse.success(PaymentMessages.PAYMENT_LINKS_FETCHED, PagedResponse.of(mapped));
+    }
+
+    private static Specification<PaymentLink> buildListSpec(
+            String statusFilter, UUID patientId, UUID invoiceId, String searchTerm) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
+            if (statusFilter != null) {
+                if (PaymentLinkStatus.SHARED.equals(statusFilter)) {
+                    predicates.add(root.get("status").in(PaymentLinkStatus.SHARED, PaymentLinkStatus.OPEN));
+                } else {
+                    predicates.add(cb.equal(cb.upper(root.get("status")), statusFilter));
+                }
+            }
+            if (patientId != null) {
+                predicates.add(cb.equal(root.get("patientId"), patientId));
+            }
+            if (invoiceId != null) {
+                predicates.add(cb.equal(root.get("invoiceId"), invoiceId));
+            }
+            if (searchTerm != null) {
+                String pattern = "%" + searchTerm.toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("firstName")), pattern),
+                        cb.like(cb.lower(root.get("email")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.get("phone"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.get("invoiceNumber"), "")), pattern)));
+            }
+            query.orderBy(cb.desc(root.get("createdAt")));
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
     @Transactional
