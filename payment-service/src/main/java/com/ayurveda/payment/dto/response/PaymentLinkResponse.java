@@ -28,9 +28,17 @@ public class PaymentLinkResponse {
     private String firstName;
     private String email;
     private String phone;
+    private LocalDateTime createdAt;
+    private LocalDateTime sharedAt;
     private LocalDateTime expiresAt;
+    /**
+     * Effective status for UI: SHARED | PAID | EXPIRED | SUPERSEDED.
+     * Legacy OPEN is returned as SHARED.
+     */
     private String status;
     private boolean emailSent;
     /** True when {@code qrPayload} is a UPI intent string (scan → pay exact amount). */
     private boolean upiQr;
+    /** Seconds until expiry for active SHARED links; 0 when expired/paid. */
+    private long secondsRemaining;
 }

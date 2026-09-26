@@ -10,9 +10,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.payment.dto.request.CreatePaymentLinkRequest;
 import com.ayurveda.payment.dto.request.SendPaymentLinkEmailRequest;
 import com.ayurveda.payment.dto.response.PaymentLinkResponse;
@@ -38,10 +40,10 @@ public class PaymentLinkController {
             description = """
                     Available to any authenticated hospital user (JWT with hospital schema) — not Super Admin only.
                     Use after invoice generate (full amount) or after a partial cash payment (remaining amount).
-                    - Online / room: set sendEmail=true (patient gets payUrl).
+                    - Online / room: set sendEmail=true (patient gets payUrl). Status becomes SHARED.
                     - At hospital QR: set upiQr=true — qrPayload becomes upi://pay?...&am=AMOUNT (scan opens UPI with exact amount).
                       Requires PayU Dynamic QR (DBQR) on the merchant. payUrl remains web fallback.
-                    Amount must be <= invoice leftAmount.
+                    Link stays active for 15 minutes, then EXPIRED. Amount must be <= invoice leftAmount.
                     """,
             security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping
@@ -51,7 +53,29 @@ public class PaymentLinkController {
     }
 
     @Operation(
-            summary = "Get the open payment link for an invoice",
+            summary = "List payment links sent to patients",
+            description = """
+                    Hospital JWT only. Newest first.
+                    Status filter (optional): SHARED | PAID | EXPIRED | SUPERSEDED
+                    - SHARED = link shared / waiting for payment (includes legacy OPEN)
+                    - PAID = patient paid
+                    - EXPIRED = unpaid after 15 minutes
+                    Also filter by patientId, invoiceId, or search (name / email / phone / invoice number).
+                    """,
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping
+    public ResponseEntity<ApiResponse<PagedResponse<PaymentLinkResponse>>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID patientId,
+            @RequestParam(required = false) UUID invoiceId,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(paymentLinkService.list(page, size, status, patientId, invoiceId, search));
+    }
+
+    @Operation(
+            summary = "Get the active (SHARED) payment link for an invoice",
             security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/invoice/{invoiceId}")
     public ResponseEntity<ApiResponse<PaymentLinkResponse>> getOpenByInvoice(@PathVariable UUID invoiceId) {
@@ -71,6 +95,7 @@ public class PaymentLinkController {
             description = """
                     Any authenticated hospital user can share the PayU link (hospital SMTP mailbox).
                     Optional body.email overrides the address stored on the link.
+                    Sets status SHARED and sharedAt. Link remains valid for 15 minutes from create.
                     """,
             security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/{id}/email")

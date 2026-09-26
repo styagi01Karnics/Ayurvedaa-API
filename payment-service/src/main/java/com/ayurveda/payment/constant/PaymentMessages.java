@@ -16,6 +16,7 @@ public final class PaymentMessages {
     public static final String INVALID_CALLBACK_TENANT = "PayU callback is missing a valid hospital schema.";
     public static final String PAYMENT_LINK_CREATED = "Payment link created successfully.";
     public static final String PAYMENT_LINK_FETCHED = "Payment link fetched successfully.";
+    public static final String PAYMENT_LINKS_FETCHED = "Payment links fetched successfully.";
     public static final String PAYMENT_LINK_EMAILED = "Payment link emailed to the patient.";
     public static final String PAYMENT_LINK_NOT_FOUND = "Payment link not found.";
     public static final String PAYMENT_LINK_EXPIRED = "This payment link has expired.";

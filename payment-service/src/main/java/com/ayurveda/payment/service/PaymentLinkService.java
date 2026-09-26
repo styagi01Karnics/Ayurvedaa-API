@@ -1,14 +1,19 @@
 package com.ayurveda.payment.service;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.notification.EmailNotificationPublisher;
@@ -23,6 +28,7 @@ import com.ayurveda.payment.dto.request.InitiatePaymentRequest;
 import com.ayurveda.payment.dto.response.PaymentLinkResponse;
 import com.ayurveda.payment.dto.response.PaymentResponse;
 import com.ayurveda.payment.entity.PaymentLink;
+import com.ayurveda.payment.enums.PaymentLinkStatus;
 import com.ayurveda.payment.repository.PaymentLinkRepository;
 
 import feign.FeignException;
@@ -34,10 +40,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PaymentLinkService {
 
-    private static final int LINK_DAYS = 7;
-    private static final String STATUS_OPEN = "OPEN";
-    private static final String STATUS_PAID = "PAID";
-    private static final String STATUS_SUPERSEDED = "SUPERSEDED";
+    /** Active window after create / share. */
+    private static final int LINK_TTL_MINUTES = 15;
+    private static final List<String> ACTIVE_STATUSES =
+            List.of(PaymentLinkStatus.SHARED, PaymentLinkStatus.OPEN);
     private static final DateTimeFormatter EXPIRY_FORMAT =
             DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a");
 
@@ -50,11 +56,12 @@ public class PaymentLinkService {
     @Transactional
     public ApiResponse<PaymentLinkResponse> create(CreatePaymentLinkRequest request) {
         requireHospitalSchema();
+        expireOverdueLinks();
         assertAmountWithinLeft(request.getInvoiceId(), request.getAmount());
 
         PaymentLink existing = paymentLinkRepository
-                .findFirstByInvoiceIdAndStatusAndDeletedFalseOrderByCreatedAtDesc(
-                        request.getInvoiceId(), STATUS_OPEN)
+                .findFirstByInvoiceIdAndStatusInAndDeletedFalseOrderByCreatedAtDesc(
+                        request.getInvoiceId(), ACTIVE_STATUSES)
                 .filter(link -> !isExpired(link)
                         && link.getAmount().compareTo(request.getAmount()) == 0)
                 .orElse(null);
@@ -64,11 +71,12 @@ public class PaymentLinkService {
             saved = existing;
         } else {
             paymentLinkRepository
-                    .findByInvoiceIdAndStatusAndDeletedFalse(request.getInvoiceId(), STATUS_OPEN)
-                    .forEach(open -> open.setStatus(STATUS_SUPERSEDED));
+                    .findByInvoiceIdAndStatusInAndDeletedFalse(request.getInvoiceId(), ACTIVE_STATUSES)
+                    .forEach(open -> open.setStatus(PaymentLinkStatus.SUPERSEDED));
 
             String schema = TenantContext.getSchemaName();
             String token = schema + "." + UUID.randomUUID().toString().replace("-", "");
+            LocalDateTime now = LocalDateTime.now();
 
             PaymentLink link = PaymentLink.builder()
                     .token(token)
@@ -82,8 +90,9 @@ public class PaymentLinkService {
                     .schemaName(schema)
                     .tenantCode(TenantContext.getTenantCode())
                     .tenantId(TenantContext.getTenantId())
-                    .expiresAt(LocalDateTime.now().plusDays(LINK_DAYS))
-                    .status(STATUS_OPEN)
+                    .expiresAt(now.plusMinutes(LINK_TTL_MINUTES))
+                    .status(PaymentLinkStatus.SHARED)
+                    .sharedAt(Boolean.TRUE.equals(request.getSendEmail()) ? now : null)
                     .build();
             saved = paymentLinkRepository.save(link);
         }
@@ -97,6 +106,10 @@ public class PaymentLinkService {
         boolean emailed = false;
         if (Boolean.TRUE.equals(request.getSendEmail())) {
             emailed = emailLink(saved, request.getPayPageBaseUrl(), saved.getEmail());
+            if (saved.getSharedAt() == null) {
+                saved.setSharedAt(LocalDateTime.now());
+                saved = paymentLinkRepository.save(saved);
+            }
         }
 
         boolean hasUpi = saved.getUpiQrPayload() != null && !saved.getUpiQrPayload().isBlank();
@@ -106,36 +119,68 @@ public class PaymentLinkService {
         return ApiResponse.success(message, toResponse(saved, request.getPayPageBaseUrl(), emailed));
     }
 
-    @Transactional(readOnly = true)
-    public ApiResponse<PaymentLinkResponse> getById(UUID id) {
+    @Transactional
+    public ApiResponse<PagedResponse<PaymentLinkResponse>> list(
+            int page, int size, String status, UUID patientId, UUID invoiceId, String search) {
         requireHospitalSchema();
-        PaymentLink link = paymentLinkRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException(PaymentMessages.PAYMENT_LINK_NOT_FOUND));
-        return ApiResponse.success(PaymentMessages.PAYMENT_LINK_FETCHED, toResponse(link, null, false));
+        expireOverdueLinks();
+
+        String statusFilter = normalizeListStatus(status);
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
+        PageRequest pageable = PageRequest.of(safePage, safeSize);
+
+        String searchTerm = search != null && !search.isBlank() ? search.trim() : null;
+        Page<PaymentLink> result = paymentLinkRepository.search(
+                statusFilter, patientId, invoiceId, searchTerm, pageable);
+
+        Page<PaymentLinkResponse> mapped = result.map(link -> toResponse(link, null, link.getSharedAt() != null));
+        return ApiResponse.success(PaymentMessages.PAYMENT_LINKS_FETCHED, PagedResponse.of(mapped));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
+    public ApiResponse<PaymentLinkResponse> getById(UUID id) {
+        requireHospitalSchema();
+        expireOverdueLinks();
+        PaymentLink link = paymentLinkRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException(PaymentMessages.PAYMENT_LINK_NOT_FOUND));
+        return ApiResponse.success(
+                PaymentMessages.PAYMENT_LINK_FETCHED,
+                toResponse(link, null, link.getSharedAt() != null));
+    }
+
+    @Transactional
     public ApiResponse<PaymentLinkResponse> getOpenByInvoice(UUID invoiceId) {
         requireHospitalSchema();
+        expireOverdueLinks();
         PaymentLink link = paymentLinkRepository
-                .findFirstByInvoiceIdAndStatusAndDeletedFalseOrderByCreatedAtDesc(invoiceId, STATUS_OPEN)
+                .findFirstByInvoiceIdAndStatusInAndDeletedFalseOrderByCreatedAtDesc(
+                        invoiceId, ACTIVE_STATUSES)
                 .filter(open -> !isExpired(open))
                 .orElseThrow(() -> new ResourceNotFoundException(PaymentMessages.PAYMENT_LINK_NOT_FOUND));
-        return ApiResponse.success(PaymentMessages.PAYMENT_LINK_FETCHED, toResponse(link, null, false));
+        return ApiResponse.success(
+                PaymentMessages.PAYMENT_LINK_FETCHED,
+                toResponse(link, null, link.getSharedAt() != null));
     }
 
     @Transactional
     public ApiResponse<PaymentLinkResponse> email(UUID id, String overrideEmail) {
         requireHospitalSchema();
+        expireOverdueLinks();
         PaymentLink link = paymentLinkRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException(PaymentMessages.PAYMENT_LINK_NOT_FOUND));
         assertUsable(link);
         String to = overrideEmail != null && !overrideEmail.isBlank() ? overrideEmail.trim() : link.getEmail();
         emailLink(link, null, to);
+        if (link.getSharedAt() == null) {
+            link.setSharedAt(LocalDateTime.now());
+        }
+        link.setStatus(PaymentLinkStatus.SHARED);
+        paymentLinkRepository.save(link);
         return ApiResponse.success(PaymentMessages.PAYMENT_LINK_EMAILED, toResponse(link, null, true));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ApiResponse<PaymentLinkResponse> getPublic(String token, String payPageBaseUrl) {
         PaymentLink link = loadPublic(token);
         return ApiResponse.success(PaymentMessages.PAYMENT_LINK_FETCHED, toResponse(link, payPageBaseUrl, false));
@@ -170,6 +215,7 @@ public class PaymentLinkService {
         if (token == null || token.isBlank() || !token.contains(".")) {
             throw new BadRequestException(PaymentMessages.PAYMENT_LINK_INVALID);
         }
+        expireOverdueLinks();
         PaymentLink link = paymentLinkRepository.findByTokenAndDeletedFalse(token)
                 .orElseThrow(() -> new ResourceNotFoundException(PaymentMessages.PAYMENT_LINK_NOT_FOUND));
         assertUsable(link);
@@ -177,15 +223,31 @@ public class PaymentLinkService {
     }
 
     private void assertUsable(PaymentLink link) {
-        if (STATUS_PAID.equalsIgnoreCase(link.getStatus())) {
+        if (PaymentLinkStatus.PAID.equalsIgnoreCase(blank(link.getStatus()))) {
             throw new BadRequestException(PaymentMessages.PAYMENT_LINK_ALREADY_PAID);
         }
-        if (isExpired(link)) {
+        if (PaymentLinkStatus.EXPIRED.equalsIgnoreCase(blank(link.getStatus())) || isExpired(link)) {
+            if (PaymentLinkStatus.isActiveUnpaid(link.getStatus())) {
+                link.setStatus(PaymentLinkStatus.EXPIRED);
+                paymentLinkRepository.save(link);
+            }
             throw new BadRequestException(PaymentMessages.PAYMENT_LINK_EXPIRED);
         }
-        if (!STATUS_OPEN.equalsIgnoreCase(link.getStatus())) {
+        if (!PaymentLinkStatus.isActiveUnpaid(link.getStatus())) {
             throw new BadRequestException(PaymentMessages.PAYMENT_LINK_INVALID);
         }
+    }
+
+    @Transactional
+    public void expireOverdueLinks() {
+        List<PaymentLink> overdue = paymentLinkRepository.findByStatusInAndExpiresAtBeforeAndDeletedFalse(
+                ACTIVE_STATUSES, LocalDateTime.now());
+        if (overdue.isEmpty()) {
+            return;
+        }
+        overdue.forEach(link -> link.setStatus(PaymentLinkStatus.EXPIRED));
+        paymentLinkRepository.saveAll(overdue);
+        log.debug("Marked {} payment link(s) EXPIRED", overdue.size());
     }
 
     private boolean emailLink(PaymentLink link, String payPageBaseUrl, String to) {
@@ -202,7 +264,7 @@ public class PaymentLinkService {
                 Pay here:
                 %s
 
-                This link expires on %s.
+                This link is valid for 15 minutes and expires on %s.
 
                 If you already paid at the clinic, you can ignore this email.
                 """.formatted(
@@ -222,6 +284,7 @@ public class PaymentLinkService {
     private PaymentLinkResponse toResponse(PaymentLink link, String payPageBaseUrl, boolean emailSent) {
         String payUrl = resolvePayPageBase(payPageBaseUrl) + "/pay/" + link.getToken();
         boolean upiQr = link.getUpiQrPayload() != null && !link.getUpiQrPayload().isBlank();
+        String effective = effectiveStatus(link);
         return PaymentLinkResponse.builder()
                 .id(link.getId())
                 .token(link.getToken())
@@ -234,11 +297,50 @@ public class PaymentLinkService {
                 .firstName(link.getFirstName())
                 .email(link.getEmail())
                 .phone(link.getPhone())
+                .createdAt(link.getCreatedAt())
+                .sharedAt(link.getSharedAt())
                 .expiresAt(link.getExpiresAt())
-                .status(link.getStatus())
-                .emailSent(emailSent)
+                .status(effective)
+                .emailSent(emailSent || link.getSharedAt() != null)
                 .upiQr(upiQr)
+                .secondsRemaining(secondsRemaining(link, effective))
                 .build();
+    }
+
+    private static String effectiveStatus(PaymentLink link) {
+        String raw = blank(link.getStatus()).toUpperCase();
+        if (PaymentLinkStatus.PAID.equals(raw)) {
+            return PaymentLinkStatus.PAID;
+        }
+        if (PaymentLinkStatus.SUPERSEDED.equals(raw)) {
+            return PaymentLinkStatus.SUPERSEDED;
+        }
+        if (PaymentLinkStatus.EXPIRED.equals(raw) || isExpired(link)) {
+            return PaymentLinkStatus.EXPIRED;
+        }
+        if (PaymentLinkStatus.isActiveUnpaid(raw)) {
+            return PaymentLinkStatus.SHARED;
+        }
+        return raw.isBlank() ? PaymentLinkStatus.SHARED : raw;
+    }
+
+    private static long secondsRemaining(PaymentLink link, String effectiveStatus) {
+        if (!PaymentLinkStatus.SHARED.equals(effectiveStatus) || link.getExpiresAt() == null) {
+            return 0L;
+        }
+        long seconds = Duration.between(LocalDateTime.now(), link.getExpiresAt()).getSeconds();
+        return Math.max(0L, seconds);
+    }
+
+    private static String normalizeListStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        String s = status.trim().toUpperCase();
+        if (PaymentLinkStatus.OPEN.equals(s)) {
+            return PaymentLinkStatus.SHARED;
+        }
+        return s;
     }
 
     private void attachUpiQr(PaymentLink link, CreatePaymentLinkRequest request) {
@@ -304,7 +406,7 @@ public class PaymentLinkService {
     }
 
     private static boolean isExpired(PaymentLink link) {
-        return link.getExpiresAt() != null && link.getExpiresAt().isBefore(LocalDateTime.now());
+        return link.getExpiresAt() != null && !link.getExpiresAt().isAfter(LocalDateTime.now());
     }
 
     private static String schemaFromToken(String token) {
@@ -316,6 +418,10 @@ public class PaymentLinkService {
             throw new BadRequestException(PaymentMessages.PAYMENT_LINK_INVALID);
         }
         return schema;
+    }
+
+    private static String blank(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private static String trimSlash(String value) {

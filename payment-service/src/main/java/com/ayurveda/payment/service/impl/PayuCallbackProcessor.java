@@ -1,5 +1,6 @@
 package com.ayurveda.payment.service.impl;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.payment.constant.PaymentMessages;
 import com.ayurveda.payment.entity.PaymentTransaction;
+import com.ayurveda.payment.enums.PaymentLinkStatus;
 import com.ayurveda.payment.enums.PaymentStatus;
 import com.ayurveda.payment.repository.PaymentLinkRepository;
 import com.ayurveda.payment.repository.PaymentRepository;
@@ -48,8 +50,10 @@ public class PayuCallbackProcessor {
 
         if (mapped == PaymentStatus.SUCCESS && payment.getInvoiceId() != null) {
             paymentLinkRepository
-                    .findByInvoiceIdAndStatusAndDeletedFalse(payment.getInvoiceId(), "OPEN")
-                    .forEach(link -> link.setStatus("PAID"));
+                    .findByInvoiceIdAndStatusInAndDeletedFalse(
+                            payment.getInvoiceId(),
+                            List.of(PaymentLinkStatus.SHARED, PaymentLinkStatus.OPEN))
+                    .forEach(link -> link.setStatus(PaymentLinkStatus.PAID));
         }
 
         log.info(

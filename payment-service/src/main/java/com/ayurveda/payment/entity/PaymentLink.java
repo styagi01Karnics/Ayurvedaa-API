@@ -59,8 +59,15 @@ public class PaymentLink extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime expiresAt;
 
+    /**
+     * Stored status: SHARED | PAID | EXPIRED | SUPERSEDED (legacy OPEN = active unpaid).
+     * Effective status for unpaid links past {@link #expiresAt} is EXPIRED.
+     */
     @Column(length = 20)
     private String status;
+
+    /** When the link was emailed / shared with the patient (null if created but never emailed). */
+    private LocalDateTime sharedAt;
 
     /** PayU UPI Dynamic QR payload ({@code upi://pay?...&am=...}). Null when link-only. */
     @Column(columnDefinition = "TEXT")
@@ -76,7 +83,7 @@ public class PaymentLink extends BaseEntity {
             setDeleted(false);
         }
         if (status == null) {
-            status = "OPEN";
+            status = "SHARED";
         }
     }
 }

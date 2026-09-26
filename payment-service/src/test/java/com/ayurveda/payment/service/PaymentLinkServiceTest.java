@@ -94,8 +94,11 @@ class PaymentLinkServiceTest {
 
         assertEquals(PaymentMessages.PAYMENT_LINK_CREATED, response.getMessage());
         assertEquals(new BigDecimal("75.50"), response.getData().getAmount());
+        assertEquals("SHARED", response.getData().getStatus());
         assertFalse(response.getData().isUpiQr());
         assertTrue(response.getData().getQrPayload().startsWith("http://"));
+        assertTrue(response.getData().getSecondsRemaining() > 0);
+        assertTrue(response.getData().getSecondsRemaining() <= 15 * 60);
         verify(paymentService, never()).initiateUpiQr(any(), anyString());
     }
 
@@ -137,14 +140,19 @@ class PaymentLinkServiceTest {
     }
 
     private void stubSaveNewLink() {
-        when(paymentLinkRepository.findFirstByInvoiceIdAndStatusAndDeletedFalseOrderByCreatedAtDesc(
-                invoiceId, "OPEN")).thenReturn(java.util.Optional.empty());
-        when(paymentLinkRepository.findByInvoiceIdAndStatusAndDeletedFalse(invoiceId, "OPEN"))
+        when(paymentLinkRepository.findByStatusInAndExpiresAtBeforeAndDeletedFalse(any(), any()))
+                .thenReturn(java.util.List.of());
+        when(paymentLinkRepository.findFirstByInvoiceIdAndStatusInAndDeletedFalseOrderByCreatedAtDesc(
+                eq(invoiceId), any())).thenReturn(java.util.Optional.empty());
+        when(paymentLinkRepository.findByInvoiceIdAndStatusInAndDeletedFalse(eq(invoiceId), any()))
                 .thenReturn(java.util.List.of());
         when(paymentLinkRepository.save(any())).thenAnswer(invocation -> {
             var link = invocation.getArgument(0, com.ayurveda.payment.entity.PaymentLink.class);
             if (link.getId() == null) {
                 link.setId(UUID.randomUUID());
+            }
+            if (link.getCreatedAt() == null) {
+                link.setCreatedAt(java.time.LocalDateTime.now());
             }
             return link;
         });
