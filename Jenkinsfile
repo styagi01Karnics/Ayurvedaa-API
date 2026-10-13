@@ -102,21 +102,19 @@ pipeline {
             }
         }
 
-
         stage('SonarQube Analysis') {
             steps {
-
                 withSonarQubeEnv('SonarQube') {
-
                     sh '''
                         set -e
-
-                        mvn sonar:sonar
+        
+                        mvn sonar:sonar \
+                            -Dsonar.projectKey=com.ayurveda:ayurvedaa-services \
+                            -Dsonar.projectName="Ayurvedaa-backend-API"
                     '''
                 }
             }
         }
-
 
         stage('Verify Dockerfiles') {
             steps {
