@@ -1,7 +1,5 @@
 timestamps {
-
     node {
-
         properties([
             buildDiscarder(logRotator(numToKeepStr: '3')),
             disableConcurrentBuilds()
@@ -9,38 +7,16 @@ timestamps {
 
         def mvnHome = tool 'Maven'
 
-        env.PROJECT_NAME = "ayurvedaa-api"
-        env.DOCKER_ORG = "sunardock"
-        env.DEPLOY_SERVER = "45.195.229.15"
-        env.DEPLOY_PATH = "/root/ayurvedaa"
-
+        env.PROJECT_NAME = 'ayurvedaa-api'
+        env.DOCKER_ORG = 'sunardock'
+        env.DEPLOY_SERVER = '45.195.229.15'
+        env.DEPLOY_PATH = '/root/ayurvedaa'
         env.PATH = "${mvnHome}/bin:${env.PATH}"
 
         def branchName = env.BRANCH_NAME ?: 'unknown'
 
-        def services = [
-            'patient-service',
-            'doctor-service',
-            'appointment-service',
-            'therapist-service',
-            'file-upload-service',
-            'attendance-service',
-            'activity-log-service',
-            'medicine-service',
-            'billing-service',
-            'notification-service',
-            'auth-service',
-            'payment-service'
-        ]
-
         try {
-
-            // =========================================================
-            // CHECKOUT SOURCE
-            // =========================================================
-
             stage('Checkout Source') {
-
                 checkout scm
 
                 env.SAFE_BRANCH = branchName
@@ -50,67 +26,42 @@ timestamps {
                     .toLowerCase()
 
                 if (!env.SAFE_BRANCH) {
-                    env.SAFE_BRANCH = "unknown"
+                    env.SAFE_BRANCH = 'unknown'
                 }
 
                 env.IMAGE_TAG = "${env.SAFE_BRANCH}-${env.BUILD_NUMBER}"
 
-                echo "=========================================="
-                echo "AYURVEDAA API MULTIBRANCH PIPELINE"
-                echo "=========================================="
+                echo '=========================================='
+                echo 'AYURVEDAA API MULTIBRANCH PIPELINE'
+                echo '=========================================='
                 echo "Branch      : ${branchName}"
                 echo "Safe Branch : ${env.SAFE_BRANCH}"
                 echo "Image Tag   : ${env.IMAGE_TAG}"
-                echo "=========================================="
+                echo '=========================================='
             }
 
-
-            // =========================================================
-            // ENVIRONMENT CHECK - ALL BRANCHES
-            // =========================================================
-
             stage('Environment Check') {
-
                 sh '''
-                    set -e
-
+                    set -eu
                     command -v java
                     command -v mvn
                     command -v git
-
                     echo "Environment check completed."
                 '''
             }
 
-
-            // =========================================================
-            // MAVEN TEST & PACKAGE - ALL BRANCHES
-            // =========================================================
-
             stage('Maven Test & Package') {
-
                 sh '''
-                    set -e
-
-                    echo "=========================================="
+                    set -eu
                     echo "Maven Test & Package"
-                    echo "=========================================="
-
                     mvn clean test package -DskipTests=false
-
                     echo "Maven build and tests completed."
                 '''
             }
 
-
-            // =========================================================
-            // VERIFY DOCKERFILES - ALL BRANCHES
-            // =========================================================
-
             stage('Verify Dockerfiles') {
-
                 sh '''
-                    set -e
+                    set -eu
 
                     for service in \
                         patient-service \
@@ -134,27 +85,12 @@ timestamps {
                 '''
             }
 
-
-            // =========================================================
-            // DEV BRANCH ONLY
-            // =========================================================
-
             if (branchName == 'dev') {
 
-                // =====================================================
-                // SONARQUBE ANALYSIS
-                // =====================================================
-
                 stage('SonarQube Analysis') {
-
                     withSonarQubeEnv('SonarQube') {
-
                         sh '''
-                            set -e
-
-                            echo "=========================================="
-                            echo "SonarQube Analysis"
-                            echo "=========================================="
+                            set -eu
 
                             mvn sonar:sonar \
                                 -Dsonar.projectKey=com.ayurveda:ayurvedaa-services \
@@ -165,13 +101,7 @@ timestamps {
                     }
                 }
 
-
-                // =====================================================
-                // DOCKER LOGIN
-                // =====================================================
-
                 stage('Docker Login') {
-
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'dockerhub-creds',
@@ -179,13 +109,11 @@ timestamps {
                             passwordVariable: 'DOCKER_PASSWORD'
                         )
                     ]) {
-
                         sh '''
                             set -eu
-
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
 
-                            echo "$DOCKER_PASSWORD" | docker login \
+                            printf '%s' "$DOCKER_PASSWORD" | docker login \
                                 --username "$DOCKER_USERNAME" \
                                 --password-stdin
 
@@ -194,20 +122,11 @@ timestamps {
                     }
                 }
 
-
-                // =====================================================
-                // BUILD DOCKER IMAGES
-                // =====================================================
-
                 stage('Build Docker Images') {
-
                     sh '''
-                        set -e
+                        set -eu
 
-                        echo "=========================================="
-                        echo "Building Ayurvedaa API Images"
-                        echo "Image Tag: ${IMAGE_TAG}"
-                        echo "=========================================="
+                        echo "Building Ayurvedaa API images with tag ${IMAGE_TAG}"
 
                         for service in \
                             patient-service \
@@ -223,28 +142,20 @@ timestamps {
                             auth-service \
                             payment-service
                         do
+                            image="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
 
-                            IMAGE="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
-
-                            echo "Building: $IMAGE"
+                            echo "Building: $image"
 
                             docker build \
-                                -t "$IMAGE" \
+                                -t "$image" \
                                 "./${service}"
-
                         done
 
                         echo "All Docker images built successfully."
                     '''
                 }
 
-
-                // =====================================================
-                // PUSH DOCKER IMAGES
-                // =====================================================
-
                 stage('Push Docker Images') {
-
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'dockerhub-creds',
@@ -252,13 +163,11 @@ timestamps {
                             passwordVariable: 'DOCKER_PASSWORD'
                         )
                     ]) {
-
                         sh '''
                             set -eu
-
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
 
-                            echo "$DOCKER_PASSWORD" | docker login \
+                            printf '%s' "$DOCKER_PASSWORD" | docker login \
                                 --username "$DOCKER_USERNAME" \
                                 --password-stdin
 
@@ -276,13 +185,11 @@ timestamps {
                                 auth-service \
                                 payment-service
                             do
+                                image="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
 
-                                IMAGE="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
+                                echo "Pushing: $image"
 
-                                echo "Pushing: $IMAGE"
-
-                                docker push "$IMAGE"
-
+                                docker push "$image"
                             done
 
                             echo "All Docker images pushed successfully."
@@ -290,13 +197,7 @@ timestamps {
                     }
                 }
 
-
-                // =====================================================
-                // DEPLOY APPLICATION
-                // =====================================================
-
                 stage('Deploy Application') {
-
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'new-server-ssh',
@@ -304,10 +205,8 @@ timestamps {
                             passwordVariable: 'SSH_PASSWORD'
                         )
                     ]) {
-
                         sh '''
                             set -eu
-
                             command -v sshpass
 
                             export SSHPASS="$SSH_PASSWORD"
@@ -317,16 +216,15 @@ timestamps {
                                 -o UserKnownHostsFile=/dev/null \
                                 "$SSH_USERNAME@$DEPLOY_SERVER" \
                                 "IMAGE_TAG='$IMAGE_TAG' APP_DIR='$DEPLOY_PATH' bash -s" <<'REMOTE_SCRIPT'
-
 set -eu
 
 echo "=========================================="
 echo "AYURVEDAA API DEPLOYMENT"
-echo "=========================================="
 echo "Image Tag: ${IMAGE_TAG}"
 echo "=========================================="
 
 exec 9>/var/lock/ayurvedaa-api-deployment.lock
+
 flock -n 9 || {
     echo "ERROR: Another deployment is already running."
     exit 1
@@ -344,7 +242,7 @@ if [ ! -f docker-compose.yml ] && [ ! -f compose.yml ]; then
     exit 1
 fi
 
-# Update only IMAGE_TAG. Preserve all other server configuration.
+# Update only IMAGE_TAG and preserve other server configuration.
 if grep -q '^IMAGE_TAG=' .env; then
     sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
 else
@@ -352,32 +250,22 @@ else
 fi
 
 echo "Validating Compose configuration..."
-
 docker compose --env-file .env config --quiet
 
 echo "Pulling updated images..."
-
 docker compose --env-file .env pull
 
 echo "Starting updated services..."
-
 docker compose --env-file .env up -d --remove-orphans
 
 echo "Deployment command completed."
-
 docker compose --env-file .env ps
-
 REMOTE_SCRIPT
 
                             unset SSHPASS
                         '''
                     }
                 }
-
-
-                // =====================================================
-                // DEPLOYMENT VERIFICATION
-                // =====================================================
 
                 stage('Deployment Verification') {
                     withCredentials([
@@ -389,133 +277,120 @@ REMOTE_SCRIPT
                     ]) {
                         sh '''
                             set -eu
+                            command -v sshpass
+
                             export SSHPASS="$SSH_PASSWORD"
-                
+
                             sshpass -e ssh \
                                 -o StrictHostKeyChecking=no \
                                 -o UserKnownHostsFile=/dev/null \
-                                "$SSH_USER@45.195.229.15" \
-                                "IMAGE_TAG='$IMAGE_TAG' APP_DIR='/root/ayurvedaa' bash -s" <<'REMOTE'
-                            set -eu
-                            cd "$APP_DIR"
-                
-                            SERVICES=(
-                                patient-service
-                                doctor-service
-                                appointment-service
-                                therapist-service
-                                file-upload-service
-                                attendance-service
-                                activity-log-service
-                                medicine-service
-                                billing-service
-                                notification-service
-                                auth-service
-                                payment-service
-                            )
-                
-                            echo "Verifying Ayurvedaa API services..."
-                
-                            for service in "\${SERVICES[@]}"; do
-                                container_id=$(docker compose --env-file .env ps --all -q "$service")
-                
-                                if [ -z "$container_id" ]; then
-                                    echo "ERROR: No container found for $service"
-                                    exit 1
-                                fi
-                
-                                running=$(docker inspect \
-                                    --format '{{.State.Running}}' "$container_id")
-                
-                                if [ "$running" != "true" ]; then
-                                    echo "ERROR: $service is not running"
-                                    docker logs --tail 50 "$container_id" || true
-                                    exit 1
-                                fi
-                
-                                expected_image="sunardock/ayurvedaa-api-${service}:${IMAGE_TAG}"
-                                actual_image=$(docker inspect \
-                                    --format '{{.Config.Image}}' "$container_id")
-                
-                                if [ "$actual_image" != "$expected_image" ]; then
-                                    echo "ERROR: Unexpected image for $service"
-                                    echo "Expected: $expected_image"
-                                    echo "Actual:   $actual_image"
-                                    exit 1
-                                fi
-                
-                                echo "OK: $service is running with $IMAGE_TAG"
-                            done
-                
-                            echo "All 12 services passed deployment verification."
-                            REMOTE
-                
+                                "$SSH_USER@$DEPLOY_SERVER" \
+                                "IMAGE_TAG='$IMAGE_TAG' APP_DIR='$DEPLOY_PATH' bash -s" <<'REMOTE'
+set -eu
+
+cd "$APP_DIR"
+
+SERVICES="
+patient-service
+doctor-service
+appointment-service
+therapist-service
+file-upload-service
+attendance-service
+activity-log-service
+medicine-service
+billing-service
+notification-service
+auth-service
+payment-service
+"
+
+echo "Verifying Ayurvedaa API services..."
+
+for service in $SERVICES; do
+    container_ids=$(docker compose --env-file .env ps --all -q "$service")
+
+    if [ -z "$container_ids" ]; then
+        echo "ERROR: No container found for $service"
+        exit 1
+    fi
+
+    # Expect exactly one container per Compose service.
+    set -- $container_ids
+
+    if [ "$#" -ne 1 ]; then
+        echo "ERROR: Expected one container for $service, found $#"
+        exit 1
+    fi
+
+    container_id=$1
+
+    running=$(docker inspect --format '{{.State.Running}}' "$container_id")
+
+    if [ "$running" != "true" ]; then
+        echo "ERROR: $service is not running"
+        docker logs --tail 50 "$container_id" || true
+        exit 1
+    fi
+
+    expected_image="sunardock/ayurvedaa-api-${service}:${IMAGE_TAG}"
+    actual_image=$(docker inspect --format '{{.Config.Image}}' "$container_id")
+
+    if [ "$actual_image" != "$expected_image" ]; then
+        echo "ERROR: Unexpected image for $service"
+        echo "Expected: $expected_image"
+        echo "Actual:   $actual_image"
+        exit 1
+    fi
+
+    echo "OK: $service is running with ${IMAGE_TAG}"
+done
+
+echo "All 12 services passed deployment verification."
+REMOTE
+
                             unset SSHPASS
                         '''
                     }
                 }
 
-
-                // =====================================================
-                // NO AUTOMATIC DOCKER IMAGE CLEANUP
-                // =====================================================
-
                 stage('Docker Image Cleanup') {
-
-                    echo "Automatic Docker image cleanup is disabled."
-                    echo "Existing Docker images will be preserved."
+                    echo 'Automatic Docker image cleanup is disabled.'
+                    echo 'Existing Docker images will be preserved.'
                 }
 
-
             } else {
-
-                // =====================================================
-                // NON-DEV BRANCHES
-                // =====================================================
-
-                echo "=========================================="
-                echo "NON-DEV BRANCH"
-                echo "=========================================="
+                echo '=========================================='
+                echo 'NON-DEV BRANCH'
                 echo "Branch: ${branchName}"
-                echo "Maven build and tests completed."
-                echo "Dockerfile validation completed."
-                echo "SonarQube: SKIPPED"
-                echo "Docker build: SKIPPED"
-                echo "Docker push: SKIPPED"
-                echo "Deployment: SKIPPED"
-                echo "Image cleanup: SKIPPED"
-                echo "=========================================="
+                echo 'Maven build and tests completed.'
+                echo 'Dockerfile validation completed.'
+                echo 'SonarQube: SKIPPED'
+                echo 'Docker build: SKIPPED'
+                echo 'Docker push: SKIPPED'
+                echo 'Deployment: SKIPPED'
+                echo 'Image cleanup: SKIPPED'
+                echo '=========================================='
             }
 
-
-            // =========================================================
-            // SUCCESS
-            // =========================================================
-
-            echo "=========================================="
-            echo "AYURVEDAA API PIPELINE SUCCESS"
-            echo "=========================================="
+            echo '=========================================='
+            echo 'AYURVEDAA API PIPELINE SUCCESS'
             echo "Branch    : ${branchName}"
             echo "Build     : ${env.BUILD_NUMBER}"
             echo "Image Tag : ${env.IMAGE_TAG}"
-            echo "=========================================="
-
+            echo '=========================================='
 
         } catch (err) {
-
-            echo "=========================================="
-            echo "AYURVEDAA API PIPELINE FAILED"
-            echo "=========================================="
+            echo '=========================================='
+            echo 'AYURVEDAA API PIPELINE FAILED'
             echo "Branch: ${branchName}"
-            echo "Check Jenkins Console Output."
-            echo "=========================================="
+            echo 'Check Jenkins Console Output.'
+            echo '=========================================='
 
             currentBuild.result = 'FAILURE'
-
             throw err
 
         } finally {
-
             if (branchName == 'dev') {
                 sh 'docker logout >/dev/null 2>&1 || true'
             }
