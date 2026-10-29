@@ -380,89 +380,76 @@ REMOTE_SCRIPT
                 // =====================================================
 
                 stage('Deployment Verification') {
-
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'new-server-ssh',
-                            usernameVariable: 'SSH_USERNAME',
+                            usernameVariable: 'SSH_USER',
                             passwordVariable: 'SSH_PASSWORD'
                         )
                     ]) {
-
                         sh '''
                             set -eu
-
                             export SSHPASS="$SSH_PASSWORD"
-
+                
                             sshpass -e ssh \
                                 -o StrictHostKeyChecking=no \
                                 -o UserKnownHostsFile=/dev/null \
-                                "$SSH_USERNAME@$DEPLOY_SERVER" \
-                                "IMAGE_TAG='$IMAGE_TAG' APP_DIR='$DEPLOY_PATH' bash -s" <<'REMOTE_VERIFY'
-
-set -eu
-
-cd "${APP_DIR}"
-
-echo "=========================================="
-echo "VERIFYING AYURVEDAA API SERVICES"
-echo "=========================================="
-
-docker compose --env-file .env config --quiet
-
-for service in 
-    patient-service 
-    doctor-service 
-    appointment-service 
-    therapist-service 
-    file-upload-service 
-    attendance-service 
-    activity-log-service 
-    medicine-service 
-    billing-service 
-    notification-service 
-    auth-service 
-    payment-service
-do
-
-    CONTAINER_ID=$(docker compose \
-        --env-file .env ps --all -q "${service}")
-
-    if [ -z "${CONTAINER_ID}" ]; then
-        echo "ERROR: Container not found for ${service}"
-        exit 1
-    fi
-
-    RUNNING=$(docker inspect \
-        --format '{{.State.Running}}' "${CONTAINER_ID}")
-
-    if [ "${RUNNING}" != "true" ]; then
-        echo "ERROR: ${service} is not running."
-        docker inspect \
-            --format '{{.State.Status}}' "${CONTAINER_ID}"
-        exit 1
-    fi
-
-    ACTUAL_IMAGE=$(docker inspect \
-        --format '{{.Config.Image}}' "${CONTAINER_ID}")
-
-    EXPECTED_IMAGE="sunardock/ayurvedaa-api-${service}:${IMAGE_TAG}"
-
-    if [ "${ACTUAL_IMAGE}" != "${EXPECTED_IMAGE}" ]; then
-        echo "ERROR: Unexpected image for ${service}"
-        echo "Expected: ${EXPECTED_IMAGE}"
-        echo "Actual:   ${ACTUAL_IMAGE}"
-        exit 1
-    fi
-
-    echo "PASS: ${service} is running with ${IMAGE_TAG}"
-
-done
-
-echo "All 12 services passed deployment verification."
-
-REMOTE_VERIFY
-
+                                "$SSH_USER@45.195.229.15" \
+                                "IMAGE_TAG='$IMAGE_TAG' APP_DIR='/root/ayurvedaa' bash -s" <<'REMOTE'
+                            set -eu
+                            cd "$APP_DIR"
+                
+                            SERVICES=(
+                                patient-service
+                                doctor-service
+                                appointment-service
+                                therapist-service
+                                file-upload-service
+                                attendance-service
+                                activity-log-service
+                                medicine-service
+                                billing-service
+                                notification-service
+                                auth-service
+                                payment-service
+                            )
+                
+                            echo "Verifying Ayurvedaa API services..."
+                
+                            for service in "\${SERVICES[@]}"; do
+                                container_id=$(docker compose --env-file .env ps --all -q "$service")
+                
+                                if [ -z "$container_id" ]; then
+                                    echo "ERROR: No container found for $service"
+                                    exit 1
+                                fi
+                
+                                running=$(docker inspect \
+                                    --format '{{.State.Running}}' "$container_id")
+                
+                                if [ "$running" != "true" ]; then
+                                    echo "ERROR: $service is not running"
+                                    docker logs --tail 50 "$container_id" || true
+                                    exit 1
+                                fi
+                
+                                expected_image="sunardock/ayurvedaa-api-${service}:${IMAGE_TAG}"
+                                actual_image=$(docker inspect \
+                                    --format '{{.Config.Image}}' "$container_id")
+                
+                                if [ "$actual_image" != "$expected_image" ]; then
+                                    echo "ERROR: Unexpected image for $service"
+                                    echo "Expected: $expected_image"
+                                    echo "Actual:   $actual_image"
+                                    exit 1
+                                fi
+                
+                                echo "OK: $service is running with $IMAGE_TAG"
+                            done
+                
+                            echo "All 12 services passed deployment verification."
+                            REMOTE
+                
                             unset SSHPASS
                         '''
                     }
