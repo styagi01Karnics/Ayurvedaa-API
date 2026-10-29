@@ -94,7 +94,7 @@ timestamps {
 
                             mvn sonar:sonar \
                                 -Dsonar.projectKey=com.ayurveda:ayurvedaa-services \
-                                -Dsonar.projectName="Ayurvedaa-backend-API"
+                                -Dsonar.projectName="Ayurvedaa-backend"
 
                             echo "SonarQube analysis completed."
                         '''
