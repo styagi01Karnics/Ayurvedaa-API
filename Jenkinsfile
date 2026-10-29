@@ -1,4 +1,3 @@
-```groovy
 timestamps {
     node {
         properties([
@@ -600,4 +599,3 @@ REMOTE
         }
     }
 }
-```
