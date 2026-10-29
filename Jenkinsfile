@@ -33,10 +33,8 @@ timestamps {
 
                 echo '=========================================='
                 echo 'AYURVEDAA API MULTIBRANCH PIPELINE'
-                echo '=========================================='
-                echo "Branch      : ${branchName}"
-                echo "Safe Branch : ${env.SAFE_BRANCH}"
-                echo "Image Tag   : ${env.IMAGE_TAG}"
+                echo "Branch: ${branchName}"
+                echo "Image Tag: ${env.IMAGE_TAG}"
                 echo '=========================================='
             }
 
@@ -46,6 +44,7 @@ timestamps {
                     command -v java
                     command -v mvn
                     command -v git
+                    command -v docker
                     echo "Environment check completed."
                 '''
             }
@@ -53,7 +52,6 @@ timestamps {
             stage('Maven Test & Package') {
                 sh '''
                     set -eu
-                    echo "Maven Test & Package"
                     mvn clean test package -DskipTests=false
                     echo "Maven build and tests completed."
                 '''
@@ -80,8 +78,6 @@ timestamps {
                         test -f "./${service}/Dockerfile"
                         echo "Verified: ${service}/Dockerfile"
                     done
-
-                    echo "All Dockerfiles found."
                 '''
             }
 
@@ -126,8 +122,6 @@ timestamps {
                     sh '''
                         set -eu
 
-                        echo "Building Ayurvedaa API images with tag ${IMAGE_TAG}"
-
                         for service in \
                             patient-service \
                             doctor-service \
@@ -146,9 +140,7 @@ timestamps {
 
                             echo "Building: $image"
 
-                            docker build \
-                                -t "$image" \
-                                "./${service}"
+                            docker build -t "$image" "./${service}"
                         done
 
                         echo "All Docker images built successfully."
@@ -197,6 +189,66 @@ timestamps {
                     }
                 }
 
+                // Keep only the current image tag for each service
+                // on the Jenkins/monitoring server.
+                stage('Monitoring Server Image Retention') {
+                    sh '''
+                        set -eu
+
+                        echo "Applying monitoring server image retention..."
+                        echo "Policy: keep only the current build tag per service."
+
+                        for service in \
+                            patient-service \
+                            doctor-service \
+                            appointment-service \
+                            therapist-service \
+                            file-upload-service \
+                            attendance-service \
+                            activity-log-service \
+                            medicine-service \
+                            billing-service \
+                            notification-service \
+                            auth-service \
+                            payment-service
+                        do
+                            repo="${DOCKER_ORG}/${PROJECT_NAME}-${service}"
+                            current="${repo}:${IMAGE_TAG}"
+
+                            if ! docker image inspect "$current" >/dev/null 2>&1; then
+                                echo "ERROR: Current image not found: $current"
+                                exit 1
+                            fi
+
+                            image_refs=$(docker image ls \
+                                --format '{{.Repository}}:{{.Tag}}' |
+                                awk -v prefix="${repo}:" \
+                                    'index($0, prefix) == 1')
+
+                            for image in $image_refs; do
+                                if [ "$image" = "$current" ]; then
+                                    continue
+                                fi
+
+                                # Do not remove images used by containers.
+                                if docker ps -a \
+                                    --filter "ancestor=$image" \
+                                    --format '{{.ID}}' | grep -q .; then
+                                    echo "Keeping image referenced by a container: $image"
+                                    continue
+                                fi
+
+                                echo "Removing older local tag: $image"
+
+                                docker image rm "$image" ||
+                                    echo "WARNING: Could not remove $image"
+                            done
+                        done
+
+                        echo "Monitoring server image retention completed."
+                    '''
+                }
+
                 stage('Deploy Application') {
                     withCredentials([
                         usernamePassword(
@@ -242,7 +294,7 @@ if [ ! -f docker-compose.yml ] && [ ! -f compose.yml ]; then
     exit 1
 fi
 
-# Update only IMAGE_TAG and preserve other server configuration.
+# Change only IMAGE_TAG; preserve the other server settings.
 if grep -q '^IMAGE_TAG=' .env; then
     sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
 else
@@ -267,7 +319,7 @@ REMOTE_SCRIPT
                     }
                 }
 
-                stage('Deployment Verification') {
+                stage('Deployment Verification & App Image Retention') {
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'new-server-ssh',
@@ -305,8 +357,11 @@ auth-service
 payment-service
 "
 
-echo "Verifying Ayurvedaa API services..."
+echo "=========================================="
+echo "DEPLOYMENT VERIFICATION"
+echo "=========================================="
 
+# Verify all 12 services before removing any old image tags.
 for service in $SERVICES; do
     container_ids=$(docker compose --env-file .env ps --all -q "$service")
 
@@ -315,7 +370,6 @@ for service in $SERVICES; do
         exit 1
     fi
 
-    # Expect exactly one container per Compose service.
     set -- $container_ids
 
     if [ "$#" -ne 1 ]; then
@@ -347,16 +401,73 @@ for service in $SERVICES; do
 done
 
 echo "All 12 services passed deployment verification."
+
+# App server policy:
+# Keep the deployed image plus the two newest other image tags
+# for each service. Sort by Docker image creation timestamp.
+echo "=========================================="
+echo "APPLICATION SERVER IMAGE RETENTION"
+echo "Policy: current + previous 2 images per service"
+echo "=========================================="
+
+for service in $SERVICES; do
+    repo="sunardock/ayurvedaa-api-${service}"
+    current="${repo}:${IMAGE_TAG}"
+
+    if ! docker image inspect "$current" >/dev/null 2>&1; then
+        echo "ERROR: Deployed image not found locally: $current"
+        exit 1
+    fi
+
+    image_rows=$(docker image ls \
+        --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' |
+        awk -F '|' -v prefix="${repo}:" \
+            'index($2, prefix) == 1 { print $0 }' |
+        sort -r)
+
+    previous_kept=0
+
+    while IFS='|' read -r created image; do
+        [ -n "$image" ] || continue
+
+        # Always retain the currently deployed image.
+        if [ "$image" = "$current" ]; then
+            echo "KEEP current: $image"
+            continue
+        fi
+
+        # Retain the two newest other tags.
+        if [ "$previous_kept" -lt 2 ]; then
+            previous_kept=$((previous_kept + 1))
+            echo "KEEP previous ${previous_kept}: $image"
+            continue
+        fi
+
+        # Never remove an image referenced by any container.
+        if docker ps -a \
+            --filter "ancestor=$image" \
+            --format '{{.ID}}' | grep -q .; then
+            echo "WARNING: Keeping image referenced by a container: $image"
+            continue
+        fi
+
+        echo "Removing old image tag: $image"
+
+        docker image rm "$image" ||
+            echo "WARNING: Could not remove $image"
+
+    done <<IMAGE_ROWS
+$image_rows
+IMAGE_ROWS
+
+done
+
+echo "Application server image retention completed."
 REMOTE
 
                             unset SSHPASS
                         '''
                     }
-                }
-
-                stage('Docker Image Cleanup') {
-                    echo 'Automatic Docker image cleanup is disabled.'
-                    echo 'Existing Docker images will be preserved.'
                 }
 
             } else {
@@ -369,7 +480,6 @@ REMOTE
                 echo 'Docker build: SKIPPED'
                 echo 'Docker push: SKIPPED'
                 echo 'Deployment: SKIPPED'
-                echo 'Image cleanup: SKIPPED'
                 echo '=========================================='
             }
 
