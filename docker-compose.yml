@@ -283,6 +283,35 @@ services:
     networks:
       - ayurvedaa-app-net
 
+api-gateway:
+    image: sunardock/ayurvedaa-api-api-gateway:${IMAGE_TAG}
+    container_name: ayurvedaa-api-gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+
+    environment:
+      GATEWAY_PORT: 8113
+      GATEWAY_CORS_ORIGINS: ${GATEWAY_CORS_ORIGINS:-http://localhost:5180}
+
+      AUTH_SERVICE_URL: http://auth-service:8111
+      PATIENT_SERVICE_URL: http://patient-service:8101
+      DOCTOR_SERVICE_URL: http://doctor-service:8102
+      APPOINTMENT_SERVICE_URL: http://appointment-service:8103
+      THERAPIST_SERVICE_URL: http://therapist-service:8104
+      FILE_UPLOAD_SERVICE_URL: http://file-upload-service:8105
+      ATTENDANCE_SERVICE_URL: http://attendance-service:8106
+      ACTIVITY_LOG_SERVICE_URL: http://activity-log-service:8107
+      MEDICINE_SERVICE_URL: http://medicine-service:8108
+      BILLING_SERVICE_URL: http://billing-service:8109
+      NOTIFICATION_SERVICE_URL: http://notification-service:8110
+      PAYMENT_SERVICE_URL: http://payment-service:8112
+
+    ports:
+      - "8113:8113"
+
+    networks:
+      - ayurvedaa-app-net
 
 networks:
 
