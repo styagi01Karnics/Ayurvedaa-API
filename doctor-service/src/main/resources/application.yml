@@ -37,6 +37,9 @@ auth:
     secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}
 
 services:
+  # Overridden in Docker deploy via SERVICES_AUTH_URL (container DNS).
+  auth:
+    url: http://45.195.229.15:8111
   activity-log:
     url: http://45.195.229.15:8107
     enabled: true

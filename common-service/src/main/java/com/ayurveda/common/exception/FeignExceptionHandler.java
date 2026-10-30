@@ -4,9 +4,12 @@ import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.constant.AppConstants;
 
 import feign.FeignException;
+import feign.RetryableException;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @Slf4j
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 public class FeignExceptionHandler {
 
@@ -47,6 +51,14 @@ public class FeignExceptionHandler {
     @ExceptionHandler(FeignException.class)
     public ResponseEntity<ApiResponse<Object>> handleFeign(FeignException ex) {
         log.error("Downstream service call failed with status {}", ex.status(), ex);
+
+        if (ex instanceof RetryableException retryable) {
+            boolean timedOut = retryable.getMessage() != null && retryable.getMessage().contains("timed out");
+            HttpStatus status = timedOut ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.SERVICE_UNAVAILABLE;
+            String message = timedOut ? AppConstants.DOWNSTREAM_TIMEOUT : AppConstants.DOWNSTREAM_UNAVAILABLE;
+            return ResponseEntity.status(status)
+                    .body(ApiResponse.failure(status.value(), message));
+        }
 
         HttpStatus status = HttpStatus.resolve(ex.status());
         if (status == null || status.is2xxSuccessful()) {

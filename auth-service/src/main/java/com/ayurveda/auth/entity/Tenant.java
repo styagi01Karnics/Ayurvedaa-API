@@ -55,7 +55,8 @@ public class Tenant extends BaseEntity {
     @Column(length = 100)
     private String registrationNumberGst;
 
-    @Column(length = 500)
+    /** Logo URL or base64 data URL (up to ~7 MB encoded). */
+    @Column(columnDefinition = "text")
     private String logoUrl;
 
     /** Hospital primary contact full name (from signup Contact Information). */
@@ -69,7 +70,7 @@ public class Tenant extends BaseEntity {
     private String email;
 
     /** Primary contact / admin photo URL (from signup Contact Information). */
-    @Column(length = 500)
+    @Column(columnDefinition = "text")
     private String photoUrl;
 
     /**

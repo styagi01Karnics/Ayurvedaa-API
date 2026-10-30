@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -15,6 +17,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,6 +28,10 @@ import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.therapist.client.AppointmentServiceClient;
+import com.ayurveda.therapist.client.AuthServiceClient;
+import com.ayurveda.therapist.dto.client.AuthUserClientRequest;
+import com.ayurveda.therapist.dto.client.AuthUserClientResponse;
+import com.ayurveda.therapist.dto.client.TenantRoleClientResponse;
 import com.ayurveda.therapist.dto.client.TherapyMasterClientResponse;
 import com.ayurveda.therapist.dto.request.CreateTherapistRequest;
 import com.ayurveda.therapist.dto.request.UpdateTherapistRequest;
@@ -50,17 +57,22 @@ class TherapistServiceImplTest {
     @Mock
     private ActivityLogPublisher activityLogPublisher;
 
+    @Mock
+    private AuthServiceClient authServiceClient;
+
     @InjectMocks
     private TherapistServiceImpl therapistService;
 
     private UUID therapistId;
     private UUID therapyId;
+    private UUID doctorRoleId;
     private Therapist therapist;
 
     @BeforeEach
     void setUp() {
         therapistId = UUID.randomUUID();
         therapyId = UUID.randomUUID();
+        doctorRoleId = UUID.randomUUID();
         therapist = Therapist.builder()
                 .therapistName("Dr. Rahul Verma")
                 .therapistCode("GAN-DL-THP-00002")
@@ -70,19 +82,39 @@ class TherapistServiceImplTest {
         ReflectionTestUtils.setField(therapist, "id", therapistId);
     }
 
-    @Test
-    void createTherapist_validatesTherapyAndSaves() {
+    private CreateTherapistRequest validRequest() {
         CreateTherapistRequest request = new CreateTherapistRequest();
         request.setName(" Dr. Rahul Verma ");
         request.setAssignedTherapyIds(List.of(therapyId));
+        request.setEmail(" Rahul@Example.com ");
+        request.setPassword("secret123");
+        request.setMobileNumber("9876543210");        return request;
+    }
+
+    private TenantRoleClientResponse doctorRole() {
+        TenantRoleClientResponse role = new TenantRoleClientResponse();
+        ReflectionTestUtils.setField(role, "id", doctorRoleId);
+        ReflectionTestUtils.setField(role, "roleCode", "DOCTOR");
+        ReflectionTestUtils.setField(role, "active", true);
+        return role;
+    }
+
+    @Test
+    void createTherapist_validatesTherapyAndSaves() {
+        CreateTherapistRequest request = validRequest();
 
         when(appointmentServiceClient.getTherapyById(therapyId))
                 .thenReturn(ApiResponse.success(TherapyMasterClientResponse.builder()
                         .id(therapyId)
                         .name("Kayakalpa")
                         .build()));
+        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of(doctorRole())));
+        AuthUserClientResponse authUser = new AuthUserClientResponse();
+        ReflectionTestUtils.setField(authUser, "id", UUID.randomUUID());
+        when(authServiceClient.registerUser(any(AuthUserClientRequest.class)))
+                .thenReturn(ApiResponse.success(authUser));
         when(therapistCodeGenerator.generate()).thenReturn("GAN-DL-THP-00002");
-        when(therapistRepository.save(any(Therapist.class))).thenAnswer(inv -> {
+        when(therapistRepository.saveAndFlush(any(Therapist.class))).thenAnswer(inv -> {
             Therapist saved = inv.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", therapistId);
             return saved;
@@ -98,6 +130,52 @@ class TherapistServiceImplTest {
         assertTrue(response.isSuccess());
         assertEquals("Dr. Rahul Verma", response.getData().getName());
         assertEquals("Kayakalpa", response.getData().getAssignedTherapies().get(0).getName());
+
+        ArgumentCaptor<AuthUserClientRequest> captor = ArgumentCaptor.forClass(AuthUserClientRequest.class);
+        verify(authServiceClient).registerUser(captor.capture());
+        assertEquals("9876543210", captor.getValue().getMobileNumber());
+        assertEquals(doctorRoleId, captor.getValue().getTenantRoleId());
+        assertEquals("rahul@example.com", captor.getValue().getEmail());
+        assertEquals("Dr. Rahul Verma", captor.getValue().getFullName());
+    }
+
+    @Test
+    void createTherapist_missingDoctorRole_failsBeforeCreatingLogin() {
+        CreateTherapistRequest request = validRequest();
+
+        when(appointmentServiceClient.getTherapyById(therapyId))
+                .thenReturn(ApiResponse.success(TherapyMasterClientResponse.builder()
+                        .id(therapyId)
+                        .name("Kayakalpa")
+                        .build()));
+        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of()));
+
+        assertThrows(ResourceNotFoundException.class, () -> therapistService.createTherapist(request));
+        verify(authServiceClient, never()).registerUser(any());
+        verify(therapistRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void createTherapist_saveFails_rollsBackLogin() {
+        CreateTherapistRequest request = validRequest();
+        UUID authUserId = UUID.randomUUID();
+
+        when(appointmentServiceClient.getTherapyById(therapyId))
+                .thenReturn(ApiResponse.success(TherapyMasterClientResponse.builder()
+                        .id(therapyId)
+                        .name("Kayakalpa")
+                        .build()));
+        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of(doctorRole())));
+        AuthUserClientResponse authUser = new AuthUserClientResponse();
+        ReflectionTestUtils.setField(authUser, "id", authUserId);
+        when(authServiceClient.registerUser(any(AuthUserClientRequest.class)))
+                .thenReturn(ApiResponse.success(authUser));
+        when(therapistCodeGenerator.generate()).thenReturn("GAN-DL-THP-00002");
+        when(therapistRepository.saveAndFlush(any(Therapist.class)))
+                .thenThrow(new IllegalStateException("db down"));
+
+        assertThrows(IllegalStateException.class, () -> therapistService.createTherapist(request));
+        verify(authServiceClient).deleteUser(authUserId);
     }
 
     @Test

@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,7 @@ import org.springframework.util.StringUtils;
 
 import com.ayurveda.auth.config.ResetPasswordProperties;
 import com.ayurveda.auth.constant.AuthMessages;
+import com.ayurveda.auth.mail.UserWelcomeEmailTemplate;
 import com.ayurveda.auth.dto.request.ChangePasswordRequest;
 import com.ayurveda.auth.dto.request.ForgotPasswordRequest;
 import com.ayurveda.auth.dto.request.LoginRequest;
@@ -104,16 +106,16 @@ public class AuthServiceImpl implements AuthService {
                 throw new BadRequestException(AuthMessages.TENANT_NOT_ALLOWED_FOR_SUPER_ADMIN_LOGIN);
             }
         } else {
-            user = resolveSuperAdminByEmail(loginId)
-                    .orElseThrow(() -> new UnauthorizedException(AuthMessages.INVALID_CREDENTIALS));
-
-            if (user.getRole() != UserRole.SUPER_ADMIN) {
-                throw new BadRequestException(AuthMessages.TENANT_REQUIRED_FOR_HOSPITAL_LOGIN);
-            }
-
-            tenant = user.getTenant();
-            if (!Boolean.TRUE.equals(tenant.getPlatform())) {
-                throw new ForbiddenException(AuthMessages.SUPER_ADMIN_LOGIN_ONLY_WITHOUT_TENANT);
+            Optional<AuthUser> superAdmin = resolveSuperAdminByEmail(loginId);
+            if (superAdmin.isPresent()) {
+                user = superAdmin.get();
+                tenant = user.getTenant();
+                if (!Boolean.TRUE.equals(tenant.getPlatform())) {
+                    throw new ForbiddenException(AuthMessages.SUPER_ADMIN_LOGIN_ONLY_WITHOUT_TENANT);
+                }
+            } else {
+                user = resolveTenantUserByEmailAndPassword(loginId, request.getPassword());
+                tenant = user.getTenant();
             }
         }
 
@@ -156,7 +158,19 @@ public class AuthServiceImpl implements AuthService {
             userOpt = resolveUserForTenant(tenant.getId(), loginId)
                     .filter(u -> u.getRole() != UserRole.SUPER_ADMIN);
         } else {
-            userOpt = resolveSuperAdminByEmail(loginId);
+            Optional<AuthUser> superAdmin = resolveSuperAdminByEmail(loginId);
+            if (superAdmin.isPresent()) {
+                userOpt = superAdmin;
+            } else {
+                List<AuthUser> tenantUsers = authUserRepository
+                        .findAllByEmailIgnoreCaseAndDeletedFalse(loginId.toLowerCase()).stream()
+                        .filter(u -> u.getRole() != UserRole.SUPER_ADMIN)
+                        .filter(u -> u.getTenant() != null && !Boolean.TRUE.equals(u.getTenant().getPlatform()))
+                        .filter(u -> !Boolean.TRUE.equals(u.getTenant().getDeleted())
+                                && u.getTenant().getStatus() == TenantStatus.ACTIVE)
+                        .toList();
+                userOpt = tenantUsers.size() == 1 ? Optional.of(tenantUsers.get(0)) : Optional.empty();
+            }
         }
 
         if (userOpt.isEmpty()) {
@@ -168,21 +182,10 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser user = userOpt.get();
-        passwordResetTokenRepository.invalidateActiveTokensForUser(user.getId());
-
-        String rawToken = UUID.randomUUID().toString().replace("-", "")
-                + UUID.randomUUID().toString().replace("-", "");
-        int expiryMinutes = Math.max(1, resetPasswordProperties.getExpiryMinutes());
-        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(expiryMinutes);
-
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .user(user)
-                .tokenHash(hashToken(rawToken))
-                .expiresAt(expiresAt)
-                .used(false)
-                .build();
-
-        passwordResetTokenRepository.save(resetToken);
+        IssuedResetToken issued = issueResetToken(user);
+        String rawToken = issued.rawToken();
+        int expiryMinutes = issued.expiryMinutes();
+        LocalDateTime expiresAt = issued.expiresAt();
 
         String resetLink = buildResetLink(rawToken);
         String emailBody = """
@@ -266,34 +269,33 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateResourceException(AuthMessages.USER_EXISTS_FOR_TENANT_EMAIL + email);
         }
 
-        if (request.getRole() == UserRole.SUPER_ADMIN) {
-            throw new BadRequestException(AuthMessages.CANNOT_CREATE_SUPER_ADMIN_VIA_TENANT_REGISTRATION);
-        }
-
-        TenantRole tenantRole = resolveTenantRoleForUser(
-                tenant.getId(), request.getRole(), request.getTenantRoleId());
+        TenantRole tenantRole = resolveTenantRoleForRegistration(tenant, request.getTenantRoleId());
+        UserRole role = userRoleFromTenantRole(tenantRole);
 
         AuthUser user = AuthUser.builder()
                 .tenant(tenant)
                 .email(email)
                 .fullName(request.getFullName().trim())
+                .mobileNumber(request.getMobileNumber().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .role(role)
                 .tenantRole(tenantRole)
                 .status(UserStatus.ACTIVE)
                 .build();
 
-        AuthUser saved = authUserRepository.save(user);
+        AuthUser saved = authUserRepository.saveAndFlush(user);
         List<String> pageCodes = pageAccessService.resolvePageCodes(saved);
 
-        log.info("Registered user {} with role {} for tenant {}", email, request.getRole(), tenant.getTenantCode());
+        log.info("Registered user {} with role {} for tenant {}", email, role, tenant.getTenantCode());
+
+        sendWelcomeEmail(saved, tenant, tenantRole);
 
         activityLogPublisher.record(
                 "Settings",
                 ActivityActionType.CREATED,
                 "User " + email,
                 null,
-                request.getRole().name(),
+                role.name(),
                 principal.getUserId(),
                 principal.getEmail(),
                 principal.getRole());
@@ -577,6 +579,61 @@ public class AuthServiceImpl implements AuthService {
         return base + separator + "token=" + rawToken;
     }
 
+    private record IssuedResetToken(String rawToken, LocalDateTime expiresAt, int expiryMinutes) {
+    }
+
+    private IssuedResetToken issueResetToken(AuthUser user) {
+        passwordResetTokenRepository.invalidateActiveTokensForUser(user.getId());
+
+        String rawToken = UUID.randomUUID().toString().replace("-", "")
+                + UUID.randomUUID().toString().replace("-", "");
+        int expiryMinutes = Math.max(1, resetPasswordProperties.getExpiryMinutes());
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(expiryMinutes);
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .user(user)
+                .tokenHash(hashToken(rawToken))
+                .expiresAt(expiresAt)
+                .used(false)
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+        return new IssuedResetToken(rawToken, expiresAt, expiryMinutes);
+    }
+
+    /**
+     * Sends the new user a welcome email with tenant code, login email and a set-password link.
+     * Failures are logged so user creation still succeeds.
+     */
+    private void sendWelcomeEmail(AuthUser user, Tenant tenant, TenantRole tenantRole) {
+        try {
+            IssuedResetToken issued = issueResetToken(user);
+            String setPasswordUrl = buildResetLink(issued.rawToken());
+            String hospitalName = tenant.getName();
+            String roleLabel = tenantRole.getRoleName() != null
+                    ? tenantRole.getRoleName()
+                    : tenantRole.getRoleCode();
+
+            String html = UserWelcomeEmailTemplate.render(
+                    hospitalName,
+                    tenant.getLogoUrl(),
+                    user.getFullName(),
+                    tenant.getTenantCode(),
+                    user.getEmail(),
+                    roleLabel,
+                    setPasswordUrl,
+                    issued.expiryMinutes());
+
+            emailNotificationPublisher.sendHtmlEmail(
+                    user.getEmail(),
+                    UserWelcomeEmailTemplate.subject(hospitalName),
+                    html,
+                    tenant.getTenantCode());
+        } catch (Exception ex) {
+            log.warn("Welcome email not sent to {}: {}", user.getEmail(), ex.getMessage());
+        }
+    }
+
     private Optional<AuthUser> resolveSuperAdminByEmail(String emailOrLogin) {
         String loginId = emailOrLogin.toLowerCase();
         return authUserRepository.findByRoleAndEmailIgnoreCaseAndDeletedFalse(
@@ -588,9 +645,64 @@ public class AuthServiceImpl implements AuthService {
         return authUserRepository.findByTenantIdAndEmailIgnoreCaseAndDeletedFalse(tenantId, loginId);
     }
 
+    /**
+     * Login without tenantCode: the clinic is derived from the email. Only accounts whose
+     * password matches are considered; an active clinic is preferred when the same email
+     * exists in several clinics. Multiple active matches are rejected as ambiguous.
+     */
+    private AuthUser resolveTenantUserByEmailAndPassword(String loginId, String password) {
+        List<AuthUser> candidates = authUserRepository.findAllByEmailIgnoreCaseAndDeletedFalse(loginId).stream()
+                .filter(u -> u.getRole() != UserRole.SUPER_ADMIN)
+                .filter(u -> u.getTenant() != null && !Boolean.TRUE.equals(u.getTenant().getPlatform()))
+                .filter(u -> passwordEncoder.matches(password, u.getPasswordHash()))
+                .toList();
+
+        if (candidates.isEmpty()) {
+            throw new UnauthorizedException(AuthMessages.INVALID_CREDENTIALS);
+        }
+
+        List<AuthUser> active = candidates.stream()
+                .filter(u -> !Boolean.TRUE.equals(u.getTenant().getDeleted())
+                        && u.getTenant().getStatus() == TenantStatus.ACTIVE)
+                .toList();
+
+        if (active.size() > 1) {
+            throw new BadRequestException(AuthMessages.TENANT_AMBIGUOUS_FOR_EMAIL);
+        }
+        if (active.size() == 1) {
+            return active.get(0);
+        }
+        if (candidates.size() > 1) {
+            throw new BadRequestException(AuthMessages.TENANT_AMBIGUOUS_FOR_EMAIL);
+        }
+        return candidates.get(0);
+    }
+
     private AuthUser requireTenantUser(UUID userId, UUID tenantId) {
         return authUserRepository.findByIdAndTenantIdAndDeletedFalse(userId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND));
+    }
+
+    private TenantRole resolveTenantRoleForRegistration(Tenant tenant, UUID tenantRoleId) {
+        if (tenantRoleId == null) {
+            throw new BadRequestException(AuthMessages.TENANT_ROLE_REQUIRED_FOR_NON_ADMIN);
+        }
+        return tenantRoleRepository
+                .findByIdAndTenantIdAndDeletedFalse(tenantRoleId, tenant.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.TENANT_ROLE_NOT_FOUND));
+    }
+
+    /** Maps the selected tenant role code to the system authority; SUPER_ADMIN is never assignable. */
+    private UserRole userRoleFromTenantRole(TenantRole tenantRole) {
+        String code = tenantRole.getRoleCode();
+        if (TenantBootstrapService.HOSPITAL_ADMIN_ROLE_CODE.equalsIgnoreCase(code)) {
+            return UserRole.ADMIN;
+        }
+        return Arrays.stream(UserRole.values())
+                .filter(r -> r != UserRole.SUPER_ADMIN && r.name().equalsIgnoreCase(code))
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException(
+                        String.format(AuthMessages.TENANT_ROLE_NOT_MAPPED_TO_SYSTEM_ROLE, code)));
     }
 
     private TenantRole resolveTenantRoleForUser(UUID tenantId, UserRole role, UUID tenantRoleId) {

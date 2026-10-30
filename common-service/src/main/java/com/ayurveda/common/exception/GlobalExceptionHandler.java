@@ -10,10 +10,15 @@ import jakarta.validation.ConstraintViolationException;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.dao.TransientDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -22,9 +27,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Arrays;
@@ -213,12 +220,59 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), AppConstants.INVALID_MULTIPART_REQUEST));
     }
 
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Object>> handleResponseStatus(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        if (status == null) {
+            status = HttpStatus.SERVICE_UNAVAILABLE;
+        }
+        if (status.is5xxServerError()) {
+            log.error("Response status exception: {}", ex.getMessage(), ex);
+        } else {
+            log.warn("Response status exception ({}): {}", status.value(), ex.getReason());
+        }
+        String message = ex.getReason() != null ? ex.getReason() : status.getReasonPhrase();
+        return ResponseEntity.status(status)
+                .body(ApiResponse.failure(status.value(), message));
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Object>> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
+        log.warn("Optimistic locking conflict: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.failure(HttpStatus.CONFLICT.value(), AppConstants.OPTIMISTIC_LOCK_CONFLICT));
+    }
+
+    @ExceptionHandler({
+            DataAccessResourceFailureException.class,
+            CannotGetJdbcConnectionException.class,
+            TransientDataAccessException.class,
+            ResourceAccessException.class
+    })
+    public ResponseEntity<ApiResponse<Object>> handleDependencyUnavailable(Exception ex) {
+        log.error("Dependency unavailable: {}", ex.getMessage(), ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.failure(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(), AppConstants.SERVICE_TEMPORARILY_UNAVAILABLE));
+    }
+
+    @ExceptionHandler(QueryTimeoutException.class)
+    public ResponseEntity<ApiResponse<Object>> handleQueryTimeout(QueryTimeoutException ex) {
+        log.error("Database query timed out: {}", ex.getMessage(), ex);
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
+                .body(ApiResponse.failure(HttpStatus.GATEWAY_TIMEOUT.value(), AppConstants.DOWNSTREAM_TIMEOUT));
+    }
+
+    /**
+     * Last resort for unexpected failures. Known infrastructure and client errors are mapped above.
+     * Returns 503 instead of 500 so no generic 500 leaves the service; the stack trace is still logged.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleException(Exception ex) {
         log.error("Unexpected exception", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.failure(
-                        HttpStatus.INTERNAL_SERVER_ERROR.value(), AppConstants.SOMETHING_WENT_WRONG));
+                        HttpStatus.SERVICE_UNAVAILABLE.value(), AppConstants.SERVICE_TEMPORARILY_UNAVAILABLE));
     }
 
     private ResponseEntity<ApiResponse<Object>> toInvalidFormatResponse(Throwable throwable) {

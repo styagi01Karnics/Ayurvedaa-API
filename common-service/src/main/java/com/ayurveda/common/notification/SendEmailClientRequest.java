@@ -18,4 +18,7 @@ public class SendEmailClientRequest {
     private String body;
     private String tenantCode;
 
+    /** When true, {@code body} is HTML. */
+    private boolean html;
+
 }

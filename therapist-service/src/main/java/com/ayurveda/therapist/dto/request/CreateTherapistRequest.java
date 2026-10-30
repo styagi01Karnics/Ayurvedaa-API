@@ -7,6 +7,7 @@ import com.ayurveda.therapist.enums.TherapistStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,5 +24,17 @@ public class CreateTherapistRequest {
 
     @NotEmpty(message = "At least one assigned therapy id is required")
     private List<@NotNull UUID> assignedTherapyIds;
+
+    @NotBlank(message = "Mobile number is required")
+    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Enter a valid 10-digit mobile number")
+    private String mobileNumber;
+
+    @NotBlank(message = "Email is required")
+    @Size(max = 150, message = "Email must not exceed 150 characters")
+    private String email;
+
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
+    private String password;
 
 }

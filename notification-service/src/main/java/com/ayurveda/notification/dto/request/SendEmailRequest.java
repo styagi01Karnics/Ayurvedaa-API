@@ -33,4 +33,7 @@ public class SendEmailRequest {
     @Size(max = 50)
     private String tenantCode;
 
+    /** When true, {@link #body} is sent as HTML; otherwise as plain text. */
+    private boolean html;
+
 }

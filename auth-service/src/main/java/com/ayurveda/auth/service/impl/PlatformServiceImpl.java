@@ -124,7 +124,9 @@ public class PlatformServiceImpl implements PlatformService {
         String schemaName = schemaProvisioningService.buildSchemaName(tenantCode);
 
         String contactEmail = request.getEmail().trim().toLowerCase();
-
+        if (authUserRepository.existsByEmailIgnoreCaseAndDeletedFalse(contactEmail)) {
+            throw new DuplicateResourceException(AuthMessages.ADMIN_EMAIL_ALREADY_IN_USE + contactEmail);
+        }
         Tenant hospital = Tenant.builder()
                 .tenantCode(tenantCode)
                 .name(hospitalName)
@@ -351,6 +353,33 @@ public class PlatformServiceImpl implements PlatformService {
 
         return ApiResponse.success(
                 AuthMessages.HOSPITAL_STATUS_UPDATED, toHospitalResponse(hospital));
+    }
+
+    /**
+     * Soft-deactivates a hospital: sets the tenant and all of its users to INACTIVE.
+     * The tenant schema and rows are kept.
+     */
+    @Override
+    @Transactional
+    public ApiResponse<TenantResponse> deleteHospital(UUID hospitalId) {
+        requireSuperAdmin();
+
+        Tenant hospital = requireHospital(hospitalId);
+        if (Boolean.TRUE.equals(hospital.getPlatform())) {
+            throw new BadRequestException("The platform tenant cannot be deleted");
+        }
+
+        hospital.setStatus(TenantStatus.INACTIVE);
+        tenantRepository.save(hospital);
+
+        List<AuthUser> users = authUserRepository.findByTenantIdAndDeletedFalse(hospital.getId());
+        users.forEach(user -> user.setStatus(UserStatus.INACTIVE));
+        authUserRepository.saveAll(users);
+
+        log.info("Deleted hospital {} and set {} users to INACTIVE",
+                hospital.getTenantCode(), users.size());
+
+        return ApiResponse.success(AuthMessages.HOSPITAL_DEACTIVATED, toHospitalResponse(hospital));
     }
 
     @Override

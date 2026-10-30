@@ -1,7 +1,6 @@
 package com.ayurveda.auth.dto.request;
 
 import com.ayurveda.auth.constant.AuthValidation;
-import com.ayurveda.auth.enums.UserRole;
 
 import java.util.UUID;
 
@@ -26,6 +25,10 @@ public class RegisterUserRequest {
     @Size(max = 100)
     private String fullName;
 
+    @NotBlank(message = "Mobile number is required")
+    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Enter a valid 10-digit mobile number")
+    private String mobileNumber;
+
     /** Gmail login identity. */
     @NotBlank(message = "Email (Gmail) is required")
     @Size(max = 150)
@@ -36,13 +39,11 @@ public class RegisterUserRequest {
     @Size(min = 8, max = 100)
     private String password;
 
-    @NotNull(message = "Role is required")
-    private UserRole role;
-
     /**
-     * Hospital custom role (UI pages). Required for non-ADMIN users.
-     * Optional for ADMIN (seeded hospital-admin role is used when null).
+     * Hospital tenant role (the form's "Tenant Role"). Required. The system role
+     * (ADMIN, DOCTOR, ...) is derived from its role code.
      */
+    @NotNull(message = "Tenant role is required")
     private UUID tenantRoleId;
 
 }

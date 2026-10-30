@@ -22,7 +22,6 @@ import com.ayurveda.patient.enums.PatientStatus;
 import com.ayurveda.patient.mapper.PatientMapper;
 import com.ayurveda.patient.repository.PatientRepository;
 import com.ayurveda.patient.service.PatientService;
-import com.ayurveda.patient.util.FullNameSplitter;
 import com.ayurveda.patient.util.PatientCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,13 +62,11 @@ public class PatientServiceImpl implements PatientService {
 
         validateDuplicatePatient(request);
 
-        String[] names = FullNameSplitter.split(request.getFullName());
         String patientCode = patientCodeGenerator.generate();
 
         Patient patient = Patient.builder()
                 .patientCode(patientCode)
-                .firstName(names[0])
-                .lastName(names[1])
+                .fullName(request.getFullName())
                 .gender(request.getGender())
                 .dateOfBirth(request.getDateOfBirth())
                 .age(request.getAge())
@@ -112,12 +109,7 @@ public class PatientServiceImpl implements PatientService {
         if (patient == null || !StringUtils.hasText(patient.getEmail())) {
             return;
         }
-        String name = ((patient.getFirstName() != null ? patient.getFirstName() : "")
-                + " "
-                + (patient.getLastName() != null ? patient.getLastName() : "")).trim();
-        if (!StringUtils.hasText(name)) {
-            name = "Patient";
-        }
+        String name = StringUtils.hasText(patient.getFullName()) ? patient.getFullName().trim() : "Patient";
         String body = """
                 Hello %s,
 

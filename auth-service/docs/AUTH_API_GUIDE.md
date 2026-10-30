@@ -255,8 +255,7 @@ Email link base URL: `auth.reset-password.reset-link-base-url` (default `http://
 
 ```json
 {
-  "usernameOrEmail": "superadmin@gmail.com",
-  "password": "YourPassword@123"
+  "usernameOrEmail": "<super-admin-email>",
 }
 ```
 
@@ -343,7 +342,7 @@ Email link base URL: `auth.reset-password.reset-link-base-url` (default `http://
 
 ```json
 {
-  "usernameOrEmail": "superadmin@gmail.com"
+  "usernameOrEmail": "<super-admin-email>"
 }
 ```
 
@@ -532,7 +531,7 @@ All hospital management routes below require **Bearer + role SUPER_ADMIN** (enfo
 ```json
 {
   "fullName": "Platform Owner",
-  "email": "superadmin@gmail.com",
+  "email": "<super-admin-email>",
   "password": "Password@123"
 }
 ```
@@ -549,7 +548,7 @@ All hospital management routes below require **Bearer + role SUPER_ADMIN** (enfo
     "tenantId": "…",
     "tenantCode": "…",
     "schemaName": "public",
-    "email": "superadmin@gmail.com",
+    "email": "<super-admin-email>",
     "fullName": "Platform Owner",
     "mobileNumber": null,
     "role": "SUPER_ADMIN",
@@ -813,17 +812,17 @@ Requires **Bearer** and `ADMIN` / `SUPER_ADMIN` or authority `PAGE_SETTINGS`.
   "fullName": "Anita Nurse",
   "email": "nurse@gmail.com",
   "password": "Password@123",
-  "role": "RECEPTIONIST",
+  "mobileNumber": "9876543210",
   "tenantRoleId": "<uuid-from-GET-/roles>"
 }
 ```
 
 
-| Field          | Notes                                                                                    |
-| -------------- | ---------------------------------------------------------------------------------------- |
-| `email`        | Gmail login identity                                                                     |
-| `role`         | `ADMIN`, `MANAGER`, `RECEPTIONIST`, `DIETICIAN`, `DOCTOR`, `CHEMIST` — not `SUPER_ADMIN` |
-| `tenantRoleId` | Required for non-ADMIN (owns `pageCodes`)                                                |
+| Field          | Notes                                                                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `email`        | Gmail login identity                                                                                                                   |
+| `mobileNumber` | Required, 10 digits starting with 6-9                                                                                                  |
+| `tenantRoleId` | Required. The system role is derived from its role code (`HOSPITAL_ADMIN` maps to `ADMIN`; other codes must match a role name such as `DOCTOR`) |
 
 
 **Response:** `ApiResponse<UserResponse>` — `"User registered successfully."`

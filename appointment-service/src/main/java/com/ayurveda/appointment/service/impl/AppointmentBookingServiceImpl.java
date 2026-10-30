@@ -1142,13 +1142,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         if (patient == null) {
             return "Patient";
         }
-        if (StringUtils.hasText(patient.getFullName())) {
-            return patient.getFullName().trim();
-        }
-        String combined = ((patient.getFirstName() != null ? patient.getFirstName() : "")
-                + " "
-                + (patient.getLastName() != null ? patient.getLastName() : "")).trim();
-        return StringUtils.hasText(combined) ? combined : "Patient";
+        return StringUtils.hasText(patient.getFullName()) ? patient.getFullName().trim() : "Patient";
     }
 
     private static String doctorDisplayName(DoctorSummaryResponse doctor) {

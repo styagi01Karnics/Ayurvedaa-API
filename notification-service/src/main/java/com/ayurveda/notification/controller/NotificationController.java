@@ -18,11 +18,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.notification.dto.request.CreateNotificationRequest;
+import com.ayurveda.notification.dto.request.RegisterDeviceTokenRequest;
 import com.ayurveda.notification.dto.request.SendEmailRequest;
 import com.ayurveda.notification.dto.response.EmailSendResponse;
 import com.ayurveda.notification.dto.response.NotificationResponse;
 import com.ayurveda.notification.dto.response.UnreadCountResponse;
 import com.ayurveda.notification.enums.NotificationType;
+import com.ayurveda.notification.service.DeviceTokenService;
 import com.ayurveda.notification.service.EmailService;
 import com.ayurveda.notification.service.NotificationService;
 
@@ -40,6 +42,7 @@ public class NotificationController {
 
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final DeviceTokenService deviceTokenService;
 
     @Operation(summary = "Send an email (internal / service-to-service)",
             description = "SMTP failures are soft: HTTP 200 with deliveryStatus FAILED/SKIPPED. Never fails business callers.")
@@ -102,6 +105,20 @@ public class NotificationController {
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable UUID notificationId) {
         return ResponseEntity.ok(notificationService.deleteNotification(notificationId));
+    }
+
+    @Operation(summary = "Register FCM device token for push notifications",
+            description = "Call from the mobile/web client after obtaining an FCM token. Re-registering the same token moves it to the given user.")
+    @PostMapping("/device-tokens")
+    public ResponseEntity<ApiResponse<Void>> registerDeviceToken(
+            @Valid @RequestBody RegisterDeviceTokenRequest request) {
+        return ResponseEntity.ok(deviceTokenService.registerDeviceToken(request));
+    }
+
+    @Operation(summary = "Remove FCM device token (e.g., on logout)")
+    @DeleteMapping("/device-tokens/{token}")
+    public ResponseEntity<ApiResponse<Void>> removeDeviceToken(@PathVariable String token) {
+        return ResponseEntity.ok(deviceTokenService.removeDeviceToken(token));
     }
 
 }

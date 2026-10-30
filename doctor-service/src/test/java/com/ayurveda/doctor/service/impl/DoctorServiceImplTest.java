@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -15,6 +17,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,6 +26,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.doctor.client.AuthServiceClient;
+import com.ayurveda.doctor.dto.client.AuthUserClientRequest;
+import com.ayurveda.doctor.dto.client.AuthUserClientResponse;
+import com.ayurveda.doctor.dto.client.TenantRoleClientResponse;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -34,6 +41,9 @@ import com.ayurveda.doctor.util.DoctorCodeGenerator;
 @ExtendWith(MockitoExtension.class)
 class DoctorServiceImplTest {
 
+    private static final UUID DOCTOR_ROLE_ID = UUID.randomUUID();
+    private static final UUID AUTH_USER_ID = UUID.randomUUID();
+
     @Mock
     private DoctorRepository doctorRepository;
 
@@ -42,6 +52,9 @@ class DoctorServiceImplTest {
 
     @Mock
     private ActivityLogPublisher activityLogPublisher;
+
+    @Mock
+    private AuthServiceClient authServiceClient;
 
     @InjectMocks
     private DoctorServiceImpl doctorService;
@@ -66,15 +79,12 @@ class DoctorServiceImplTest {
 
     @Test
     void createDoctor_defaultsActiveAndSaves() {
-        CreateDoctorRequest request = new CreateDoctorRequest();
-        request.setName(" Dr. Sheekha ");
-        request.setSpecialization(" Panchakarma ");
-        request.setConsultationFees(BigDecimal.valueOf(500));
-        request.setFollowUpFees(BigDecimal.valueOf(300));
-        request.setAvailability(" Mon-Fri ");
+        CreateDoctorRequest request = validCreateRequest();
 
+        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of(doctorRole())));
+        when(authServiceClient.registerUser(any())).thenReturn(ApiResponse.success(authUser()));
         when(doctorCodeGenerator.generate()).thenReturn("GAN-DL-DOC-00001");
-        when(doctorRepository.save(any(Doctor.class))).thenAnswer(inv -> {
+        when(doctorRepository.saveAndFlush(any(Doctor.class))).thenAnswer(inv -> {
             Doctor saved = inv.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", doctorId);
             return saved;
@@ -85,6 +95,64 @@ class DoctorServiceImplTest {
         assertTrue(response.isSuccess());
         assertEquals("Dr. Sheekha", response.getData().getName());
         assertEquals(DoctorStatus.ACTIVE, response.getData().getStatus());
+
+        ArgumentCaptor<AuthUserClientRequest> captor = ArgumentCaptor.forClass(AuthUserClientRequest.class);
+        verify(authServiceClient).registerUser(captor.capture());
+        assertEquals("9876543210", captor.getValue().getMobileNumber());
+        assertEquals(DOCTOR_ROLE_ID, captor.getValue().getTenantRoleId());
+        assertEquals("sheekha@gmail.com", captor.getValue().getEmail());
+    }
+
+    @Test
+    void createDoctor_missingDoctorRole_failsBeforeCreatingLogin() {
+        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of()));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> doctorService.createDoctor(validCreateRequest()));
+
+        verify(authServiceClient, never()).registerUser(any());
+        verify(doctorRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void createDoctor_doctorSaveFails_rollsBackLogin() {
+        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of(doctorRole())));
+        when(authServiceClient.registerUser(any())).thenReturn(ApiResponse.success(authUser()));
+        when(doctorCodeGenerator.generate()).thenReturn("GAN-DL-DOC-00001");
+        when(doctorRepository.saveAndFlush(any(Doctor.class)))
+                .thenThrow(new IllegalStateException("db down"));
+
+        assertThrows(IllegalStateException.class,
+                () -> doctorService.createDoctor(validCreateRequest()));
+
+        verify(authServiceClient).deleteUser(AUTH_USER_ID);
+    }
+
+    private CreateDoctorRequest validCreateRequest() {
+        CreateDoctorRequest request = new CreateDoctorRequest();
+        request.setName(" Dr. Sheekha ");
+        request.setSpecialization(" Panchakarma ");
+        request.setConsultationFees(BigDecimal.valueOf(500));
+        request.setFollowUpFees(BigDecimal.valueOf(300));
+        request.setAvailability(" Mon-Fri ");
+        request.setEmail(" Sheekha@Gmail.com ");
+        request.setPassword("secret123");
+        request.setMobileNumber("9876543210");
+        return request;
+    }
+
+    private TenantRoleClientResponse doctorRole() {
+        TenantRoleClientResponse role = new TenantRoleClientResponse();
+        role.setId(DOCTOR_ROLE_ID);
+        role.setRoleCode("DOCTOR");
+        role.setActive(true);
+        return role;
+    }
+
+    private AuthUserClientResponse authUser() {
+        AuthUserClientResponse user = new AuthUserClientResponse();
+        user.setId(AUTH_USER_ID);
+        return user;
     }
 
     @Test

@@ -26,7 +26,7 @@ Content-Type: application/json
 ```json
 {
   "fullName": "Platform Admin",
-  "email": "superadmin@gmail.com",
+  "email": "<super-admin-email>",
   "password": "SecurePass1"
 }
 ```
@@ -38,7 +38,7 @@ Content-Type: application/json
   "message": "Success",
   "data": {
     "id": "…",
-    "email": "superadmin@gmail.com",
+    "email": "<super-admin-email>",
     "fullName": "Platform Admin",
     "role": "SUPER_ADMIN",
     "status": "ACTIVE"
@@ -56,7 +56,7 @@ POST http://localhost:8111/api/v1/auth/login
 
 ```json
 {
-  "usernameOrEmail": "superadmin@gmail.com",
+  "usernameOrEmail": "<super-admin-email>",
   "password": "SecurePass1"
 }
 ```
@@ -125,7 +125,7 @@ Use this JWT for all Step-2 clinical APIs.
 | POST | `/forgot-password` | Public | `tenantCode?`, `usernameOrEmail` | `ForgotPasswordResponse` | Emails reset link |
 | POST | `/reset-password` | Public | `token`, `newPassword`, `confirmPassword` | `null` | Completes reset |
 | POST | `/validate` | Public | optional Bearer | `TokenValidationResponse` | S2S JWT check |
-| POST | `/register-user` | Bearer + admin/settings | `fullName`, `email`, `password`, `role`, `tenantRoleId?` | `UserResponse` | Staff under current tenant |
+| POST | `/register-user` | Bearer + admin/settings | `fullName`, `email`, `password`, `mobileNumber`, `tenantRoleId` | `UserResponse` | Staff under current tenant; system role derived from tenant role. Sends a welcome email with tenant code, login email and a set-password link (the password is not emailed) |
 | GET | `/me` | Bearer | — | `UserResponse` | Current user |
 | PUT | `/me` | Bearer | `fullName?` | `UserResponse` | Own profile |
 | PUT | `/change-password` | Bearer | `currentPassword`, `newPassword`, `confirmPassword` | `null` | Does not rotate JWT |

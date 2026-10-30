@@ -16,6 +16,7 @@ import com.ayurveda.notification.dto.response.UnreadCountResponse;
 import com.ayurveda.notification.entity.Notification;
 import com.ayurveda.notification.enums.NotificationType;
 import com.ayurveda.notification.mapper.NotificationMapper;
+import com.ayurveda.notification.push.PushNotificationDispatcher;
 import com.ayurveda.notification.repository.NotificationRepository;
 import com.ayurveda.notification.service.NotificationService;
 
@@ -30,12 +31,14 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
+    private final PushNotificationDispatcher pushNotificationDispatcher;
 
     @Override
     public ApiResponse<NotificationResponse> createNotification(CreateNotificationRequest request) {
         log.info("Creating {} notification for user {}", request.getType(), request.getRecipientUserId());
 
         Notification saved = notificationRepository.save(notificationMapper.toEntity(request));
+        pushNotificationDispatcher.dispatch(saved);
         return ApiResponse.success(
                 NotificationMessages.NOTIFICATION_CREATED_SUCCESSFULLY, notificationMapper.toResponse(saved));
     }

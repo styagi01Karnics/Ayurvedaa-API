@@ -48,10 +48,20 @@ ayurveda:
       require-hospital-schema: false
       skip-path-patterns:
         - /api/v1/notifications/email
+        - /ws/**
 
 auth:
   jwt:
     secret: ${JWT_SECRET:AyurvedaaAuthJwtSecretKeyMustBeAtLeast256BitsLong!!}
+
+# Push notifications:
+#   Real-time: STOMP endpoint /ws, subscribe to /user/queue/notifications with ?token=<JWT>.
+#   Device push: FCM, enabled only when FIREBASE_PUSH_ENABLED=true.
+#   FIREBASE_SERVICE_ACCOUNT_PATH must point to a service-account JSON file on the host (never commit it).
+firebase:
+  push:
+    enabled: ${FIREBASE_PUSH_ENABLED:false}
+    service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
 
 # SMTP is only in notification-service. Auth/payment call POST /api/v1/notifications/email.
 # Do not put real passwords in this file. Set env on the host, then restart notification-service.

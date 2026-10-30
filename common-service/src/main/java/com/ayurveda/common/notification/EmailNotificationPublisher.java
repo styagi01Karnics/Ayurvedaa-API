@@ -33,6 +33,14 @@ public class EmailNotificationPublisher {
     }
 
     public void sendEmail(String to, String subject, String body, String tenantCode) {
+        sendEmail(to, subject, body, tenantCode, false);
+    }
+
+    public void sendHtmlEmail(String to, String subject, String htmlBody, String tenantCode) {
+        sendEmail(to, subject, htmlBody, tenantCode, true);
+    }
+
+    private void sendEmail(String to, String subject, String body, String tenantCode, boolean html) {
         if (!enabled || to == null || to.isBlank() || subject == null || subject.isBlank()) {
             return;
         }
@@ -46,6 +54,7 @@ public class EmailNotificationPublisher {
                     .subject(subject)
                     .body(body != null ? body : "")
                     .tenantCode(resolvedTenant)
+                    .html(html)
                     .build();
 
             HttpHeaders headers = new HttpHeaders();
