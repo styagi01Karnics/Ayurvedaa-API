@@ -115,6 +115,10 @@ timestamps {
 
             if (branchName == 'dev') {
 
+                // ==========================================
+                // SONARQUBE ANALYSIS
+                // ==========================================
+
                 stage('SonarQube Analysis') {
                     withSonarQubeEnv('SonarQube') {
                         sh '''
@@ -128,6 +132,10 @@ timestamps {
                         '''
                     }
                 }
+
+                // ==========================================
+                // DOCKER LOGIN
+                // ==========================================
 
                 stage('Docker Login') {
                     withCredentials([
@@ -150,6 +158,10 @@ timestamps {
                         '''
                     }
                 }
+
+                // ==========================================
+                // BUILD DOCKER IMAGES
+                // ==========================================
 
                 stage('Build Docker Images') {
                     sh '''
@@ -180,6 +192,10 @@ timestamps {
                         echo "All Docker images built successfully."
                     '''
                 }
+
+                // ==========================================
+                // PUSH DOCKER IMAGES
+                // ==========================================
 
                 stage('Push Docker Images') {
                     withCredentials([
@@ -225,16 +241,22 @@ timestamps {
                     }
                 }
 
+                // ==========================================
                 // MONITORING SERVER IMAGE RETENTION
-                // Runs on the Jenkins execution server.
-                // Keeps current build tag and protects container-referenced images.
+                // Server: Jenkins / Monitoring Server
+                // Policy: Current image only per service.
+                // Protect images referenced by containers.
+                // ==========================================
 
                 stage('Monitoring Server Image Retention') {
                     sh '''
                         set -eu
 
-                        echo "Applying monitoring server image retention..."
-                        echo "Policy: current build tag per service."
+                        echo "=========================================="
+                        echo "MONITORING SERVER IMAGE RETENTION"
+                        echo "Policy: Current image only"
+                        echo "Current tag: ${IMAGE_TAG}"
+                        echo "=========================================="
 
                         for service in \
                             patient-service \
@@ -254,10 +276,15 @@ timestamps {
                             repo="${DOCKER_ORG}/${PROJECT_NAME}-${service}"
                             current="${repo}:${IMAGE_TAG}"
 
+                            echo ""
+                            echo "Processing: $repo"
+
                             if ! docker image inspect "$current" >/dev/null 2>&1; then
                                 echo "ERROR: Current image not found: $current"
                                 exit 1
                             fi
+
+                            echo "KEEP: $current"
 
                             image_refs=$(
                                 docker image ls \
@@ -267,6 +294,7 @@ timestamps {
                             )
 
                             for image in $image_refs; do
+
                                 if [ "$image" = "$current" ]; then
                                     continue
                                 fi
@@ -275,24 +303,28 @@ timestamps {
                                     --filter "ancestor=$image" \
                                     --format '{{.ID}}' |
                                     grep -q .; then
-                                    echo "Keeping container-referenced image: $image"
+
+                                    echo "SKIP: $image (referenced by a container)"
                                     continue
                                 fi
 
-                                echo "Removing older local tag: $image"
+                                echo "DELETE: $image"
 
                                 docker image rm "$image" ||
                                     echo "WARNING: Could not remove $image"
                             done
                         done
 
+                        echo ""
                         echo "Monitoring server image retention completed."
                     '''
                 }
 
-                // DEPLOY TO APPLICATION SERVER
-                // First copies updated Compose file from Jenkins workspace.
-                // Then deploys using the existing application server .env.
+                // ==========================================
+                // DEPLOY APPLICATION
+                // Transfer Compose file and deploy.
+                // Preserve existing server .env settings.
+                // ==========================================
 
                 stage('Deploy Application') {
                     withCredentials([
@@ -313,10 +345,8 @@ timestamps {
 
                             echo "=========================================="
                             echo "TRANSFERRING DOCKER COMPOSE FILE"
-                            echo "Monitoring Server -> Application Server"
                             echo "=========================================="
 
-                            # Copy updated Compose file from Jenkins workspace.
                             sshpass -e scp \
                                 -o StrictHostKeyChecking=no \
                                 -o UserKnownHostsFile=/dev/null \
@@ -325,7 +355,6 @@ timestamps {
 
                             echo "Compose file transferred successfully."
 
-                            # Start deployment on application server.
                             sshpass -e ssh \
                                 -o StrictHostKeyChecking=no \
                                 -o UserKnownHostsFile=/dev/null \
@@ -396,8 +425,10 @@ REMOTE_SCRIPT
                     }
                 }
 
+                // ==========================================
                 // DEPLOYMENT VERIFICATION
-                // Verifies all 13 API services and their image tags.
+                // Verify all 13 API services and image tags.
+                // ==========================================
 
                 stage('Deployment Verification') {
                     withCredentials([
@@ -460,7 +491,6 @@ payment-service
 api-gateway
 "
 
-# Verify every service.
 for service in $SERVICES; do
 
     container_ids=$(
@@ -512,9 +542,13 @@ REMOTE
                     }
                 }
 
+                // ==========================================
                 // APPLICATION SERVER IMAGE RETENTION
-                // Keep current dev tag + two newest previous dev tags.
-                // Protect images referenced by any container.
+                // Server: Application Server
+                // Policy: Current + 2 newest other images.
+                // All branch names are considered.
+                // Protect images referenced by containers.
+                // ==========================================
 
                 stage('App Server Image Retention') {
                     withCredentials([
@@ -559,7 +593,8 @@ SERVICES=(
 
 echo "=========================================="
 echo "APPLICATION SERVER IMAGE RETENTION"
-echo "Policy: current + two previous dev tags"
+echo "Policy: Current + 2 newest other images"
+echo "Branch restriction: NONE"
 echo "Current tag: ${IMAGE_TAG}"
 echo "=========================================="
 
@@ -569,17 +604,31 @@ for service in "${SERVICES[@]}"; do
     current="${repo}:${IMAGE_TAG}"
 
     if ! docker image inspect "$current" >/dev/null 2>&1; then
-        echo "ERROR: Deployed image not found locally: $current"
+        echo "ERROR: Current image not found: $current"
         exit 1
     fi
 
-    echo "Checking: $repo"
-    echo "Keeping current image: $current"
+    echo ""
+    echo "Processing repository: $repo"
+    echo "KEEP: $current (current deployment)"
 
+    # Collect every tag regardless of branch name.
+    # Sort all images by their Docker creation timestamp.
     mapfile -t TAGS < <(
-        docker image ls "$repo" --format '{{.Tag}}' |
-            grep -E '^dev-[0-9]+$' |
-            sort -t- -k2,2nr || true
+        while IFS= read -r tag; do
+            [ -n "$tag" ] || continue
+
+            created=$(docker image inspect \
+                --format '{{.Created}}' "${repo}:${tag}")
+
+            printf '%s\\t%s\\n' "$created" "$tag"
+
+        done < <(
+            docker image ls "$repo" --format '{{.Tag}}' |
+                grep -v '^<none>$' || true
+        ) |
+        LC_ALL=C sort -r -k1,1 |
+        cut -f2-
     )
 
     previous_kept=0
@@ -588,14 +637,15 @@ for service in "${SERVICES[@]}"; do
 
         image="${repo}:${tag}"
 
+        # Current deployment is always retained.
         if [ "$image" = "$current" ]; then
             continue
         fi
 
-        # Keep two newest previous dev tags.
+        # Keep the two newest other images.
         if [ "$previous_kept" -lt 2 ]; then
             previous_kept=$((previous_kept + 1))
-            echo "Keeping previous image ${previous_kept}: $image"
+            echo "KEEP: $image (recent image ${previous_kept} of 2)"
             continue
         fi
 
@@ -605,18 +655,24 @@ for service in "${SERVICES[@]}"; do
             --format '{{.ID}}' |
             grep -q .; then
 
-            echo "Keeping container-referenced image: $image"
+            echo "SKIP: $image (referenced by a container)"
             continue
         fi
 
-        echo "Removing old image tag: $image"
+        echo "DELETE: $image"
 
         docker image rm "$image" ||
             echo "WARNING: Could not remove $image"
     done
+
+    echo "Completed: $repo"
+
 done
 
-echo "Application server image retention completed."
+echo ""
+echo "=========================================="
+echo "APPLICATION SERVER IMAGE RETENTION DONE"
+echo "=========================================="
 REMOTE
                         '''
                     }
