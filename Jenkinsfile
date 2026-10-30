@@ -1,3 +1,4 @@
+
 timestamps {
     node {
         properties([
@@ -27,7 +28,8 @@ timestamps {
             'billing-service',
             'notification-service',
             'auth-service',
-            'payment-service'
+            'payment-service',
+            'api-gateway'
         ]
 
         try {
@@ -92,7 +94,8 @@ timestamps {
                         billing-service \
                         notification-service \
                         auth-service \
-                        payment-service
+                        payment-service \
+                        api-gateway
                     do
                         test -f "./${service}/Dockerfile"
                         echo "Verified: ${service}/Dockerfile"
@@ -156,7 +159,8 @@ timestamps {
                             billing-service \
                             notification-service \
                             auth-service \
-                            payment-service
+                            payment-service \
+                            api-gateway
                         do
                             image="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
 
@@ -198,7 +202,8 @@ timestamps {
                                 billing-service \
                                 notification-service \
                                 auth-service \
-                                payment-service
+                                payment-service \
+                                api-gateway
                             do
                                 image="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
 
@@ -234,7 +239,8 @@ timestamps {
                             billing-service \
                             notification-service \
                             auth-service \
-                            payment-service
+                            payment-service \
+                            api-gateway
                         do
                             repo="${DOCKER_ORG}/${PROJECT_NAME}-${service}"
                             current="${repo}:${IMAGE_TAG}"
@@ -407,9 +413,10 @@ billing-service
 notification-service
 auth-service
 payment-service
+api-gateway
 "
 
-# Verify every service before any image cleanup begins.
+# Verify every service before image retention begins.
 for service in $SERVICES; do
     container_ids=$(
         docker compose --env-file .env -f "$COMPOSE_FILE" \
@@ -451,7 +458,7 @@ for service in $SERVICES; do
     echo "OK: $service is running with ${IMAGE_TAG}"
 done
 
-echo "All 12 services passed deployment verification."
+echo "All 13 services passed deployment verification."
 REMOTE
                         '''
                     }
@@ -497,6 +504,7 @@ SERVICES=(
     notification-service
     auth-service
     payment-service
+    api-gateway
 )
 
 echo "=========================================="
@@ -599,3 +607,4 @@ REMOTE
         }
     }
 }
+ 
