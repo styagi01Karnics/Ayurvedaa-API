@@ -63,6 +63,7 @@ timestamps {
                     command -v mvn
                     command -v git
                     command -v docker
+                    command -v sshpass
 
                     echo "Environment check completed."
                 '''
@@ -101,7 +102,14 @@ timestamps {
                         echo "Verified: ${service}/Dockerfile"
                     done
 
-                    echo "All Dockerfiles verified."
+                    test -f docker-compose.yml
+
+                    if ! grep -q '^  api-gateway:' docker-compose.yml; then
+                        echo "ERROR: api-gateway missing from docker-compose.yml"
+                        exit 1
+                    fi
+
+                    echo "Dockerfiles and Compose file verified."
                 '''
             }
 
@@ -217,15 +225,16 @@ timestamps {
                     }
                 }
 
-                // Jenkins server:
-                // Keep only the current build tag per service.
-                // Do not remove images used by existing containers.
+                // MONITORING SERVER IMAGE RETENTION
+                // Runs on the Jenkins execution server.
+                // Keeps current build tag and protects container-referenced images.
+
                 stage('Monitoring Server Image Retention') {
                     sh '''
                         set -eu
 
                         echo "Applying monitoring server image retention..."
-                        echo "Policy: current build tag only per service."
+                        echo "Policy: current build tag per service."
 
                         for service in \
                             patient-service \
@@ -281,6 +290,10 @@ timestamps {
                     '''
                 }
 
+                // DEPLOY TO APPLICATION SERVER
+                // First copies updated Compose file from Jenkins workspace.
+                // Then deploys using the existing application server .env.
+
                 stage('Deploy Application') {
                     withCredentials([
                         usernamePassword(
@@ -291,11 +304,28 @@ timestamps {
                     ]) {
                         sh '''
                             set -eu
+
                             command -v sshpass
+                            test -f docker-compose.yml
 
                             export SSHPASS="$SSH_PASSWORD"
                             trap 'unset SSHPASS' EXIT
 
+                            echo "=========================================="
+                            echo "TRANSFERRING DOCKER COMPOSE FILE"
+                            echo "Monitoring Server -> Application Server"
+                            echo "=========================================="
+
+                            # Copy updated Compose file from Jenkins workspace.
+                            sshpass -e scp \
+                                -o StrictHostKeyChecking=no \
+                                -o UserKnownHostsFile=/dev/null \
+                                docker-compose.yml \
+                                "$SSH_USERNAME@$DEPLOY_SERVER:$DEPLOY_PATH/docker-compose.yml"
+
+                            echo "Compose file transferred successfully."
+
+                            # Start deployment on application server.
                             sshpass -e ssh \
                                 -o StrictHostKeyChecking=no \
                                 -o UserKnownHostsFile=/dev/null \
@@ -322,20 +352,14 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-if [ -f docker-compose.yml ]; then
-    COMPOSE_FILE="docker-compose.yml"
-elif [ -f compose.yml ]; then
-    COMPOSE_FILE="compose.yml"
-elif [ -f docker-compose.yaml ]; then
-    COMPOSE_FILE="docker-compose.yaml"
-elif [ -f compose.yaml ]; then
-    COMPOSE_FILE="compose.yaml"
-else
+COMPOSE_FILE="docker-compose.yml"
+
+if [ ! -f "$COMPOSE_FILE" ]; then
     echo "ERROR: Docker Compose file not found."
     exit 1
 fi
 
-# Change only IMAGE_TAG and preserve all other environment settings.
+# Update only IMAGE_TAG and preserve all other settings.
 if grep -q '^IMAGE_TAG=' .env; then
     sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
 else
@@ -343,20 +367,37 @@ else
 fi
 
 echo "Validating Compose configuration..."
+
 docker compose --env-file .env -f "$COMPOSE_FILE" config --quiet
 
+echo "Checking API Gateway service..."
+
+if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
+    grep -Fxq api-gateway; then
+    echo "ERROR: api-gateway is missing from Compose configuration."
+    exit 1
+fi
+
+echo "OK: API Gateway found in Compose configuration."
+
 echo "Pulling updated images..."
+
 docker compose --env-file .env -f "$COMPOSE_FILE" pull
 
 echo "Starting updated services..."
+
 docker compose --env-file .env -f "$COMPOSE_FILE" up -d --remove-orphans
 
 echo "Deployment command completed."
+
 docker compose --env-file .env -f "$COMPOSE_FILE" ps
 REMOTE_SCRIPT
                         '''
                     }
                 }
+
+                // DEPLOYMENT VERIFICATION
+                // Verifies all 13 API services and their image tags.
 
                 stage('Deployment Verification') {
                     withCredentials([
@@ -368,6 +409,7 @@ REMOTE_SCRIPT
                     ]) {
                         sh '''
                             set -eu
+
                             command -v sshpass
 
                             export SSHPASS="$SSH_PASSWORD"
@@ -382,23 +424,25 @@ set -eu
 
 cd "$APP_DIR"
 
-if [ -f docker-compose.yml ]; then
-    COMPOSE_FILE="docker-compose.yml"
-elif [ -f compose.yml ]; then
-    COMPOSE_FILE="compose.yml"
-elif [ -f docker-compose.yaml ]; then
-    COMPOSE_FILE="docker-compose.yaml"
-elif [ -f compose.yaml ]; then
-    COMPOSE_FILE="compose.yaml"
-else
-    echo "ERROR: Docker Compose file not found."
+if [ ! -f .env ] || [ ! -f docker-compose.yml ]; then
+    echo "ERROR: .env or docker-compose.yml missing."
     exit 1
 fi
+
+COMPOSE_FILE="docker-compose.yml"
 
 echo "=========================================="
 echo "AYURVEDAA API DEPLOYMENT VERIFICATION"
 echo "Image Tag: ${IMAGE_TAG}"
 echo "=========================================="
+
+docker compose --env-file .env -f "$COMPOSE_FILE" config --quiet
+
+if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
+    grep -Fxq api-gateway; then
+    echo "ERROR: api-gateway missing from Compose configuration."
+    exit 1
+fi
 
 SERVICES="
 patient-service
@@ -416,8 +460,9 @@ payment-service
 api-gateway
 "
 
-# Verify every service before image retention begins.
+# Verify every service.
 for service in $SERVICES; do
+
     container_ids=$(
         docker compose --env-file .env -f "$COMPOSE_FILE" \
             ps --all -q "$service"
@@ -446,6 +491,7 @@ for service in $SERVICES; do
     fi
 
     expected_image="sunardock/ayurvedaa-api-${service}:${IMAGE_TAG}"
+
     actual_image=$(docker inspect --format '{{.Config.Image}}' "$container_id")
 
     if [ "$actual_image" != "$expected_image" ]; then
@@ -458,15 +504,18 @@ for service in $SERVICES; do
     echo "OK: $service is running with ${IMAGE_TAG}"
 done
 
-echo "All 13 services passed deployment verification."
+echo "=========================================="
+echo "All 13 API services passed verification."
+echo "=========================================="
 REMOTE
                         '''
                     }
                 }
 
-                // App server:
+                // APPLICATION SERVER IMAGE RETENTION
                 // Keep current dev tag + two newest previous dev tags.
-                // Never remove an image referenced by any container.
+                // Protect images referenced by any container.
+
                 stage('App Server Image Retention') {
                     withCredentials([
                         usernamePassword(
@@ -477,6 +526,7 @@ REMOTE
                     ]) {
                         sh '''
                             set -eu
+
                             command -v sshpass
 
                             export SSHPASS="$SSH_PASSWORD"
@@ -514,6 +564,7 @@ echo "Current tag: ${IMAGE_TAG}"
 echo "=========================================="
 
 for service in "${SERVICES[@]}"; do
+
     repo="sunardock/ayurvedaa-api-${service}"
     current="${repo}:${IMAGE_TAG}"
 
@@ -534,24 +585,26 @@ for service in "${SERVICES[@]}"; do
     previous_kept=0
 
     for tag in "${TAGS[@]}"; do
+
         image="${repo}:${tag}"
 
         if [ "$image" = "$current" ]; then
             continue
         fi
 
-        # Keep the two newest previous dev tags.
+        # Keep two newest previous dev tags.
         if [ "$previous_kept" -lt 2 ]; then
             previous_kept=$((previous_kept + 1))
             echo "Keeping previous image ${previous_kept}: $image"
             continue
         fi
 
-        # Protect any image used by a running or stopped container.
+        # Protect images used by running or stopped containers.
         if docker ps -a \
             --filter "ancestor=$image" \
             --format '{{.ID}}' |
             grep -q .; then
+
             echo "Keeping container-referenced image: $image"
             continue
         fi
@@ -570,6 +623,7 @@ REMOTE
                 }
 
             } else {
+
                 echo '=========================================='
                 echo 'NON-DEV BRANCH'
                 echo "Branch: ${branchName}"
@@ -591,6 +645,7 @@ REMOTE
             echo '=========================================='
 
         } catch (err) {
+
             echo '=========================================='
             echo 'AYURVEDAA API PIPELINE FAILED'
             echo "Branch: ${branchName}"
@@ -601,10 +656,10 @@ REMOTE
             throw err
 
         } finally {
+
             if (branchName == 'dev') {
                 sh 'docker logout >/dev/null 2>&1 || true'
             }
         }
     }
 }
- 
