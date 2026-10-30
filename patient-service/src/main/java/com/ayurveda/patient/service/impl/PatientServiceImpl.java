@@ -13,6 +13,7 @@ import com.ayurveda.common.util.PageRequests;
 import com.ayurveda.common.util.ResponseUtil;
 import com.ayurveda.common.validation.IdProofValidator;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
+import com.ayurveda.patient.dto.request.UpdatePatientEmailRequest;
 import com.ayurveda.patient.dto.response.DashboardNewPatientsMonthlyResponse;
 import com.ayurveda.patient.dto.response.MonthlyCountResponse;
 import com.ayurveda.patient.dto.response.PatientCountResponse;
@@ -311,6 +312,39 @@ public class PatientServiceImpl implements PatientService {
             throw new BadRequestException("Year must be between 2000 and " + (current + 1) + ".");
         }
         return resolved;
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<PatientResponse> updatePatientEmail(UUID patientId, UpdatePatientEmailRequest request) {
+
+        log.info("Received request to update email for patient ID: {}", patientId);
+
+        Patient patient = patientRepository.findByIdAndDeletedFalse(patientId)
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.PATIENT_NOT_FOUND));
+
+        String email = request.getEmail().trim().toLowerCase();
+
+        if (!email.equalsIgnoreCase(patient.getEmail())
+                && patientRepository.existsByEmailAndDeletedFalse(email)) {
+            throw new DuplicateResourceException(AppConstants.PATIENT_EMAIL_ALREADY_EXISTS);
+        }
+
+        patient.setEmail(email);
+
+        Patient savedPatient = patientRepository.save(patient);
+
+        log.info("Patient email updated. Patient ID: {}", patientId);
+
+        activityLogPublisher.record(
+                "Patients",
+                ActivityActionType.UPDATED,
+                "Patient " + savedPatient.getPatientCode() + " email");
+
+        return ResponseUtil.success(
+                AppConstants.PATIENT_UPDATED_SUCCESSFULLY,
+                PatientMapper.toResponse(savedPatient)
+        );
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.ayurveda.patient.controller;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
+import com.ayurveda.patient.dto.request.UpdatePatientEmailRequest;
 import com.ayurveda.patient.dto.response.PatientCountResponse;
 import com.ayurveda.patient.dto.response.PatientResponse;
 import com.ayurveda.patient.service.PatientService;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -78,6 +80,19 @@ public class PatientController {
         log.info("Received request to fetch patient counts.");
 
         return ResponseEntity.ok(patientService.getTotalPatientCount());
+    }
+
+    @Operation(
+            summary = "Update Patient Email",
+            description = "Updates the email address of a patient by patient ID.")
+    @PutMapping("/update-patient-email/{patientId}")
+    public ResponseEntity<ApiResponse<PatientResponse>> updatePatientEmail(
+            @PathVariable UUID patientId,
+            @Valid @RequestBody UpdatePatientEmailRequest request) {
+
+        log.info("Received request to update email for patient: {}", patientId);
+
+        return ResponseEntity.ok(patientService.updatePatientEmail(patientId, request));
     }
 
     @Operation(
