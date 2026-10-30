@@ -283,7 +283,7 @@ services:
     networks:
       - ayurvedaa-app-net
 
-api-gateway:
+  api-gateway:
     image: sunardock/ayurvedaa-api-api-gateway:${IMAGE_TAG}
     container_name: ayurvedaa-api-gateway
     restart: unless-stopped
