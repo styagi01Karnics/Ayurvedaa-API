@@ -9,6 +9,9 @@ import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.util.PageRequests;
 import com.ayurveda.therapist.client.AppointmentServiceClient;
+import com.ayurveda.therapist.client.AuthServiceClient;
+import com.ayurveda.therapist.dto.client.AuthUserClientRequest;
+import com.ayurveda.therapist.dto.client.TenantRoleClientResponse;
 import com.ayurveda.therapist.dto.client.TherapyMasterClientResponse;
 import com.ayurveda.therapist.dto.request.CreateTherapistRequest;
 import com.ayurveda.therapist.dto.request.UpdateTherapistRequest;
@@ -34,6 +37,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -41,10 +45,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TherapistServiceImpl implements TherapistService {
 
+    private static final String DOCTOR_ROLE_CODE = "DOCTOR";
+    private static final String DOCTOR_ROLE_NOT_FOUND =
+            "DOCTOR role not found for this hospital. Create the DOCTOR role before adding a therapist.";
+
     private final TherapistRepository therapistRepository;
     private final TherapistCodeGenerator therapistCodeGenerator;
     private final AppointmentServiceClient appointmentServiceClient;
     private final ActivityLogPublisher activityLogPublisher;
+    private final AuthServiceClient authServiceClient;
 
     @Override
     @Transactional
@@ -55,16 +64,27 @@ public class TherapistServiceImpl implements TherapistService {
 
         List<UUID> therapyIds = normalizeAndValidateTherapyIds(request.getAssignedTherapyIds());
 
+        TenantRoleClientResponse doctorRole = findActiveDoctorRole();
+        UUID authUserId = createTherapistLogin(request, doctorRole);
+
         Therapist therapist = Therapist.builder()
                 .therapistName(request.getName().trim())
                 .therapistCode(therapistCodeGenerator.generate())
+                .mobileNumber(request.getMobileNumber().trim())
                 .status(status)
                 .assignedTherapyIds(new ArrayList<>(therapyIds))
                 .build();
 
-        Therapist savedTherapist = therapistRepository.save(therapist);
+        Therapist savedTherapist;
+        try {
+            savedTherapist = therapistRepository.saveAndFlush(therapist);
+        } catch (RuntimeException ex) {
+            deleteTherapistLogin(authUserId);
+            throw ex;
+        }
 
-        log.info("Therapist created successfully. Therapist ID: {}", savedTherapist.getId());
+        log.info("Therapist created successfully. Therapist ID: {}, Auth user ID: {}",
+                savedTherapist.getId(), authUserId);
 
         activityLogPublisher.record(
                 "Doctors",
@@ -73,6 +93,37 @@ public class TherapistServiceImpl implements TherapistService {
 
         return ApiResponse.success(
                 AppConstants.THERAPIST_CREATED_SUCCESSFULLY, toResponse(savedTherapist));
+    }
+
+    private TenantRoleClientResponse findActiveDoctorRole() {
+        List<TenantRoleClientResponse> roles = Optional.ofNullable(authServiceClient.listRoles().getData())
+                .orElse(List.of());
+        return roles.stream()
+                .filter(role -> DOCTOR_ROLE_CODE.equalsIgnoreCase(role.getRoleCode())
+                        && Boolean.TRUE.equals(role.getActive()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(DOCTOR_ROLE_NOT_FOUND));
+    }
+
+    private UUID createTherapistLogin(CreateTherapistRequest request, TenantRoleClientResponse doctorRole) {
+        AuthUserClientRequest authRequest = AuthUserClientRequest.builder()
+                .fullName(request.getName().trim())
+                .email(request.getEmail().trim().toLowerCase())
+                .password(request.getPassword())
+                .mobileNumber(request.getMobileNumber().trim())
+                .tenantRoleId(doctorRole.getId())
+                .build();
+        return authServiceClient.registerUser(authRequest).getData().getId();
+    }
+
+    private void deleteTherapistLogin(UUID authUserId) {
+        try {
+            authServiceClient.deleteUser(authUserId);
+            log.info("Rolled back auth user {} after therapist save failed", authUserId);
+        } catch (RuntimeException ex) {
+            log.error("Failed to roll back auth user {} after therapist save failed; remove it manually",
+                    authUserId, ex);
+        }
     }
 
     @Override

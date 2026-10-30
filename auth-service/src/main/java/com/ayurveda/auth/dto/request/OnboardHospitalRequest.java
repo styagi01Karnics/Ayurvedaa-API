@@ -60,8 +60,9 @@ public class OnboardHospitalRequest {
     @Size(max = 100)
     private String registrationNumberGst;
 
-    /** Optional logo URL after upload via file-upload-service. */
-    @Size(max = 500)
+    /** Required tenant logo (data URL or image URL). */
+    @NotBlank(message = "Clinic logo is required")
+    @Size(max = 7_000_000)
     private String logoUrl;
 
     // ----- Contact Information (hospital admin) -----
@@ -91,7 +92,7 @@ public class OnboardHospitalRequest {
     private String confirmPassword;
 
     /** Optional primary-contact photo URL after file-upload-service; stored on tenant. */
-    @Size(max = 500)
+    @Size(max = 7_000_000)
     private String photoUrl;
 
 }

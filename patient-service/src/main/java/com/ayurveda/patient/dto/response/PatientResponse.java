@@ -18,8 +18,6 @@ public class PatientResponse {
     private UUID id;
     /** e.g. GAN-DL-PT-00001 */
     private String patientCode;
-    private String firstName;
-    private String lastName;
     private String fullName;
     private Gender gender;
     private LocalDate dateOfBirth;

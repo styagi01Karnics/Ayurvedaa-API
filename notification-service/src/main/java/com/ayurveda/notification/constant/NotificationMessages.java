@@ -25,4 +25,7 @@ public final class NotificationMessages {
     public static final String NOTIFICATION_NOT_FOUND_WITH_ID =
             "Notification not found with id: ";
 
+    public static final String DEVICE_TOKEN_REGISTERED = "Device token registered successfully.";
+    public static final String DEVICE_TOKEN_REMOVED = "Device token removed successfully.";
+
 }

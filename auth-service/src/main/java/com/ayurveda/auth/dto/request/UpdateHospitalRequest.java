@@ -49,7 +49,7 @@ public class UpdateHospitalRequest {
     private String registrationNumberGst;
 
     /** Optional logo URL after upload; stored on tenant. */
-    @Size(max = 500)
+    @Size(max = 7_000_000)
     private String logoUrl;
 
     // ----- Contact Information -----
@@ -66,7 +66,7 @@ public class UpdateHospitalRequest {
     private String email;
 
     /** Optional contact photo URL; stored on tenant. */
-    @Size(max = 500)
+    @Size(max = 7_000_000)
     private String photoUrl;
 
 }

@@ -33,11 +33,8 @@ public class Patient extends BaseEntity {
     @Column(nullable = false, unique = true, length = 50)
     private String patientCode;
 
-    @Column(nullable = false, length = 100)
-    private String firstName;
-
-    @Column(nullable = false, length = 100)
-    private String lastName;
+    @Column(nullable = false, length = 200)
+    private String fullName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

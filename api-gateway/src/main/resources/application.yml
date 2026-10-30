@@ -1,0 +1,179 @@
+server:
+  port: ${GATEWAY_PORT:8113}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins: ${GATEWAY_CORS_ORIGINS:http://localhost:5180}
+                allowed-methods: "*"
+                allowed-headers: "*"
+                allow-credentials: true
+          routes:
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URL:http://localhost:8111}
+              predicates:
+                - Path=/api/v1/auth/**,/api/v1/public/**,/api/v1/platform/**,/api/v1/roles/**,/api/v1/ui-pages,/api/v1/tenants/**
+            - id: patient-service
+              uri: ${PATIENT_SERVICE_URL:http://localhost:8101}
+              predicates:
+                - Path=/api/v1/patients/**,/api/v1/medical-history/**,/api/v1/dashboard/new-patients-by-month
+            - id: doctor-service
+              uri: ${DOCTOR_SERVICE_URL:http://localhost:8102}
+              predicates:
+                - Path=/api/v1/doctors/**
+            - id: appointment-service
+              uri: ${APPOINTMENT_SERVICE_URL:http://localhost:8103}
+              predicates:
+                - Path=/api/v1/appointments/**,/api/v1/ayurvedic-assessments/**,/api/v1/lifestyle-information/**,/api/v1/medical-histories/**,/api/v1/physical-examinations/**,/api/v1/systemic-examinations/**,/api/v1/consultation-types/**,/api/v1/appointment-therapies/**,/api/v1/treatment-plans/**,/api/v1/doshas/**,/api/v1/follow-ups/**,/api/v1/medical-assessment/**,/api/v1/prescriptions/**,/api/v1/therapies/**,/api/v1/treatment-categories/**,/api/v1/treatment-plan-masters/**,/api/v1/treatments/**,/api/v1/dashboard/todays-schedule,/api/v1/dashboard/patient-trends
+            - id: therapist-service
+              uri: ${THERAPIST_SERVICE_URL:http://localhost:8104}
+              predicates:
+                - Path=/api/v1/therapists/**
+            - id: file-upload-service
+              uri: ${FILE_UPLOAD_SERVICE_URL:http://localhost:8105}
+              predicates:
+                - Path=/api/v1/documents/**
+            - id: attendance-service
+              uri: ${ATTENDANCE_SERVICE_URL:http://localhost:8106}
+              predicates:
+                - Path=/api/v1/attendances/**,/api/v1/employee-attendances/**,/api/v1/employee-attendance-master/**,/iclock/**
+            - id: activity-log-service
+              uri: ${ACTIVITY_LOG_SERVICE_URL:http://localhost:8107}
+              predicates:
+                - Path=/api/v1/activity-logs/**
+            - id: medicine-service
+              uri: ${MEDICINE_SERVICE_URL:http://localhost:8108}
+              predicates:
+                - Path=/api/v1/medicines/**,/api/v1/dashboard/medicine-stock
+            - id: billing-service
+              uri: ${BILLING_SERVICE_URL:http://localhost:8109}
+              predicates:
+                - Path=/api/v1/billings/**,/api/v1/invoices/**,/api/v1/billing/**,/api/v1/package-masters/**,/api/v1/packages/**,/api/v1/sales/**,/api/v1/dashboard/billing-summary
+            - id: notification-service
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8110}
+              predicates:
+                - Path=/api/v1/notifications/**,/api/v1/messages/**
+            - id: payment-service
+              uri: ${PAYMENT_SERVICE_URL:http://localhost:8112}
+              predicates:
+                - Path=/api/v1/payments/**,/pay/**
+            - id: docs-auth
+              uri: ${AUTH_SERVICE_URL:http://localhost:8111}
+              predicates:
+                - Path=/docs/auth
+              filters:
+                - RewritePath=/docs/auth, /api-docs
+            - id: docs-patient
+              uri: ${PATIENT_SERVICE_URL:http://localhost:8101}
+              predicates:
+                - Path=/docs/patient
+              filters:
+                - RewritePath=/docs/patient, /api-docs
+            - id: docs-doctor
+              uri: ${DOCTOR_SERVICE_URL:http://localhost:8102}
+              predicates:
+                - Path=/docs/doctor
+              filters:
+                - RewritePath=/docs/doctor, /api-docs
+            - id: docs-appointment
+              uri: ${APPOINTMENT_SERVICE_URL:http://localhost:8103}
+              predicates:
+                - Path=/docs/appointment
+              filters:
+                - RewritePath=/docs/appointment, /api-docs
+            - id: docs-therapist
+              uri: ${THERAPIST_SERVICE_URL:http://localhost:8104}
+              predicates:
+                - Path=/docs/therapist
+              filters:
+                - RewritePath=/docs/therapist, /api-docs
+            - id: docs-file-upload
+              uri: ${FILE_UPLOAD_SERVICE_URL:http://localhost:8105}
+              predicates:
+                - Path=/docs/file-upload
+              filters:
+                - RewritePath=/docs/file-upload, /api-docs
+            - id: docs-attendance
+              uri: ${ATTENDANCE_SERVICE_URL:http://localhost:8106}
+              predicates:
+                - Path=/docs/attendance
+              filters:
+                - RewritePath=/docs/attendance, /api-docs
+            - id: docs-activity-log
+              uri: ${ACTIVITY_LOG_SERVICE_URL:http://localhost:8107}
+              predicates:
+                - Path=/docs/activity-log
+              filters:
+                - RewritePath=/docs/activity-log, /api-docs
+            - id: docs-medicine
+              uri: ${MEDICINE_SERVICE_URL:http://localhost:8108}
+              predicates:
+                - Path=/docs/medicine
+              filters:
+                - RewritePath=/docs/medicine, /api-docs
+            - id: docs-billing
+              uri: ${BILLING_SERVICE_URL:http://localhost:8109}
+              predicates:
+                - Path=/docs/billing
+              filters:
+                - RewritePath=/docs/billing, /api-docs
+            - id: docs-notification
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8110}
+              predicates:
+                - Path=/docs/notification
+              filters:
+                - RewritePath=/docs/notification, /api-docs
+            - id: docs-payment
+              uri: ${PAYMENT_SERVICE_URL:http://localhost:8112}
+              predicates:
+                - Path=/docs/payment
+              filters:
+                - RewritePath=/docs/payment, /api-docs
+
+springdoc:
+  # Must stay enabled: springdoc only registers the Swagger UI when its core config is active.
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    primary-name: Auth
+    urls:
+      - name: Auth
+        url: /docs/auth
+      - name: Patient
+        url: /docs/patient
+      - name: Doctor
+        url: /docs/doctor
+      - name: Appointment
+        url: /docs/appointment
+      - name: Therapist
+        url: /docs/therapist
+      - name: File Upload
+        url: /docs/file-upload
+      - name: Attendance
+        url: /docs/attendance
+      - name: Activity Log
+        url: /docs/activity-log
+      - name: Medicine
+        url: /docs/medicine
+      - name: Billing
+        url: /docs/billing
+      - name: Notification
+        url: /docs/notification
+      - name: Payment
+        url: /docs/payment
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

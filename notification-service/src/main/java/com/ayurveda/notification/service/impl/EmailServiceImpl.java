@@ -1,8 +1,13 @@
 package com.ayurveda.notification.service.impl;
 
+import java.nio.charset.StandardCharsets;
+
+import jakarta.mail.internet.MimeMessage;
+
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -83,6 +88,7 @@ public class EmailServiceImpl implements EmailService {
                     to,
                     subject,
                     body,
+                    request.isHtml(),
                     tenantCode);
         }
 
@@ -110,6 +116,7 @@ public class EmailServiceImpl implements EmailService {
                 to,
                 subject,
                 body,
+                request.isHtml(),
                 tenantCode);
     }
 
@@ -120,6 +127,7 @@ public class EmailServiceImpl implements EmailService {
             String to,
             String subject,
             String body,
+            boolean html,
             String tenantCode) {
 
         String lastError = null;
@@ -127,14 +135,26 @@ public class EmailServiceImpl implements EmailService {
         for (int i = 1; i <= MAX_ATTEMPTS; i++) {
             attempts = i;
             try {
-                SimpleMailMessage message = new SimpleMailMessage();
-                if (StringUtils.hasText(from)) {
-                    message.setFrom(from.trim());
+                if (html) {
+                    MimeMessage message = mailSender.createMimeMessage();
+                    MimeMessageHelper helper = new MimeMessageHelper(message, StandardCharsets.UTF_8.name());
+                    if (StringUtils.hasText(from)) {
+                        helper.setFrom(from.trim());
+                    }
+                    helper.setTo(to);
+                    helper.setSubject(subject);
+                    helper.setText(body, true);
+                    mailSender.send(message);
+                } else {
+                    SimpleMailMessage message = new SimpleMailMessage();
+                    if (StringUtils.hasText(from)) {
+                        message.setFrom(from.trim());
+                    }
+                    message.setTo(to);
+                    message.setSubject(subject);
+                    message.setText(body);
+                    mailSender.send(message);
                 }
-                message.setTo(to);
-                message.setSubject(subject);
-                message.setText(body);
-                mailSender.send(message);
                 log.info("Email sent via SMTP provider={} to={} attempt={}", provider, to, attempts);
                 persistLog(to, tenantCode, subject, "SENT", attempts, provider, null);
                 return softResult(

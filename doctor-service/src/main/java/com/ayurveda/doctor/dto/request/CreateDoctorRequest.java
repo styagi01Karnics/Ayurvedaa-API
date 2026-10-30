@@ -6,6 +6,7 @@ import com.ayurveda.doctor.enums.DoctorStatus;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -35,5 +36,17 @@ public class CreateDoctorRequest {
     @NotBlank(message = "Availability is required")
     @Size(max = 255, message = "Availability must not exceed 255 characters")
     private String availability;
+
+    @NotBlank(message = "Mobile number is required")
+    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Enter a valid 10-digit mobile number")
+    private String mobileNumber;
+
+    @NotBlank(message = "Email is required")
+    @Size(max = 150, message = "Email must not exceed 150 characters")
+    private String email;
+
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
+    private String password;
 
 }

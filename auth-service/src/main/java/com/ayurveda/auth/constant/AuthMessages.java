@@ -15,6 +15,7 @@ public final class AuthMessages {
     public static final String PUBLIC_TENANT_LOCATIONS_FETCHED =
             "Tenant locations fetched successfully.";
     public static final String HOSPITAL_STATUS_UPDATED = "Hospital status updated successfully.";
+    public static final String HOSPITAL_DEACTIVATED = "Hospital and all its users set to INACTIVE.";
     public static final String ROLE_CREATED_SUCCESSFULLY = "Role created successfully.";
     public static final String ROLE_UPDATED_SUCCESSFULLY = "Role updated successfully.";
     public static final String ROLE_DELETED_SUCCESSFULLY = "Role deleted successfully.";
@@ -54,6 +55,8 @@ public final class AuthMessages {
             "Tenant is not available for user registration.";
     public static final String USER_EXISTS_FOR_TENANT_EMAIL =
             "User already exists for this tenant with email: ";
+    public static final String ADMIN_EMAIL_ALREADY_IN_USE =
+            "An account with this email already exists: ";
     public static final String CANNOT_CREATE_SUPER_ADMIN_VIA_TENANT_REGISTRATION =
             "Cannot create SUPER_ADMIN via tenant registration.";
     public static final String USER_NOT_FOUND = "User not found.";
@@ -74,7 +77,9 @@ public final class AuthMessages {
     public static final String INVALID_UI_PAGE_CODES = "Invalid UI page code(s): ";
     public static final String TENANT_ROLE_NOT_FOUND = "Tenant role not found for this hospital.";
     public static final String TENANT_ROLE_REQUIRED_FOR_NON_ADMIN =
-            "tenantRoleId is required when creating non-admin users.";
+            "tenantRoleId is required when creating users.";
+    public static final String TENANT_ROLE_NOT_MAPPED_TO_SYSTEM_ROLE =
+            "Tenant role code '%s' does not map to a system role.";
     public static final String CANNOT_ASSIGN_ROLE_ON_PLATFORM_TENANT =
             "Custom roles are only for hospital tenants.";
     public static final String PLATFORM_TENANT_REQUIRED =
@@ -83,6 +88,8 @@ public final class AuthMessages {
             "Platform tenant cannot be managed as a hospital.";
     public static final String TENANT_REQUIRED_FOR_HOSPITAL_LOGIN =
             "tenantCode is required for hospital user login.";
+    public static final String TENANT_AMBIGUOUS_FOR_EMAIL =
+            "This email is registered with more than one clinic. Please contact your administrator.";
     public static final String TENANT_NOT_ALLOWED_FOR_SUPER_ADMIN_LOGIN =
             "Do not send tenantCode for platform Super Admin login.";
     public static final String SUPER_ADMIN_LOGIN_ONLY_WITHOUT_TENANT =

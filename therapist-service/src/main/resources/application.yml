@@ -44,6 +44,9 @@ services:
   activity-log:
     url: http://45.195.229.15:8107
     enabled: true
+  # Overridden in Docker deploy via SERVICES_AUTH_URL (container DNS).
+  auth:
+    url: http://45.195.229.15:8111
 
 springdoc:
   api-docs:

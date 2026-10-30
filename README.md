@@ -109,15 +109,27 @@ Repeat for `doctor-service`, `therapist-service`, `file-upload-service`, and `ap
 
 ## Swagger / API Documentation
 
-Each runnable service exposes interactive API docs:
+The `api-gateway` (port `8113`, override with `GATEWAY_PORT`) is the single entry point for all services. Its Swagger UI aggregates the docs of every service in one dropdown:
+
+- Aggregated Swagger UI: http://localhost:8113/swagger-ui.html
+- Per-service OpenAPI JSON through the gateway: `http://localhost:8113/docs/<service>` (for example `/docs/auth`, `/docs/patient`, `/docs/appointment`)
+
+Each service also exposes its own docs directly on its port:
 
 | Service | Swagger UI | OpenAPI JSON |
 |---------|------------|--------------|
-| Patient | http://localhost:8081/swagger-ui.html | http://localhost:8081/api-docs |
-| Appointment | http://localhost:8082/swagger-ui.html | http://localhost:8082/api-docs |
-| Doctor | http://localhost:8083/swagger-ui.html | http://localhost:8083/api-docs |
-| File Upload | http://localhost:8084/swagger-ui.html | http://localhost:8084/api-docs |
-| Therapist | http://localhost:8085/swagger-ui.html | http://localhost:8085/api-docs |
+| Auth | http://localhost:8111/swagger-ui.html | http://localhost:8111/api-docs |
+| Patient | http://localhost:8101/swagger-ui.html | http://localhost:8101/api-docs |
+| Doctor | http://localhost:8102/swagger-ui.html | http://localhost:8102/api-docs |
+| Appointment | http://localhost:8103/swagger-ui.html | http://localhost:8103/api-docs |
+| Therapist | http://localhost:8104/swagger-ui.html | http://localhost:8104/api-docs |
+| File Upload | http://localhost:8105/swagger-ui.html | http://localhost:8105/api-docs |
+| Attendance | http://localhost:8106/swagger-ui.html | http://localhost:8106/api-docs |
+| Activity Log | http://localhost:8107/swagger-ui.html | http://localhost:8107/api-docs |
+| Medicine | http://localhost:8108/swagger-ui.html | http://localhost:8108/api-docs |
+| Billing | http://localhost:8109/swagger-ui.html | http://localhost:8109/api-docs |
+| Notification | http://localhost:8110/swagger-ui.html | http://localhost:8110/api-docs |
+| Payment | http://localhost:8112/swagger-ui.html | http://localhost:8112/api-docs |
 
 ## API Overview
 

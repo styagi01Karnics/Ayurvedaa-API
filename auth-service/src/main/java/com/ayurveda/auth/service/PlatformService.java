@@ -37,6 +37,8 @@ public interface PlatformService {
 
     ApiResponse<TenantResponse> updateHospitalStatus(UUID hospitalId, UpdateHospitalStatusRequest request);
 
+    ApiResponse<TenantResponse> deleteHospital(UUID hospitalId);
+
     ApiResponse<TenantResponse> retryHospitalProvision(UUID hospitalId);
 
     ApiResponse<TenantPaymentGatewayResponse> upsertPaymentGateway(

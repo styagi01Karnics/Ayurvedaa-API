@@ -7,6 +7,9 @@ import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.util.PageRequests;
+import com.ayurveda.doctor.client.AuthServiceClient;
+import com.ayurveda.doctor.dto.client.AuthUserClientRequest;
+import com.ayurveda.doctor.dto.client.TenantRoleClientResponse;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -23,6 +26,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -30,20 +35,29 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
 
+    private static final String DOCTOR_ROLE_CODE = "DOCTOR";
+    private static final String DOCTOR_ROLE_NOT_FOUND =
+            "DOCTOR role not found for this hospital. Create the DOCTOR role before adding a doctor.";
+
     private final DoctorRepository doctorRepository;
     private final DoctorCodeGenerator doctorCodeGenerator;
     private final ActivityLogPublisher activityLogPublisher;
+    private final AuthServiceClient authServiceClient;
 
     @Override
     @Transactional
     public ApiResponse<DoctorResponse> createDoctor(CreateDoctorRequest request) {
         log.info("Creating doctor: {}", request.getName());
 
+        TenantRoleClientResponse doctorRole = findActiveDoctorRole();
+        UUID authUserId = createDoctorLogin(request, doctorRole);
+
         DoctorStatus status = request.getStatus() != null ? request.getStatus() : DoctorStatus.ACTIVE;
 
         Doctor doctor = Doctor.builder()
                 .doctorName(request.getName().trim())
                 .doctorCode(doctorCodeGenerator.generate())
+                .mobileNumber(request.getMobileNumber().trim())
                 .specialization(request.getSpecialization().trim())
                 .status(status)
                 .consultationFees(request.getConsultationFees())
@@ -51,9 +65,15 @@ public class DoctorServiceImpl implements DoctorService {
                 .availability(request.getAvailability().trim())
                 .build();
 
-        Doctor savedDoctor = doctorRepository.save(doctor);
+        Doctor savedDoctor;
+        try {
+            savedDoctor = doctorRepository.saveAndFlush(doctor);
+        } catch (RuntimeException ex) {
+            deleteDoctorLogin(authUserId);
+            throw ex;
+        }
 
-        log.info("Doctor created successfully. Doctor ID: {}", savedDoctor.getId());
+        log.info("Doctor created successfully. Doctor ID: {}, Auth user ID: {}", savedDoctor.getId(), authUserId);
 
         activityLogPublisher.record(
                 "Doctors",
@@ -61,6 +81,37 @@ public class DoctorServiceImpl implements DoctorService {
                 "Doctor " + savedDoctor.getDoctorName());
 
         return ApiResponse.success(AppConstants.DOCTOR_CREATED_SUCCESSFULLY, DoctorMapper.toResponse(savedDoctor));
+    }
+
+    private TenantRoleClientResponse findActiveDoctorRole() {
+        List<TenantRoleClientResponse> roles = Optional.ofNullable(authServiceClient.listRoles().getData())
+                .orElse(List.of());
+        return roles.stream()
+                .filter(role -> DOCTOR_ROLE_CODE.equalsIgnoreCase(role.getRoleCode())
+                        && Boolean.TRUE.equals(role.getActive()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(DOCTOR_ROLE_NOT_FOUND));
+    }
+
+    private UUID createDoctorLogin(CreateDoctorRequest request, TenantRoleClientResponse doctorRole) {
+        AuthUserClientRequest authRequest = AuthUserClientRequest.builder()
+                .fullName(request.getName().trim())
+                .email(request.getEmail().trim().toLowerCase())
+                .password(request.getPassword())
+                .mobileNumber(request.getMobileNumber().trim())
+                .tenantRoleId(doctorRole.getId())
+                .build();
+        return authServiceClient.registerUser(authRequest).getData().getId();
+    }
+
+    private void deleteDoctorLogin(UUID authUserId) {
+        try {
+            authServiceClient.deleteUser(authUserId);
+            log.info("Rolled back auth user {} after doctor save failed", authUserId);
+        } catch (RuntimeException ex) {
+            log.error("Failed to roll back auth user {} after doctor save failed; remove it manually",
+                    authUserId, ex);
+        }
     }
 
     @Override

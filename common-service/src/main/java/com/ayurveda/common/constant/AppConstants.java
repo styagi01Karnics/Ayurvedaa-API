@@ -219,4 +219,13 @@ public final class AppConstants {
     public static final String DOWNSTREAM_REQUEST_FAILED =
             "Downstream service request failed.";
 
+    public static final String SERVICE_TEMPORARILY_UNAVAILABLE =
+            "Service is temporarily unavailable. Please try again later.";
+
+    public static final String DOWNSTREAM_TIMEOUT =
+            "Downstream service did not respond in time. Please try again later.";
+
+    public static final String OPTIMISTIC_LOCK_CONFLICT =
+            "The record was modified by another request. Please reload and try again.";
+
 }
