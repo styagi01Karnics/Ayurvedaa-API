@@ -1,19 +1,16 @@
 package com.ayurveda.patient.controller;
 
 import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
 import com.ayurveda.patient.dto.request.UpdatePatientEmailRequest;
 import com.ayurveda.patient.dto.response.PatientCountResponse;
 import com.ayurveda.patient.dto.response.PatientResponse;
 import com.ayurveda.patient.service.PatientService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -62,11 +59,21 @@ public class PatientController {
 
     @Operation(
             summary = "Get All Patients (paginated)",
-            description = "Query params: page (default 0), size (default 20, max 100). Response data.content holds rows.")
+            description = "Query params: page (default 0), size (default 20, max 100).")
     @GetMapping("/get-all-patients")
-    public ResponseEntity<ApiResponse<PagedResponse<PatientResponse>>> getAllPatients(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<?> getAllPatients(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
 
         log.info("Received request to fetch patients page={}, size={}", page, size);
 

@@ -1,8 +1,22 @@
 package com.ayurveda.medicine.controller;
 
-import java.util.List;
-import java.util.UUID;
-
+import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
+import com.ayurveda.medicine.dto.request.CreateMedicineRequestList;
+import com.ayurveda.medicine.dto.request.StockAdjustRequest;
+import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
+import com.ayurveda.medicine.dto.response.CategoryStockCountResponse;
+import com.ayurveda.medicine.dto.response.MedicineNameResponse;
+import com.ayurveda.medicine.dto.response.MedicineResponse;
+import com.ayurveda.medicine.dto.response.StockSummaryResponse;
+import com.ayurveda.medicine.enums.MedicineCategory;
+import com.ayurveda.medicine.enums.MedicineStockStatus;
+import com.ayurveda.medicine.service.MedicineService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -16,29 +30,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.dto.PagedResponse;
-import com.ayurveda.medicine.dto.request.CreateMedicineRequest;
-import com.ayurveda.medicine.dto.request.CreateMedicineRequestList;
-import com.ayurveda.medicine.dto.request.StockAdjustRequest;
-import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
-import com.ayurveda.medicine.dto.response.CategoryStockCountResponse;
-import com.ayurveda.medicine.dto.response.MedicineNameResponse;
-import com.ayurveda.medicine.dto.response.MedicineResponse;
-import com.ayurveda.medicine.dto.response.StockSummaryResponse;
-import com.ayurveda.medicine.enums.MedicineCategory;
-import com.ayurveda.medicine.enums.MedicineStockStatus;
-import com.ayurveda.medicine.service.MedicineService;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.UUID;
 
 @Tag(name = "Medicine Inventory", description = "Medicine inventory management APIs")
 @RestController
 @RequestMapping("/api/v1/medicines")
 @RequiredArgsConstructor
+@Slf4j
 @Validated
 public class MedicineController {
 
@@ -93,11 +92,26 @@ public class MedicineController {
         return ResponseEntity.ok(medicineService.getStockCountByCategory(category));
     }
 
-    @Operation(summary = "Get low stock medicine details (paginated)")
+    @Operation(
+            summary = "Get low stock medicine details (paginated)",
+            description = "Query params: page (default 0), size (default 20, max 100).")
     @GetMapping("/low-stock")
-    public ResponseEntity<ApiResponse<PagedResponse<MedicineResponse>>> getLowStockMedicines(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<?> getLowStockMedicines(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
+
+        log.info("Received request to fetch low stock medicines page={}, size={}", page, size);
+
         return ResponseEntity.ok(medicineService.getLowStockMedicines(page, size));
     }
 

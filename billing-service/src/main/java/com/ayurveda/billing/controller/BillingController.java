@@ -1,8 +1,17 @@
 package com.ayurveda.billing.controller;
 
-import java.util.List;
-import java.util.UUID;
-
+import com.ayurveda.billing.dto.request.CreateBillingRequest;
+import com.ayurveda.billing.dto.request.CreateInvoiceRequest;
+import com.ayurveda.billing.dto.response.BillingResponse;
+import com.ayurveda.billing.dto.response.InvoiceResponse;
+import com.ayurveda.billing.enums.BillingStatus;
+import com.ayurveda.billing.service.BillingService;
+import com.ayurveda.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -14,25 +23,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ayurveda.billing.dto.request.CreateBillingRequest;
-import com.ayurveda.billing.dto.request.CreateInvoiceRequest;
-import com.ayurveda.billing.dto.response.BillingListResponse;
-import com.ayurveda.billing.dto.response.BillingResponse;
-import com.ayurveda.billing.dto.response.InvoiceResponse;
-import com.ayurveda.billing.enums.BillingStatus;
-import com.ayurveda.billing.service.BillingService;
-import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.dto.PagedResponse;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.UUID;
 
 @Tag(name = "Billing", description = "Doctor PENDING billing + receptionist invoice generation")
 @RestController
 @RequestMapping("/api/v1/billings")
 @RequiredArgsConstructor
+@Slf4j
 @Validated
 public class BillingController {
 
@@ -49,22 +46,48 @@ public class BillingController {
                 .body(billingService.createBilling(request));
     }
 
-    @Operation(summary = "List billings (paginated)", description = "Filter: PENDING or COMPLETED. page/size supported.")
-    @GetMapping
-    public ResponseEntity<ApiResponse<PagedResponse<BillingListResponse>>> getBillings(
-            @RequestParam(required = false) BillingStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    @Operation(
+            summary = "List billings (paginated)",
+            description = "Filter: PENDING or COMPLETED. page/size supported.")
+    @GetMapping()
+    public ResponseEntity<?> getBillings(@RequestParam(required = false) BillingStatus status, @RequestParam(defaultValue = "0") int page,
+                                         @RequestParam(defaultValue = "20") int size) {
 
-        return ResponseEntity.ok(billingService.getBillings(status, page, size));
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
+
+        log.info("Received request to fetch billing details page={}, size={}", page, size);
+
+        return ResponseEntity.ok(ResponseEntity.ok(billingService.getBillings(status, page, size)));
     }
 
     @Operation(summary = "Get billings by patient id (paginated)")
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<ApiResponse<PagedResponse<BillingResponse>>> getBillingsByPatientId(
-            @PathVariable UUID patientId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<?> getBillingsByPatientId(@PathVariable UUID patientId, @RequestParam(defaultValue = "0") int page,
+                                                    @RequestParam(defaultValue = "20") int size) {
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
+
+        log.info("Received request to fetch billing details by patient id={}, page={}, size={}", patientId, page, size);
 
         return ResponseEntity.ok(billingService.getBillingsByPatientId(patientId, page, size));
     }
