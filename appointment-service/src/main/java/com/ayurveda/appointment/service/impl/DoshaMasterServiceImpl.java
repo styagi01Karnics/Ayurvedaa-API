@@ -1,24 +1,23 @@
 package com.ayurveda.appointment.service.impl;
 
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateDoshaRequest;
 import com.ayurveda.appointment.dto.response.DoshaResponse;
 import com.ayurveda.appointment.entity.DoshaMaster;
+import com.ayurveda.appointment.enums.DoshaMasterStatus;
 import com.ayurveda.appointment.mapper.DoshaMapper;
 import com.ayurveda.appointment.repository.DoshaMasterRepository;
 import com.ayurveda.appointment.service.DoshaMasterService;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -72,4 +71,41 @@ public class DoshaMasterServiceImpl implements DoshaMasterService {
         return ApiResponse.success(Constants.DOSHAS_FETCHED, doshas);
     }
 
+    @Override
+    public ApiResponse<DoshaResponse> updateDoshaMaster(UUID doshaId, CreateDoshaRequest request) {
+        log.info("Updating dosha master by id: {}", doshaId);
+
+        return doshaMasterRepository.findByIdAndDeletedFalse(doshaId)
+                .map(existingDosha -> {
+                    existingDosha.setName(request.getName());
+                    existingDosha.setElements(request.getElements());
+                    existingDosha.setCharacteristics(request.getCharacteristics());
+                    existingDosha.setStatus(request.getStatus());
+                    existingDosha.setUpdatedAt(java.time.LocalDateTime.now());
+                    return doshaMasterRepository.save(existingDosha);
+                })
+                .map(savedDosha -> {
+                    log.info("Dosha master updated successfully with id: {}", savedDosha.getId());
+                    DoshaResponse response = doshaMapper.toResponse(savedDosha);
+                    return ApiResponse.success("Dosha master updated successfully with id: " + savedDosha.getId(), response);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Dosha master not found with id: " + doshaId));
+    }
+
+    @Override
+    public ApiResponse<Void> deleteDoshaMaster(UUID doshaId) {
+        log.info("Deleting dosha master by id: {}", doshaId);
+
+        return doshaMasterRepository.findByIdAndDeletedFalse(doshaId)
+                .map(existingDosha -> {
+                    existingDosha.setStatus(DoshaMasterStatus.INACTIVE);
+                    existingDosha.setDeleted(Boolean.TRUE);
+                    existingDosha.setUpdatedAt(java.time.LocalDateTime.now());
+                    doshaMasterRepository.save(existingDosha);
+                    log.info("Dosha master deactivated successfully with id: {}", doshaId);
+                    return ApiResponse.<Void>success("Dosha master deactivated successfully with id: " + doshaId, null);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Dosha master not found with id: " + doshaId));
+    }
 }

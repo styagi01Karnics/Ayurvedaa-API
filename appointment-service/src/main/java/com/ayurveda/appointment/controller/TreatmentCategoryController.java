@@ -1,22 +1,27 @@
 package com.ayurveda.appointment.controller;
 
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
-import com.ayurveda.common.ApiResponse;
 import com.ayurveda.appointment.dto.request.CreateTreatmentCategoryRequest;
 import com.ayurveda.appointment.dto.response.TreatmentCategoryResponse;
 import com.ayurveda.appointment.service.TreatmentCategoryService;
-
+import com.ayurveda.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
 
 @Tag(name = "Treatment Category", description = "Treatment category master APIs")
 @RestController
@@ -58,5 +63,25 @@ public class TreatmentCategoryController {
 
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "Update treatment category", description = "Updates a treatment category by its ID.")
+    @PutMapping("/{categoryId}")
+    public ResponseEntity<ApiResponse<TreatmentCategoryResponse>> updateTreatmentCategory(@PathVariable UUID categoryId,
+                                                                                          @Valid @RequestBody CreateTreatmentCategoryRequest request) {
+
+        ApiResponse<TreatmentCategoryResponse> response =
+                treatmentCategoryService.updateTreatmentCategory(categoryId, request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Delete treatment category", description = "Deletes a treatment category by its ID.")
+    @DeleteMapping("/{categoryId}")
+    public ResponseEntity<ApiResponse<Void>> deleteTreatmentCategory(@PathVariable UUID categoryId) {
+
+        return ResponseEntity.ok(treatmentCategoryService.deleteTreatmentCategory(categoryId));
+
+    }
+
 
 }

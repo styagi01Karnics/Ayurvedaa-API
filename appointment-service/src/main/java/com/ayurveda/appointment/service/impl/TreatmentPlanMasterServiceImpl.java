@@ -1,11 +1,5 @@
 package com.ayurveda.appointment.service.impl;
 
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateTreatmentPlanMasterRequest;
 import com.ayurveda.appointment.dto.response.TreatmentPlanMasterResponse;
@@ -17,9 +11,13 @@ import com.ayurveda.appointment.service.TreatmentPlanMasterService;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -88,6 +86,42 @@ public class TreatmentPlanMasterServiceImpl implements TreatmentPlanMasterServic
 
         log.info("Fetched {} active treatment plan masters successfully", plans.size());
         return ApiResponse.success(Constants.TREATMENT_PLAN_MASTERS_FETCHED, plans);
+    }
+
+    @Override
+    public ApiResponse<TreatmentPlanMasterResponse> updateTreatmentPlanMaster(UUID treatmentPlanId, CreateTreatmentPlanMasterRequest request) {
+        log.info("Updating treatment plan master by id: {}", treatmentPlanId);
+
+        return treatmentPlanMasterRepository.findByIdAndDeletedFalse(treatmentPlanId)
+                .map(existingPlan -> {
+                    existingPlan.setName(request.getName());
+                    existingPlan.setStatus(request.getStatus());
+                    existingPlan.setUpdatedAt(java.time.LocalDateTime.now());
+                    return treatmentPlanMasterRepository.save(existingPlan);
+                })
+                .map(savedPlan -> {
+                    log.info("Treatment plan master updated successfully with id: {}", savedPlan.getId());
+                    TreatmentPlanMasterResponse response = treatmentPlanMasterMapper.toResponse(savedPlan);
+                    return ApiResponse.success("Treatment plan master updated successfully with id: " + savedPlan.getId(), response);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Treatment plan master not found with id: " + treatmentPlanId));
+    }
+
+    @Override
+    public ApiResponse<Void> deleteTreatmentPlanMaster(UUID treatmentPlanId) {
+        log.info("Deleting treatment plan master by id: {}", treatmentPlanId);
+
+        return treatmentPlanMasterRepository.findByIdAndDeletedFalse(treatmentPlanId)
+                .map(existingPlan -> {
+                    existingPlan.setStatus(TreatmentPlanMasterStatus.INACTIVE);
+                    existingPlan.setDeleted(Boolean.TRUE);
+                    existingPlan.setUpdatedAt(java.time.LocalDateTime.now());
+                    treatmentPlanMasterRepository.save(existingPlan);
+                    log.info("Treatment plan master deactivated successfully with id: {}", treatmentPlanId);
+                    return ApiResponse.<Void>success("Treatment plan master deactivated successfully with id: " + treatmentPlanId, null);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Treatment plan master not found with id: " + treatmentPlanId));
     }
 
 }
