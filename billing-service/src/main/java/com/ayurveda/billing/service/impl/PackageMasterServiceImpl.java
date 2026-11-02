@@ -1,11 +1,5 @@
 package com.ayurveda.billing.service.impl;
 
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.ayurveda.billing.constant.BillingMessages;
 import com.ayurveda.billing.dto.request.CreatePackageMasterRequest;
 import com.ayurveda.billing.dto.response.PackageMasterResponse;
@@ -17,9 +11,13 @@ import com.ayurveda.billing.service.PackageMasterService;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -86,6 +84,43 @@ public class PackageMasterServiceImpl implements PackageMasterService {
 
         log.info("Fetched {} active package masters successfully", packages.size());
         return ApiResponse.success(BillingMessages.PACKAGE_MASTERS_FETCHED, packages);
+    }
+
+    @Override
+    public ApiResponse<PackageMasterResponse> updatePackageMaster(UUID packageMasterId, CreatePackageMasterRequest request) {
+        log.info("Updating package master by id: {}", packageMasterId);
+
+        return packageMasterRepository.findByIdAndDeletedFalse(packageMasterId)
+                .map(existingPlan -> {
+                    existingPlan.setName(request.getName());
+                    existingPlan.setPackagePrice(request.getPackagePrice());
+                    existingPlan.setStatus(request.getStatus());
+                    existingPlan.setUpdatedAt(java.time.LocalDateTime.now());
+                    return packageMasterRepository.save(existingPlan);
+                })
+                .map(savedPlan -> {
+                    log.info("Package master updated successfully with id: {}", savedPlan.getId());
+                    PackageMasterResponse response = packageMasterMapper.toResponse(savedPlan);
+                    return ApiResponse.success("Package master updated successfully with id: " + savedPlan.getId(), response);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Package master not found with id: " + packageMasterId));
+    }
+
+    @Override
+    public ApiResponse<Void> deletePackageMaster(UUID packageMasterId) {
+        log.info("Deleting package master by id: {}", packageMasterId);
+
+        return packageMasterRepository.findByIdAndDeletedFalse(packageMasterId)
+                .map(existingPlan -> {
+                    existingPlan.setStatus(PackageMasterStatus.INACTIVE);
+                    existingPlan.setDeleted(Boolean.TRUE);
+                    existingPlan.setUpdatedAt(java.time.LocalDateTime.now());
+                    packageMasterRepository.save(existingPlan);
+                    log.info("Package master deactivated successfully with id: {}", packageMasterId);
+                    return ApiResponse.<Void>success("Package master deactivated successfully with id: " + packageMasterId, null);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Package master not found with id: " + packageMasterId));
     }
 
 }

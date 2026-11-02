@@ -204,4 +204,29 @@ public class DoctorServiceImpl implements DoctorService {
         return ApiResponse.success(AppConstants.DOCTOR_DELETED_SUCCESSFULLY, null);
     }
 
+    @Override
+    public ApiResponse<DoctorResponse> updateDoctorData(UUID doctorId, CreateDoctorRequest request) {
+        log.info("Updating doctor data. Doctor ID: {}", doctorId);
+
+        return doctorRepository.findByIdAndDeletedFalse(doctorId)
+                .map(existingDoctor -> {
+                    existingDoctor.setDoctorName(request.getName());
+                    existingDoctor.setSpecialization(request.getSpecialization());
+                    existingDoctor.setStatus(request.getStatus());
+                    existingDoctor.setConsultationFees(request.getConsultationFees());
+                    existingDoctor.setFollowUpFees(request.getFollowUpFees());
+                    existingDoctor.setAvailability(request.getAvailability());
+                    existingDoctor.setMobileNumber(request.getMobileNumber());
+                    existingDoctor.setEmail(request.getEmail());
+                    existingDoctor.setUpdatedAt(java.time.LocalDateTime.now());
+                    return doctorRepository.save(existingDoctor);
+                })
+                .map(savedDoctor -> {
+                    log.info("Doctor data updated successfully. Doctor ID: {}", savedDoctor.getId());
+                    return ApiResponse.success("Doctor data updated successfully with id: " + savedDoctor.getId(), DoctorMapper.toResponse(savedDoctor));
+                })
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND));
+
+    }
+
 }

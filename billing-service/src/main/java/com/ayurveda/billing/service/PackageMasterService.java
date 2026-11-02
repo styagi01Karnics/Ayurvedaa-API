@@ -1,11 +1,11 @@
 package com.ayurveda.billing.service;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.ayurveda.billing.dto.request.CreatePackageMasterRequest;
 import com.ayurveda.billing.dto.response.PackageMasterResponse;
 import com.ayurveda.common.ApiResponse;
+
+import java.util.List;
+import java.util.UUID;
 
 public interface PackageMasterService {
 
@@ -20,5 +20,15 @@ public interface PackageMasterService {
 
     /** Lists only active, non-deleted package masters. */
     ApiResponse<List<PackageMasterResponse>> getActive();
+
+    /**
+     * Updates a package master record by id.
+     */
+    ApiResponse<PackageMasterResponse> updatePackageMaster(UUID packageMasterId, CreatePackageMasterRequest request);
+
+    /**
+     * Deactivates a package master record by id.
+     */
+    ApiResponse<Void> deletePackageMaster(UUID packageMasterId);
 
 }

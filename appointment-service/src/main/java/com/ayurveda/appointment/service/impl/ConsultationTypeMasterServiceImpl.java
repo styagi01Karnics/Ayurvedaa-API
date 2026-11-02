@@ -1,11 +1,5 @@
 package com.ayurveda.appointment.service.impl;
 
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateConsultationTypeRequest;
 import com.ayurveda.appointment.dto.response.ConsultationTypeResponse;
@@ -17,9 +11,13 @@ import com.ayurveda.appointment.service.ConsultationTypeMasterService;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -86,6 +84,42 @@ public class ConsultationTypeMasterServiceImpl implements ConsultationTypeMaster
 
         log.info("Fetched {} active consultation types successfully", types.size());
         return ApiResponse.success(Constants.CONSULTATION_TYPES_FETCHED, types);
+    }
+
+    @Override
+    public ApiResponse<ConsultationTypeResponse> updateConsultationType(UUID consultationTypeId, CreateConsultationTypeRequest request) {
+        log.info("Updating consultation type by id: {}", consultationTypeId);
+
+        return consultationTypeMasterRepository.findByIdAndDeletedFalse(consultationTypeId)
+                .map(existingType -> {
+                    existingType.setName(request.getName());
+                    existingType.setStatus(request.getStatus());
+                    existingType.setUpdatedAt(java.time.LocalDateTime.now());
+                    return consultationTypeMasterRepository.save(existingType);
+                })
+                .map(savedType -> {
+                    log.info("Consultation type updated successfully with id: {}", savedType.getId());
+                    ConsultationTypeResponse response = consultationTypeMapper.toResponse(savedType);
+                    return ApiResponse.success("Consultation type updated successfully with id: " + savedType.getId(), response);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Consultation type not found with id: " + consultationTypeId));
+    }
+
+    @Override
+    public ApiResponse<Void> deleteConsultationType(UUID consultationTypeId) {
+        log.info("Deleting consultation type by id: {}", consultationTypeId);
+
+        return consultationTypeMasterRepository.findByIdAndDeletedFalse(consultationTypeId)
+                .map(existingType -> {
+                    existingType.setStatus(ConsultationTypeMasterStatus.INACTIVE);
+                    existingType.setDeleted(Boolean.TRUE);
+                    existingType.setUpdatedAt(java.time.LocalDateTime.now());
+                    consultationTypeMasterRepository.save(existingType);
+                    log.info("Consultation type deactivated successfully with id: {}", consultationTypeId);
+                    return ApiResponse.<Void>success("Consultation type deactivated successfully with id: " + consultationTypeId, null);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Consultation type not found with id: " + consultationTypeId));
     }
 
 }

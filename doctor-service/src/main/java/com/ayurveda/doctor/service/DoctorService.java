@@ -28,4 +28,7 @@ public interface DoctorService {
     /** Soft-deletes a doctor. */
     ApiResponse<Void> deleteDoctor(UUID doctorId);
 
+    /** Updates doctor data by id. */
+    ApiResponse<DoctorResponse> updateDoctorData(UUID doctorId, CreateDoctorRequest request);
+
 }

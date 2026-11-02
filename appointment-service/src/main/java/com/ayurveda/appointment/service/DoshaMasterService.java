@@ -1,11 +1,11 @@
 package com.ayurveda.appointment.service;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.ayurveda.appointment.dto.request.CreateDoshaRequest;
 import com.ayurveda.appointment.dto.response.DoshaResponse;
 import com.ayurveda.common.ApiResponse;
+
+import java.util.List;
+import java.util.UUID;
 
 public interface DoshaMasterService {
 
@@ -17,5 +17,15 @@ public interface DoshaMasterService {
 
     /** Lists all non-deleted doshas. */
     ApiResponse<List<DoshaResponse>> getAllDoshas();
+
+    /**
+     * Updates a dosha master record by id.
+     */
+    ApiResponse<DoshaResponse> updateDoshaMaster(UUID doshaId, CreateDoshaRequest request);
+
+    /**
+     * Deactivates a dosha master record by id.
+     */
+    ApiResponse<Void> deleteDoshaMaster(UUID doshaId);
 
 }

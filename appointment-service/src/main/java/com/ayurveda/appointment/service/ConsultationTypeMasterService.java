@@ -1,11 +1,11 @@
 package com.ayurveda.appointment.service;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.ayurveda.appointment.dto.request.CreateConsultationTypeRequest;
 import com.ayurveda.appointment.dto.response.ConsultationTypeResponse;
 import com.ayurveda.common.ApiResponse;
+
+import java.util.List;
+import java.util.UUID;
 
 public interface ConsultationTypeMasterService {
 
@@ -20,5 +20,15 @@ public interface ConsultationTypeMasterService {
 
     /** Lists only active, non-deleted consultation types. */
     ApiResponse<List<ConsultationTypeResponse>> getActive();
+
+    /**
+     * Updates a consultation type by id.
+     */
+    ApiResponse<ConsultationTypeResponse> updateConsultationType(UUID consultationTypeId, CreateConsultationTypeRequest request);
+
+    /**
+     * Deactivates a consultation type by id.
+     */
+    ApiResponse<Void> deleteConsultationType(UUID consultationTypeId);
 
 }
