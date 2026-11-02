@@ -99,24 +99,26 @@ public class TreatmentCategoryServiceImpl implements TreatmentCategoryService {
 
         return ApiResponse.success(response);
     }
-log.info("Updating treatment category by id: {}", categoryId);
 
-        return treatmentCategoryRepository.findById(categoryId)
-            .map(existingCategory -> {
-        existingCategory.setCategoryName(request.getCategoryName());
-        existingCategory.setDescription(request.getDescription());
-        existingCategory.setStatus(request.getStatus());
-        existingCategory.setUpdatedAt(java.time.LocalDateTime.now());
-        return treatmentCategoryRepository.save(existingCategory);
-    })
-            .map(savedCategory -> {
-        log.info("Treatment category updated successfully with id: {}", savedCategory.getId());
-        TreatmentCategoryResponse response = treatmentCategoryMapper.toResponse(savedCategory);
-        return ApiResponse.success("Treatment category updated successfully with id: " + savedCategory.getId(), response);
-    })
-            .orElseThrow(() -> new ResourceNotFoundException("Treatment category not found with id: " + categoryId));
     @Override
     public ApiResponse<TreatmentCategoryResponse> updateTreatmentCategory(UUID categoryId, CreateTreatmentCategoryRequest request) {
+
+        log.info("Updating treatment category by id: {}", categoryId);
+
+        return treatmentCategoryRepository.findById(categoryId)
+                .map(existingCategory -> {
+                    existingCategory.setCategoryName(request.getCategoryName());
+                    existingCategory.setDescription(request.getDescription());
+                    existingCategory.setStatus(request.getStatus());
+                    existingCategory.setUpdatedAt(java.time.LocalDateTime.now());
+                    return treatmentCategoryRepository.save(existingCategory);
+                })
+                .map(savedCategory -> {
+                    log.info("Treatment category updated successfully with id: {}", savedCategory.getId());
+                    TreatmentCategoryResponse response = treatmentCategoryMapper.toResponse(savedCategory);
+                    return ApiResponse.success("Treatment category updated successfully with id: " + savedCategory.getId(), response);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Treatment category not found with id: " + categoryId));
 
     }
 
