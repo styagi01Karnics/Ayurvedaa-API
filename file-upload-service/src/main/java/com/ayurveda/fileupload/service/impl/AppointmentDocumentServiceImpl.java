@@ -10,6 +10,8 @@ import com.ayurveda.fileupload.mapper.AppointmentDocumentMapper;
 import com.ayurveda.fileupload.repository.AppointmentDocumentRepository;
 import com.ayurveda.fileupload.service.AppointmentDocumentService;
 import com.ayurveda.fileupload.util.AppMessages;
+import com.ayurveda.patient.entity.Patient;
+import com.ayurveda.patient.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -32,10 +35,21 @@ public class AppointmentDocumentServiceImpl implements AppointmentDocumentServic
 
     private final AppointmentDocumentRepository appointmentDocumentRepository;
     private final AppointmentDocumentMapper appointmentDocumentMapper;
+    private final PatientRepository patientRepository;
 
     @Override
     public ApiResponse<AppointmentDocumentResponse> uploadDocument(UploadAppointmentDocumentRequest request) {
         log.info("Uploading document for patient: {}", request.getPatientId());
+
+        Optional<Patient> byIdAndDeletedFalse =
+                patientRepository.findByIdAndDeletedFalse(request.getPatientId());
+
+        if (byIdAndDeletedFalse.isEmpty()) {
+            log.warn("Patient with ID {} not found", request.getPatientId());
+
+            throw new ResourceNotFoundException(
+                    "Patient with ID " + request.getPatientId() + " not found or deleted");
+        }
 
         try {
             AppointmentDocument document = AppointmentDocument.builder()

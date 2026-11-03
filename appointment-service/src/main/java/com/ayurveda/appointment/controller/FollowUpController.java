@@ -1,7 +1,14 @@
 package com.ayurveda.appointment.controller;
 
-import java.util.UUID;
-
+import com.ayurveda.appointment.dto.request.CreateFollowUpRequest;
+import com.ayurveda.appointment.dto.request.UpdateFollowUpStatusRequest;
+import com.ayurveda.appointment.dto.response.FollowUpResponse;
+import com.ayurveda.appointment.service.FollowUpService;
+import com.ayurveda.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -14,17 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ayurveda.appointment.dto.request.CreateFollowUpRequest;
-import com.ayurveda.appointment.dto.request.UpdateFollowUpStatusRequest;
-import com.ayurveda.appointment.dto.response.FollowUpResponse;
-import com.ayurveda.appointment.service.FollowUpService;
-import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.dto.PagedResponse;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.UUID;
 
 @Tag(name = "Follow-up", description = "Patient follow-up APIs")
 @RestController
@@ -54,9 +51,22 @@ public class FollowUpController {
             summary = "List all follow-ups (paginated)",
             description = "Returns non-deleted follow-ups ordered by appointment date. page/size supported.")
     @GetMapping
-    public ResponseEntity<ApiResponse<PagedResponse<FollowUpResponse>>> getAllFollowUps(
+    public ResponseEntity<?> getAllFollowUps(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
+
         return ResponseEntity.ok(followUpService.getAllFollowUps(page, size));
     }
 
@@ -64,10 +74,22 @@ public class FollowUpController {
             summary = "List follow-ups by patient (paginated)",
             description = "Returns non-deleted follow-ups for the given patient id.")
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<ApiResponse<PagedResponse<FollowUpResponse>>> getFollowUpsByPatientId(
+    public ResponseEntity<?> getFollowUpsByPatientId(
             @PathVariable UUID patientId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
         return ResponseEntity.ok(followUpService.getFollowUpsByPatientId(patientId, page, size));
     }
 

@@ -1,31 +1,35 @@
 package com.ayurveda.appointment.controller;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
-import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.appointment.dto.request.CreateAppointmentBookingRequest;
 import com.ayurveda.appointment.dto.request.RescheduleAppointmentBookingRequest;
 import com.ayurveda.appointment.dto.response.AppointmentBookingResponse;
 import com.ayurveda.appointment.dto.response.AppointmentStatsResponse;
-import com.ayurveda.appointment.dto.response.DoctorTodayScheduleResponse;
 import com.ayurveda.appointment.dto.response.PatientAppointmentListItemResponse;
 import com.ayurveda.appointment.enums.BookingStatus;
 import com.ayurveda.appointment.enums.PatientListTab;
 import com.ayurveda.appointment.service.AppointmentBookingService;
-
+import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.dto.PagedResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
+import java.util.UUID;
 
 @Tag(name = "Appointment Booking", description = "Create and manage appointment bookings")
 @RestController
@@ -87,9 +91,21 @@ public class AppointmentBookingController {
             summary = "Get cancelled appointments (paginated)",
             description = "Cancelled appointment details including patient phone number. page/size supported.")
     @GetMapping("/cancelled")
-    public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getCancelledAppointments(
+    public ResponseEntity<?> getCancelledAppointments(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
 
         return ResponseEntity.ok(appointmentBookingService.getCancelledAppointments(page, size));
     }
@@ -103,10 +119,21 @@ public class AppointmentBookingController {
                     Each appointment includes assignedDoctorId.
                     """)
     @GetMapping("/today")
-    public ResponseEntity<ApiResponse<DoctorTodayScheduleResponse>> getTodayAppointments(
+    public ResponseEntity<?> getTodayAppointments(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
         return ResponseEntity.ok(appointmentBookingService.getTodayAppointments(page, size));
     }
 
@@ -114,10 +141,23 @@ public class AppointmentBookingController {
             summary = "Get today's appointments by consultation type (paginated)",
             description = "Returns today's non-cancelled appointments for the given consultation type id, with patient details.")
     @GetMapping("/today/consultation-type/{consultationTypeId}")
-    public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getTodayAppointmentsByConsultationType(
+    public ResponseEntity<?> getTodayAppointmentsByConsultationType(
             @PathVariable UUID consultationTypeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
 
         return ResponseEntity.ok(
                 appointmentBookingService.getTodayAppointmentsByConsultationType(
@@ -132,10 +172,22 @@ public class AppointmentBookingController {
                     Supports pagination via page/size.
                     """)
     @GetMapping("/doctor/{doctorId}/today")
-    public ResponseEntity<ApiResponse<DoctorTodayScheduleResponse>> getDoctorTodaySchedule(
+    public ResponseEntity<?> getDoctorTodaySchedule(
             @PathVariable UUID doctorId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
 
         return ResponseEntity.ok(
                 appointmentBookingService.getDoctorTodaySchedule(doctorId, page, size));
