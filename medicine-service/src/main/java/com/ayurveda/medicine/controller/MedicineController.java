@@ -1,7 +1,6 @@
 package com.ayurveda.medicine.controller;
 
 import com.ayurveda.common.ApiResponse;
-import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.medicine.dto.request.CreateMedicineRequestList;
 import com.ayurveda.medicine.dto.request.StockAdjustRequest;
 import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
@@ -67,12 +66,24 @@ public class MedicineController {
             summary = "List medicines (paginated)",
             description = "Supports search by medicine name and filters for category and stock status. page/size supported.")
     @GetMapping
-    public ResponseEntity<ApiResponse<PagedResponse<MedicineResponse>>> getMedicines(
+    public ResponseEntity<?> getMedicines(
             @RequestParam(required = false) String medicineName,
             @RequestParam(required = false) MedicineCategory category,
             @RequestParam(required = false) MedicineStockStatus stockStatus,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+
+        if (page < 0) {
+            return ResponseEntity.badRequest().body("Page index must not be less than zero.");
+        }
+
+        if (size <= 0) {
+            return ResponseEntity.badRequest().body("Page size must be greater than zero.");
+        }
+
+        if (size > 100) {
+            return ResponseEntity.badRequest().body("Page size must not exceed 100.");
+        }
 
         return ResponseEntity.ok(
                 medicineService.getMedicines(medicineName, category, stockStatus, page, size));
