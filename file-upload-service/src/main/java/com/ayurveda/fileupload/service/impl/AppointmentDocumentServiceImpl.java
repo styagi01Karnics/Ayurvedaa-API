@@ -3,6 +3,7 @@ package com.ayurveda.fileupload.service.impl;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.fileupload.client.PatientServiceClient;
 import com.ayurveda.fileupload.dto.request.UploadAppointmentDocumentRequest;
 import com.ayurveda.fileupload.dto.response.AppointmentDocumentResponse;
 import com.ayurveda.fileupload.entity.AppointmentDocument;
@@ -10,8 +11,7 @@ import com.ayurveda.fileupload.mapper.AppointmentDocumentMapper;
 import com.ayurveda.fileupload.repository.AppointmentDocumentRepository;
 import com.ayurveda.fileupload.service.AppointmentDocumentService;
 import com.ayurveda.fileupload.util.AppMessages;
-import com.ayurveda.patient.entity.Patient;
-import com.ayurveda.patient.repository.PatientRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -35,16 +34,15 @@ public class AppointmentDocumentServiceImpl implements AppointmentDocumentServic
 
     private final AppointmentDocumentRepository appointmentDocumentRepository;
     private final AppointmentDocumentMapper appointmentDocumentMapper;
-    private final PatientRepository patientRepository;
+    private final PatientServiceClient patientServiceClient;
 
     @Override
     public ApiResponse<AppointmentDocumentResponse> uploadDocument(UploadAppointmentDocumentRequest request) {
         log.info("Uploading document for patient: {}", request.getPatientId());
 
-        Optional<Patient> byIdAndDeletedFalse =
-                patientRepository.findByIdAndDeletedFalse(request.getPatientId());
-
-        if (byIdAndDeletedFalse.isEmpty()) {
+        try {
+            patientServiceClient.getPatientById(request.getPatientId());
+        } catch (FeignException.NotFound ex) {
             log.warn("Patient with ID {} not found", request.getPatientId());
 
             throw new ResourceNotFoundException(
