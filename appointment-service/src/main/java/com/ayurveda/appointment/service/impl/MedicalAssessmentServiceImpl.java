@@ -1,6 +1,7 @@
 package com.ayurveda.appointment.service.impl;
 
 import com.ayurveda.appointment.client.DocumentUploadClient;
+import com.ayurveda.appointment.client.PatientServiceClient;
 import com.ayurveda.appointment.common.Constants;
 import com.ayurveda.appointment.dto.request.CreateMedicalAssessmentRequest;
 import com.ayurveda.appointment.dto.response.AppointmentDocumentResponse;
@@ -15,8 +16,6 @@ import com.ayurveda.appointment.service.AppointmentTreatmentPlanService;
 import com.ayurveda.appointment.service.MedicalAssessmentService;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.ResourceNotFoundException;
-import com.ayurveda.patient.entity.Patient;
-import com.ayurveda.patient.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -42,7 +40,7 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
     private final AppointmentSystemicExaminationService systemicExaminationService;
     private final AppointmentTreatmentPlanService treatmentPlanService;
     private final DocumentUploadClient documentUploadClient;
-    private final PatientRepository patientRepository;
+    private final PatientServiceClient patientServiceClient;
 
     @Override
     public ApiResponse<MedicalAssessmentResponse> saveMedicalAssessment(
@@ -60,15 +58,7 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
 
         log.info("Saving complete medical assessment for patient {}", request.getPatientId());
 
-        Optional<Patient> byIdAndDeletedFalse =
-                patientRepository.findByIdAndDeletedFalse(request.getPatientId());
-
-        if (byIdAndDeletedFalse.isEmpty()) {
-            log.warn("Patient with ID {} not found or deleted", request.getPatientId());
-
-            throw new ResourceNotFoundException(
-                    "Patient with ID " + request.getPatientId() + " not found or deleted");
-        }
+        validatePatient(request.getPatientId());
 
         applyPatientId(request);
 
@@ -130,15 +120,7 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
 
         log.info("Fetching complete medical assessment for patient {}", patientId);
 
-        Optional<Patient> byIdAndDeletedFalse =
-                patientRepository.findByIdAndDeletedFalse(patientId);
-
-        if (byIdAndDeletedFalse.isEmpty()) {
-            log.warn("Patient with ID {} not found", patientId);
-
-            throw new ResourceNotFoundException(
-                    "Patient with ID " + patientId + " not found or deleted");
-        }
+        validatePatient(patientId);
 
         MedicalAssessmentResponse response = MedicalAssessmentResponse.builder()
                 .patientId(patientId)
@@ -173,6 +155,19 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
         } catch (Exception ex) {
             log.warn("Unable to load {} for patient {}: {}", section, patientId, ex.getMessage());
             return null;
+        }
+    }
+
+    private void validatePatient(UUID patientId) {
+        String notFound = "Patient with ID " + patientId + " not found or deleted";
+        try {
+            if (patientServiceClient.getPatientById(patientId).getData() == null) {
+                log.warn("Patient with ID {} not found or deleted", patientId);
+                throw new ResourceNotFoundException(notFound);
+            }
+        } catch (feign.FeignException.NotFound ex) {
+            log.warn("Patient with ID {} not found or deleted", patientId);
+            throw new ResourceNotFoundException(notFound);
         }
     }
 
