@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 
@@ -23,7 +22,7 @@ public class MedicineResponse {
 
     private UUID id;
     private String medicineName;
-    private MedicineCategory category;
+    private String category;
     private String manufacturer;
     private String batchNumber;
     private Integer stockQuantity;

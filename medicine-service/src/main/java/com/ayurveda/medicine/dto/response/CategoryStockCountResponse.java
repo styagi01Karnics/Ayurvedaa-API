@@ -1,7 +1,5 @@
 package com.ayurveda.medicine.dto.response;
 
-import com.ayurveda.medicine.enums.MedicineCategory;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,7 +13,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CategoryStockCountResponse {
 
-    private MedicineCategory category;
+    private String category;
     private long totalStock;
     private long medicineCount;
 

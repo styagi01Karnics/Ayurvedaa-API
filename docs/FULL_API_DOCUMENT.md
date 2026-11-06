@@ -897,7 +897,7 @@ Masters (e.g. `CONSULTATION`, `THERAPY`) live **per hospital**. Empty hospital o
 ```json
 {
   "date": "2026-10-05",
-  "currentDateTime": "2026-10-05T10:15:00",
+  "currentDateTime": "2026-10-05T10:15:00+05:30",
   "ongoingAppointment": {
     "bookingId": "<uuid>",
     "patientId": "<uuid>",
@@ -1489,7 +1489,7 @@ Response (201):
 
 # 10. Medicine service (`:8108`)
 
-`MedicineCategory` examples: `TABLET` | `SYRUP` | `POWDER` (and other enum values in code).  
+`category` is a code from the medicine category master (`mst_medicine_category`), for example `TABLET` | `SYRUP` | `POWDER` | `DROPS`. Only active master codes are accepted on create and update (400 otherwise). Manage codes with the category endpoints below.  
 `MedicineStatus`: `ACTIVE` | `INACTIVE`.  
 `MedicineStockStatus`: `IN_STOCK` | `OUT_OF_STOCK` | `LOW_STOCK`.
 
@@ -1551,7 +1551,16 @@ Response (201) `MedicineResponse[]`:
 
 ### GET `/api/v1/medicines/low-stock?page=0&size=20` — paged `MedicineResponse`
 
-### GET `/api/v1/medicines/meta/categories` — `["TABLET","SYRUP","POWDER",…]`
+### GET `/api/v1/medicines/meta/categories` — `["DROPS","POWDER","SYRUP","TABLET",…]` (active codes only)
+
+### Medicine category master `/api/v1/medicines/categories`
+
+Admin-managed list of medicine categories. Create a code here before using it on a medicine.
+
+- `GET /api/v1/medicines/categories` → `MedicineCategoryResponse[]` (`id`, `code`, `name`, `active`)
+- `POST /api/v1/medicines/categories` (201) — body `{ "code": "DROPS", "name": "Eye Drops" }`. `code` must match `^[A-Z][A-Z0-9_]*$` (max 30) and is uppercased. Duplicates return 400.
+- `PUT /api/v1/medicines/categories/{categoryId}` — body `{ "name": "Eye Drops", "active": true }`. The code cannot be changed. Set `active: false` to stop new use without deleting.
+- `DELETE /api/v1/medicines/categories/{categoryId}` — soft delete. Returns 400 while any medicine still uses the code.
 
 ### GET `/api/v1/medicines/meta/manufacturers` — `["Himalaya",…]`
 

@@ -3,7 +3,6 @@ package com.ayurveda.medicine.dto.request;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStatus;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -32,8 +31,9 @@ public class UpdateMedicineRequest {
     @Size(max = 150)
     private String medicineName;
 
-    @NotNull(message = "Medicine category is required")
-    private MedicineCategory category;
+    @NotBlank(message = "Medicine category is required")
+    @Size(max = 30)
+    private String category;
 
     @NotBlank(message = "Manufacturer is required")
     @Size(max = 150)

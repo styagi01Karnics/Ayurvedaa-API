@@ -9,7 +9,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.ayurveda.medicine.entity.Medicine;
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 
 public interface MedicineRepository extends JpaRepository<Medicine, UUID> {
@@ -27,7 +26,7 @@ public interface MedicineRepository extends JpaRepository<Medicine, UUID> {
             """)
     List<Medicine> search(
             @Param("medicineName") String medicineName,
-            @Param("category") MedicineCategory category,
+            @Param("category") String category,
             @Param("stockStatus") MedicineStockStatus stockStatus);
 
     @Query("""
@@ -55,14 +54,14 @@ public interface MedicineRepository extends JpaRepository<Medicine, UUID> {
             WHERE m.deleted = false
               AND m.category = :category
             """)
-    long sumStockByCategory(@Param("category") MedicineCategory category);
+    long sumStockByCategory(@Param("category") String category);
 
     @Query("""
             SELECT COUNT(m) FROM Medicine m
             WHERE m.deleted = false
               AND m.category = :category
             """)
-    long countByCategory(@Param("category") MedicineCategory category);
+    long countByCategory(@Param("category") String category);
 
     List<Medicine> findByStockStatusAndDeletedFalseOrderByQuantityAsc(MedicineStockStatus stockStatus);
 

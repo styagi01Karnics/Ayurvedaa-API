@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.ayurveda.common.BaseEntity;
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 import jakarta.persistence.Column;
@@ -30,9 +29,9 @@ public class Medicine extends BaseEntity {
     @Column(nullable = false, length = 150)
     private String medicineName;
 
-    @Enumerated(EnumType.STRING)
+    /** Code from medicine_category_master (validated against active master rows on save). */
     @Column(nullable = false, length = 30)
-    private MedicineCategory category;
+    private String category;
 
     @Column(nullable = false, length = 150)
     private String manufacturer;

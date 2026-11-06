@@ -13,6 +13,7 @@ public final class TenantContext {
     private static final ThreadLocal<String> SCHEMA_NAME = new ThreadLocal<>();
     private static final ThreadLocal<UUID> USER_ID = new ThreadLocal<>();
     private static final ThreadLocal<String> ROLE = new ThreadLocal<>();
+    private static final ThreadLocal<String> USER_NAME = new ThreadLocal<>();
     private static final ThreadLocal<String> AUTHORIZATION_HEADER = new ThreadLocal<>();
 
     private TenantContext() {
@@ -57,6 +58,14 @@ public final class TenantContext {
         return ROLE.get();
     }
 
+    public static void setUserName(String userName) {
+        USER_NAME.set(userName);
+    }
+
+    public static String getUserName() {
+        return USER_NAME.get();
+    }
+
     public static String getAuthorizationHeader() {
         return AUTHORIZATION_HEADER.get();
     }
@@ -67,6 +76,7 @@ public final class TenantContext {
         SCHEMA_NAME.remove();
         USER_ID.remove();
         ROLE.remove();
+        USER_NAME.remove();
         AUTHORIZATION_HEADER.remove();
     }
 
