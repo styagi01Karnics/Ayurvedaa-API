@@ -1,4 +1,3 @@
-
 timestamps {
     node {
         properties([
@@ -135,6 +134,7 @@ timestamps {
 
                 // ==========================================
                 // DOCKER LOGIN
+                // With automatic retry
                 // ==========================================
 
                 stage('Docker Login') {
@@ -149,12 +149,30 @@ timestamps {
                             set -eu
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
 
-                            printf '%s' "$DOCKER_PASSWORD" |
-                                docker login \
-                                    --username "$DOCKER_USERNAME" \
-                                    --password-stdin
+                            login_attempt=1
+                            max_login_attempts=4
 
-                            echo "Docker Hub login successful."
+                            while [ "$login_attempt" -le "$max_login_attempts" ]; do
+                                echo "Docker Hub login attempt $login_attempt/$max_login_attempts"
+
+                                if printf '%s' "$DOCKER_PASSWORD" |
+                                    docker login \
+                                        --username "$DOCKER_USERNAME" \
+                                        --password-stdin; then
+                                    echo "Docker Hub login successful."
+                                    break
+                                fi
+
+                                if [ "$login_attempt" -eq "$max_login_attempts" ]; then
+                                    echo "ERROR: Docker Hub login failed after $max_login_attempts attempts."
+                                    exit 1
+                                fi
+
+                                delay=$((10 * (2 ** (login_attempt - 1))))
+                                echo "Docker Hub login failed. Retrying in $delay seconds..."
+                                sleep "$delay"
+                                login_attempt=$((login_attempt + 1))
+                            done
                         '''
                     }
                 }
@@ -195,6 +213,7 @@ timestamps {
 
                 // ==========================================
                 // PUSH DOCKER IMAGES
+                // With automatic retry per image
                 // ==========================================
 
                 stage('Push Docker Images') {
@@ -209,10 +228,55 @@ timestamps {
                             set -eu
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
 
-                            printf '%s' "$DOCKER_PASSWORD" |
-                                docker login \
-                                    --username "$DOCKER_USERNAME" \
-                                    --password-stdin
+                            login_attempt=1
+                            max_login_attempts=4
+
+                            while [ "$login_attempt" -le "$max_login_attempts" ]; do
+                                echo "Docker Hub login attempt $login_attempt/$max_login_attempts"
+
+                                if printf '%s' "$DOCKER_PASSWORD" |
+                                    docker login \
+                                        --username "$DOCKER_USERNAME" \
+                                        --password-stdin; then
+                                    echo "Docker Hub login successful."
+                                    break
+                                fi
+
+                                if [ "$login_attempt" -eq "$max_login_attempts" ]; then
+                                    echo "ERROR: Docker Hub login failed after $max_login_attempts attempts."
+                                    exit 1
+                                fi
+
+                                delay=$((10 * (2 ** (login_attempt - 1))))
+                                echo "Docker Hub login failed. Retrying in $delay seconds..."
+                                sleep "$delay"
+                                login_attempt=$((login_attempt + 1))
+                            done
+
+                            retry_docker_push() {
+                                image="$1"
+                                attempt=1
+                                max_attempts=4
+
+                                while [ "$attempt" -le "$max_attempts" ]; do
+                                    echo "Docker push attempt $attempt/$max_attempts: $image"
+
+                                    if docker push "$image"; then
+                                        echo "SUCCESS: Pushed $image"
+                                        return 0
+                                    fi
+
+                                    if [ "$attempt" -eq "$max_attempts" ]; then
+                                        echo "ERROR: Failed to push $image after $max_attempts attempts."
+                                        return 1
+                                    fi
+
+                                    delay=$((10 * (2 ** (attempt - 1))))
+                                    echo "Docker push failed for $image. Retrying in $delay seconds..."
+                                    sleep "$delay"
+                                    attempt=$((attempt + 1))
+                                done
+                            }
 
                             for service in \
                                 patient-service \
@@ -233,7 +297,7 @@ timestamps {
 
                                 echo "Pushing: $image"
 
-                                docker push "$image"
+                                retry_docker_push "$image"
                             done
 
                             echo "All Docker images pushed successfully."
@@ -409,9 +473,37 @@ fi
 
 echo "OK: API Gateway found in Compose configuration."
 
-echo "Pulling updated images..."
+// ==========================================
+// DOCKER PULL WITH AUTOMATIC RETRY
+// ==========================================
 
-docker compose --env-file .env -f "$COMPOSE_FILE" pull
+retry_docker_pull() {
+    attempt=1
+    max_attempts=4
+
+    while [ "$attempt" -le "$max_attempts" ]; do
+        echo "Docker Compose pull attempt $attempt/$max_attempts"
+
+        if docker compose --env-file .env -f "$COMPOSE_FILE" pull; then
+            echo "All Docker Compose images pulled successfully."
+            return 0
+        fi
+
+        if [ "$attempt" -eq "$max_attempts" ]; then
+            echo "ERROR: Docker Compose image pull failed after $max_attempts attempts."
+            return 1
+        fi
+
+        delay=$((10 * (2 ** (attempt - 1))))
+        echo "Docker Compose pull failed. Retrying in $delay seconds..."
+        sleep "$delay"
+        attempt=$((attempt + 1))
+    done
+}
+
+echo "Pulling updated images with automatic retry..."
+
+retry_docker_pull
 
 echo "Starting updated services..."
 
