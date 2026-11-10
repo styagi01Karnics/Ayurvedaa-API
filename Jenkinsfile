@@ -33,6 +33,11 @@ timestamps {
         ]
 
         try {
+
+            // ==========================================
+            // CHECKOUT SOURCE
+            // ==========================================
+
             stage('Checkout Source') {
                 checkout scm
 
@@ -55,6 +60,10 @@ timestamps {
                 echo '=========================================='
             }
 
+            // ==========================================
+            // ENVIRONMENT CHECK
+            // ==========================================
+
             stage('Environment Check') {
                 sh '''
                     set -eu
@@ -63,11 +72,16 @@ timestamps {
                     command -v mvn
                     command -v git
                     command -v docker
-                    command -v sshpass
+                    command -v ssh
+                    command -v scp
 
                     echo "Environment check completed."
                 '''
             }
+
+            // ==========================================
+            // MAVEN TEST & PACKAGE
+            // ==========================================
 
             stage('Maven Test & Package') {
                 sh '''
@@ -78,6 +92,10 @@ timestamps {
                     echo "Maven build and tests completed."
                 '''
             }
+
+            // ==========================================
+            // VERIFY DOCKERFILES
+            // ==========================================
 
             stage('Verify Dockerfiles') {
                 sh '''
@@ -113,6 +131,10 @@ timestamps {
                 '''
             }
 
+            // ==========================================
+            // DEV BRANCH DEPLOYMENT
+            // ==========================================
+
             if (branchName == 'dev') {
 
                 // ==========================================
@@ -135,7 +157,6 @@ timestamps {
 
                 // ==========================================
                 // DOCKER LOGIN
-                // With automatic retry
                 // ==========================================
 
                 stage('Docker Login') {
@@ -154,12 +175,14 @@ timestamps {
                             max_login_attempts=4
 
                             while [ "$login_attempt" -le "$max_login_attempts" ]; do
+
                                 echo "Docker Hub login attempt $login_attempt/$max_login_attempts"
 
                                 if printf '%s' "$DOCKER_PASSWORD" |
                                     docker login \
                                         --username "$DOCKER_USERNAME" \
                                         --password-stdin; then
+
                                     echo "Docker Hub login successful."
                                     break
                                 fi
@@ -170,7 +193,9 @@ timestamps {
                                 fi
 
                                 delay=$((10 * (2 ** (login_attempt - 1))))
+
                                 echo "Docker Hub login failed. Retrying in $delay seconds..."
+
                                 sleep "$delay"
                                 login_attempt=$((login_attempt + 1))
                             done
@@ -214,7 +239,6 @@ timestamps {
 
                 // ==========================================
                 // PUSH DOCKER IMAGES
-                // With automatic retry per image
                 // ==========================================
 
                 stage('Push Docker Images') {
@@ -233,12 +257,14 @@ timestamps {
                             max_login_attempts=4
 
                             while [ "$login_attempt" -le "$max_login_attempts" ]; do
+
                                 echo "Docker Hub login attempt $login_attempt/$max_login_attempts"
 
                                 if printf '%s' "$DOCKER_PASSWORD" |
                                     docker login \
                                         --username "$DOCKER_USERNAME" \
                                         --password-stdin; then
+
                                     echo "Docker Hub login successful."
                                     break
                                 fi
@@ -249,7 +275,9 @@ timestamps {
                                 fi
 
                                 delay=$((10 * (2 ** (login_attempt - 1))))
+
                                 echo "Docker Hub login failed. Retrying in $delay seconds..."
+
                                 sleep "$delay"
                                 login_attempt=$((login_attempt + 1))
                             done
@@ -260,6 +288,7 @@ timestamps {
                                 max_attempts=4
 
                                 while [ "$attempt" -le "$max_attempts" ]; do
+
                                     echo "Docker push attempt $attempt/$max_attempts: $image"
 
                                     if docker push "$image"; then
@@ -273,7 +302,9 @@ timestamps {
                                     fi
 
                                     delay=$((10 * (2 ** (attempt - 1))))
-                                    echo "Docker push failed for $image. Retrying in $delay seconds..."
+
+                                    echo "Docker push failed. Retrying in $delay seconds..."
+
                                     sleep "$delay"
                                     attempt=$((attempt + 1))
                                 done
@@ -308,8 +339,7 @@ timestamps {
 
                 // ==========================================
                 // MONITORING SERVER IMAGE RETENTION
-                // Policy: Current image only per service.
-                // Protect images referenced by containers.
+                // Current image only per service.
                 // ==========================================
 
                 stage('Monitoring Server Image Retention') {
@@ -386,44 +416,47 @@ timestamps {
 
                 // ==========================================
                 // DEPLOY APPLICATION
-                // Transfer Compose file and deploy.
-                // Preserve existing server .env settings.
+                // SSH PRIVATE KEY AUTHENTICATION
                 // ==========================================
 
                 stage('Deploy Application') {
+
                     withCredentials([
-                        usernamePassword(
+                        sshUserPrivateKey(
                             credentialsId: 'new-server-ssh',
-                            usernameVariable: 'SSH_USERNAME',
-                            passwordVariable: 'SSH_PASSWORD'
+                            keyFileVariable: 'SSH_KEY',
+                            usernameVariable: 'SSH_USERNAME'
                         )
                     ]) {
+
                         sh '''
                             set -eu
 
-                            command -v sshpass
-                            test -f docker-compose.yml
+                            command -v ssh
+                            command -v scp
 
-                            export SSHPASS="$SSH_PASSWORD"
-                            trap 'unset SSHPASS' EXIT
+                            test -f docker-compose.yml
 
                             echo "=========================================="
                             echo "TRANSFERRING DOCKER COMPOSE FILE"
                             echo "=========================================="
 
-                            sshpass -e scp \
-                                -o StrictHostKeyChecking=no \
-                                -o UserKnownHostsFile=/dev/null \
+                            scp -i "$SSH_KEY" \
+                                -o IdentitiesOnly=yes \
+                                -o BatchMode=yes \
+                                -o StrictHostKeyChecking=yes \
                                 docker-compose.yml \
                                 "$SSH_USERNAME@$DEPLOY_SERVER:$DEPLOY_PATH/docker-compose.yml"
 
                             echo "Compose file transferred successfully."
 
-                            sshpass -e ssh \
-                                -o StrictHostKeyChecking=no \
-                                -o UserKnownHostsFile=/dev/null \
+                            ssh -i "$SSH_KEY" \
+                                -o IdentitiesOnly=yes \
+                                -o BatchMode=yes \
+                                -o StrictHostKeyChecking=yes \
                                 "$SSH_USERNAME@$DEPLOY_SERVER" \
                                 "IMAGE_TAG='$IMAGE_TAG' APP_DIR='$DEPLOY_PATH' bash -s" <<'REMOTE_SCRIPT'
+
 set -eu
 
 echo "=========================================="
@@ -452,7 +485,8 @@ if [ ! -f "$COMPOSE_FILE" ]; then
     exit 1
 fi
 
-# Update only IMAGE_TAG and preserve all other settings.
+# Update only IMAGE_TAG and preserve other settings.
+
 if grep -q '^IMAGE_TAG=' .env; then
     sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
 else
@@ -467,6 +501,7 @@ echo "Checking API Gateway service..."
 
 if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
     grep -Fxq api-gateway; then
+
     echo "ERROR: api-gateway is missing from Compose configuration."
     exit 1
 fi
@@ -478,10 +513,12 @@ echo "OK: API Gateway found in Compose configuration."
 # ==========================================
 
 retry_docker_pull() {
+
     attempt=1
     max_attempts=4
 
     while [ "$attempt" -le "$max_attempts" ]; do
+
         echo "Docker Compose pull attempt $attempt/$max_attempts"
 
         if docker compose --env-file .env -f "$COMPOSE_FILE" pull; then
@@ -495,7 +532,9 @@ retry_docker_pull() {
         fi
 
         delay=$((10 * (2 ** (attempt - 1))))
+
         echo "Docker Compose pull failed. Retrying in $delay seconds..."
+
         sleep "$delay"
         attempt=$((attempt + 1))
     done
@@ -512,37 +551,37 @@ docker compose --env-file .env -f "$COMPOSE_FILE" up -d --remove-orphans
 echo "Deployment command completed."
 
 docker compose --env-file .env -f "$COMPOSE_FILE" ps
+
 REMOTE_SCRIPT
-                    '''
+                        '''
                     }
                 }
 
                 // ==========================================
                 // DEPLOYMENT VERIFICATION
-                // Verify all 13 API services and image tags.
+                // SSH PRIVATE KEY AUTHENTICATION
                 // ==========================================
 
                 stage('Deployment Verification') {
+
                     withCredentials([
-                        usernamePassword(
+                        sshUserPrivateKey(
                             credentialsId: 'new-server-ssh',
-                            usernameVariable: 'SSH_USER',
-                            passwordVariable: 'SSH_PASSWORD'
+                            keyFileVariable: 'SSH_KEY',
+                            usernameVariable: 'SSH_USER'
                         )
                     ]) {
+
                         sh '''
                             set -eu
 
-                            command -v sshpass
-
-                            export SSHPASS="$SSH_PASSWORD"
-                            trap 'unset SSHPASS' EXIT
-
-                            sshpass -e ssh \
-                                -o StrictHostKeyChecking=no \
-                                -o UserKnownHostsFile=/dev/null \
+                            ssh -i "$SSH_KEY" \
+                                -o IdentitiesOnly=yes \
+                                -o BatchMode=yes \
+                                -o StrictHostKeyChecking=yes \
                                 "$SSH_USER@$DEPLOY_SERVER" \
                                 "IMAGE_TAG='$IMAGE_TAG' APP_DIR='$DEPLOY_PATH' bash -s" <<'REMOTE'
+
 set -eu
 
 cd "$APP_DIR"
@@ -563,6 +602,7 @@ docker compose --env-file .env -f "$COMPOSE_FILE" config --quiet
 
 if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
     grep -Fxq api-gateway; then
+
     echo "ERROR: api-gateway missing from Compose configuration."
     exit 1
 fi
@@ -624,11 +664,13 @@ for service in $SERVICES; do
     fi
 
     echo "OK: $service is running with ${IMAGE_TAG}"
+
 done
 
 echo "=========================================="
 echo "All 13 API services passed verification."
 echo "=========================================="
+
 REMOTE
                         '''
                     }
@@ -636,32 +678,30 @@ REMOTE
 
                 // ==========================================
                 // APPLICATION SERVER IMAGE RETENTION
-                // Policy: Current + 2 newest other images.
-                // All branch names are considered.
-                // Protect images referenced by containers.
+                // Current + 2 newest other images.
+                // SSH PRIVATE KEY AUTHENTICATION
                 // ==========================================
 
                 stage('App Server Image Retention') {
+
                     withCredentials([
-                        usernamePassword(
+                        sshUserPrivateKey(
                             credentialsId: 'new-server-ssh',
-                            usernameVariable: 'SSH_USER',
-                            passwordVariable: 'SSH_PASSWORD'
+                            keyFileVariable: 'SSH_KEY',
+                            usernameVariable: 'SSH_USER'
                         )
                     ]) {
+
                         sh '''
                             set -eu
 
-                            command -v sshpass
-
-                            export SSHPASS="$SSH_PASSWORD"
-                            trap 'unset SSHPASS' EXIT
-
-                            sshpass -e ssh \
-                                -o StrictHostKeyChecking=no \
-                                -o UserKnownHostsFile=/dev/null \
+                            ssh -i "$SSH_KEY" \
+                                -o IdentitiesOnly=yes \
+                                -o BatchMode=yes \
+                                -o StrictHostKeyChecking=yes \
                                 "$SSH_USER@$DEPLOY_SERVER" \
                                 "IMAGE_TAG='$IMAGE_TAG' APP_DIR='$DEPLOY_PATH' bash -s" <<'REMOTE'
+
 set -euo pipefail
 
 cd "$APP_DIR"
@@ -704,9 +744,11 @@ for service in "${SERVICES[@]}"; do
     echo "KEEP: $current (current deployment)"
 
     # Collect every tag regardless of branch name.
-    # Sort all images by their Docker creation timestamp.
+    # Sort images by Docker creation timestamp.
+
     mapfile -t TAGS < <(
         while IFS= read -r tag; do
+
             [ -n "$tag" ] || continue
 
             created=$(docker image inspect \
@@ -728,19 +770,23 @@ for service in "${SERVICES[@]}"; do
 
         image="${repo}:${tag}"
 
-        # Current deployment is always retained.
         if [ "$image" = "$current" ]; then
             continue
         fi
 
-        # Keep the two newest other images.
+        # Keep two newest other images.
+
         if [ "$previous_kept" -lt 2 ]; then
+
             previous_kept=$((previous_kept + 1))
+
             echo "KEEP: $image (recent image ${previous_kept} of 2)"
+
             continue
         fi
 
-        # Protect images used by running or stopped containers.
+        # Protect images referenced by containers.
+
         if docker ps -a \
             --filter "ancestor=$image" \
             --format '{{.ID}}' |
@@ -754,6 +800,7 @@ for service in "${SERVICES[@]}"; do
 
         docker image rm "$image" ||
             echo "WARNING: Could not remove $image"
+
     done
 
     echo "Completed: $repo"
@@ -764,12 +811,17 @@ echo ""
 echo "=========================================="
 echo "APPLICATION SERVER IMAGE RETENTION DONE"
 echo "=========================================="
+
 REMOTE
                         '''
                     }
                 }
 
             } else {
+
+                // ==========================================
+                // NON-DEV BRANCH
+                // ==========================================
 
                 echo '=========================================='
                 echo 'NON-DEV BRANCH'
@@ -784,6 +836,10 @@ REMOTE
                 echo '=========================================='
             }
 
+            // ==========================================
+            // PIPELINE SUCCESS
+            // ==========================================
+
             echo '=========================================='
             echo 'AYURVEDAA API PIPELINE SUCCESS'
             echo "Branch    : ${branchName}"
@@ -792,6 +848,10 @@ REMOTE
             echo '=========================================='
 
         } catch (err) {
+
+            // ==========================================
+            // PIPELINE FAILURE
+            // ==========================================
 
             echo '=========================================='
             echo 'AYURVEDAA API PIPELINE FAILED'
