@@ -144,9 +144,6 @@ public final class AppConstants {
     public static final String BAD_REQUEST =
             "Bad request.";
 
-    public static final String INTERNAL_SERVER_ERROR =
-            "Internal server error.";
-
     public static final String VALIDATION_FAILED =
             "Validation failed.";
 

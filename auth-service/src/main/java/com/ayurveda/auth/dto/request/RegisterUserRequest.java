@@ -35,7 +35,7 @@ public class RegisterUserRequest {
     @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)
     private String email;
 
-    @NotBlank(message = "Password is required")
+    /** Required for all roles except DOCTOR, which sets its password from the welcome email link. */
     @Size(min = 8, max = 100)
     private String password;
 

@@ -14,7 +14,6 @@ import com.ayurveda.medicine.dto.request.CreateMedicineRequest;
 import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
 import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.entity.Medicine;
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 
@@ -31,7 +30,7 @@ class MedicineMapperTest {
     void toEntity_appliesDefaultsAndStockStatus() {
         CreateMedicineRequest request = CreateMedicineRequest.builder()
                 .medicineName(" Ashwagandha ")
-                .category(MedicineCategory.POWDER)
+                .category("POWDER")
                 .manufacturer(" Ayur Co ")
                 .batchNumber(" B1 ")
                 .quantity(5)
@@ -56,7 +55,7 @@ class MedicineMapperTest {
     void updateEntity_updatesFieldsAndStatus() {
         Medicine medicine = Medicine.builder()
                 .medicineName("Old")
-                .category(MedicineCategory.TABLET)
+                .category("TABLET")
                 .manufacturer("OldCo")
                 .batchNumber("OLD")
                 .quantity(100)
@@ -67,7 +66,7 @@ class MedicineMapperTest {
 
         UpdateMedicineRequest request = UpdateMedicineRequest.builder()
                 .medicineName("New")
-                .category(MedicineCategory.SYRUP)
+                .category("SYRUP")
                 .manufacturer("NewCo")
                 .batchNumber("NEW")
                 .quantity(0)
@@ -81,7 +80,7 @@ class MedicineMapperTest {
         mapper.updateEntity(medicine, request, 20);
 
         assertEquals("New", medicine.getMedicineName());
-        assertEquals(MedicineCategory.SYRUP, medicine.getCategory());
+        assertEquals("SYRUP", medicine.getCategory());
         assertEquals(MedicineStockStatus.OUT_OF_STOCK, medicine.getStockStatus());
         assertEquals(MedicineStatus.INACTIVE, medicine.getStatus());
         assertFalse(medicine.getLowStockAlertEnabled());
@@ -91,7 +90,7 @@ class MedicineMapperTest {
     void toResponse_mapsCoreFields() {
         Medicine medicine = Medicine.builder()
                 .medicineName("Triphala")
-                .category(MedicineCategory.TABLET)
+                .category("TABLET")
                 .manufacturer("Herb")
                 .batchNumber("T1")
                 .quantity(50)

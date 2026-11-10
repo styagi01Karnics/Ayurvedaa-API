@@ -13,7 +13,6 @@ import com.ayurveda.medicine.dto.response.DashboardMedicineStockResponse;
 import com.ayurveda.medicine.dto.response.MedicineNameResponse;
 import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.dto.response.StockSummaryResponse;
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 
 public interface MedicineService {
@@ -26,14 +25,14 @@ public interface MedicineService {
 
     ApiResponse<PagedResponse<MedicineResponse>> getMedicines(
             String medicineName,
-            MedicineCategory category,
+            String category,
             MedicineStockStatus stockStatus,
             int page,
             int size);
 
     ApiResponse<Void> deleteMedicine(UUID medicineId);
 
-    ApiResponse<List<MedicineCategory>> getCategories();
+    ApiResponse<List<String>> getCategories();
 
     ApiResponse<List<String>> getManufacturers();
 
@@ -41,7 +40,7 @@ public interface MedicineService {
 
     ApiResponse<StockSummaryResponse> getStockSummary();
 
-    ApiResponse<CategoryStockCountResponse> getStockCountByCategory(MedicineCategory category);
+    ApiResponse<CategoryStockCountResponse> getStockCountByCategory(String category);
 
     ApiResponse<PagedResponse<MedicineResponse>> getLowStockMedicines(int page, int size);
 

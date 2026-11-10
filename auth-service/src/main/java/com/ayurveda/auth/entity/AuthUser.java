@@ -46,7 +46,8 @@ public class AuthUser extends BaseEntity {
     @Column(length = 20)
     private String mobileNumber;
 
-    @Column(nullable = false, length = 255)
+    /** Null until the user sets a password through the reset-password link (doctors). */
+    @Column(length = 255)
     private String passwordHash;
 
     /** System authority used by Spring Security (SUPER_ADMIN, ADMIN, DOCTOR, …). */

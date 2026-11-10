@@ -20,7 +20,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateNotificationRequest {
 
-    @NotNull(message = "Recipient user id is required")
     private UUID recipientUserId;
 
     @Size(max = 150)

@@ -28,6 +28,7 @@ public final class AuthMessages {
             "If an account exists, a password reset email has been sent.";
     public static final String PASSWORD_RESET_SUCCESSFUL = "Password reset successful.";
     public static final String USER_REGISTERED_SUCCESSFULLY = "User registered successfully.";
+    public static final String PASSWORD_REQUIRED_FOR_USER = "Password is required for this user role.";
     public static final String HOSPITAL_PROFILE_UPDATED = "Hospital profile updated successfully.";
 
     public static final String TENANT_CODE_ALREADY_EXISTS = "Tenant code already exists: ";

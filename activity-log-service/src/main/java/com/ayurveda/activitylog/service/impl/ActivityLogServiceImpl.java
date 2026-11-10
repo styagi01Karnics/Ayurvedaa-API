@@ -18,6 +18,7 @@ import com.ayurveda.activitylog.repository.ActivityLogRepository;
 import com.ayurveda.activitylog.service.ActivityLogService;
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.ResourceNotFoundException;
+import com.ayurveda.common.tenant.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,11 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         ActivityLog entity = activityLogMapper.toEntity(request);
         if (entity.getActivityTimestamp() == null) {
             entity.setActivityTimestamp(LocalDateTime.now());
+        }
+        if (TenantContext.getUserId() != null) {
+            entity.setPerformedByUserId(TenantContext.getUserId());
+            entity.setPerformedByRole(TenantContext.getRole());
+            entity.setPerformedByUserName(TenantContext.getUserName());
         }
 
         ActivityLog saved = activityLogRepository.save(entity);

@@ -25,6 +25,15 @@ public final class NotificationMessages {
     public static final String NOTIFICATION_NOT_FOUND_WITH_ID =
             "Notification not found with id: ";
 
+    public static final String RECIPIENT_USER_OR_ROLE_REQUIRED =
+            "Either recipient user id or recipient role is required";
+
+    public static final String USER_ID_REQUIRED_FOR_ROLE_NOTIFICATION =
+            "User id is required to mark a role notification as read";
+
+    public static final String MESSAGE_HISTORY_FETCHED_SUCCESSFULLY =
+            "Message history fetched successfully.";
+
     public static final String DEVICE_TOKEN_REGISTERED = "Device token registered successfully.";
     public static final String DEVICE_TOKEN_REMOVED = "Device token removed successfully.";
 

@@ -1,6 +1,5 @@
 package com.ayurveda.medicine.service.impl;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,11 +26,11 @@ import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.dto.response.StockStatusBreakdownResponse;
 import com.ayurveda.medicine.dto.response.StockSummaryResponse;
 import com.ayurveda.medicine.entity.Medicine;
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 import com.ayurveda.medicine.mapper.MedicineMapper;
 import com.ayurveda.medicine.repository.MedicineRepository;
+import com.ayurveda.medicine.service.MedicineCategoryService;
 import com.ayurveda.medicine.service.MedicineService;
 import com.ayurveda.medicine.util.MedicineStatusResolver;
 
@@ -44,8 +43,13 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional
 public class MedicineServiceImpl implements MedicineService {
 
+    private static final String TABLET_CATEGORY = "TABLET";
+    private static final String SYRUP_CATEGORY = "SYRUP";
+    private static final String POWDER_CATEGORY = "POWDER";
+
     private final MedicineRepository medicineRepository;
     private final MedicineMapper medicineMapper;
+    private final MedicineCategoryService medicineCategoryService;
     private final ActivityLogPublisher activityLogPublisher;
 
     @Value("${medicine.low-stock-threshold-default:20}")
@@ -54,6 +58,8 @@ public class MedicineServiceImpl implements MedicineService {
     @Override
     public ApiResponse<List<MedicineResponse>> createMedicines(List<CreateMedicineRequest> requests) {
         log.info("Creating {} medicine inventory record(s)", requests.size());
+
+        requests.forEach(item -> medicineCategoryService.assertActiveCode(item.getCategory()));
 
         List<Medicine> medicines = requests.stream()
                 .map(item -> medicineMapper.toEntity(item, defaultLowStockThreshold))
@@ -80,6 +86,8 @@ public class MedicineServiceImpl implements MedicineService {
         log.info("Updating medicine. Medicine ID: {}", medicineId);
 
         Medicine medicine = findActive(medicineId);
+        String beforeSummary = summarizeForActivityLog(medicine);
+        medicineCategoryService.assertActiveCode(request.getCategory());
         medicineMapper.updateEntity(medicine, request, defaultLowStockThreshold);
         Medicine saved = medicineRepository.save(medicine);
 
@@ -88,7 +96,9 @@ public class MedicineServiceImpl implements MedicineService {
         activityLogPublisher.record(
                 "Medicines",
                 ActivityActionType.UPDATED,
-                "Medicine " + saved.getMedicineName());
+                "Medicine " + saved.getMedicineName(),
+                beforeSummary,
+                summarizeForActivityLog(saved));
 
         return ApiResponse.success(
                 MedicineMessages.MEDICINE_UPDATED_SUCCESSFULLY, medicineMapper.toResponse(saved));
@@ -110,7 +120,7 @@ public class MedicineServiceImpl implements MedicineService {
     @Transactional(readOnly = true)
     public ApiResponse<PagedResponse<MedicineResponse>> getMedicines(
             String medicineName,
-            MedicineCategory category,
+            String category,
             MedicineStockStatus stockStatus,
             int page,
             int size) {
@@ -153,12 +163,19 @@ public class MedicineServiceImpl implements MedicineService {
         return ApiResponse.success(MedicineMessages.MEDICINE_DELETED_SUCCESSFULLY, null);
     }
 
+    private static String summarizeForActivityLog(Medicine medicine) {
+        return "Name: " + medicine.getMedicineName()
+                + ", Category: " + medicine.getCategory()
+                + ", Quantity: " + medicine.getQuantity()
+                + ", Selling price: " + medicine.getSellingPrice();
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<MedicineCategory>> getCategories() {
+    public ApiResponse<List<String>> getCategories() {
         log.info("Fetching medicine categories");
 
-        List<MedicineCategory> categories = Arrays.asList(MedicineCategory.values());
+        List<String> categories = medicineCategoryService.getActiveCategoryCodes();
 
         log.info("Successfully fetched {} medicine categories", categories.size());
 
@@ -199,7 +216,7 @@ public class MedicineServiceImpl implements MedicineService {
     public ApiResponse<StockSummaryResponse> getStockSummary() {
         log.info("Fetching stock summary");
 
-        List<CategoryStockCountResponse> byCategory = Arrays.stream(MedicineCategory.values())
+        List<CategoryStockCountResponse> byCategory = medicineCategoryService.getActiveCategoryCodes().stream()
                 .map(category -> CategoryStockCountResponse.builder()
                         .category(category)
                         .totalStock(medicineRepository.sumStockByCategory(category))
@@ -219,7 +236,7 @@ public class MedicineServiceImpl implements MedicineService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<CategoryStockCountResponse> getStockCountByCategory(MedicineCategory category) {
+    public ApiResponse<CategoryStockCountResponse> getStockCountByCategory(String category) {
         log.info("Fetching stock count for category: {}", category);
 
         CategoryStockCountResponse response = CategoryStockCountResponse.builder()
@@ -269,9 +286,9 @@ public class MedicineServiceImpl implements MedicineService {
 
         DashboardMedicineStockResponse response = DashboardMedicineStockResponse.builder()
                 .totalStock(medicineRepository.sumTotalStock())
-                .tablets(medicineRepository.sumStockByCategory(MedicineCategory.TABLET))
-                .syrups(medicineRepository.sumStockByCategory(MedicineCategory.SYRUP))
-                .powder(medicineRepository.sumStockByCategory(MedicineCategory.POWDER))
+                .tablets(medicineRepository.sumStockByCategory(TABLET_CATEGORY))
+                .syrups(medicineRepository.sumStockByCategory(SYRUP_CATEGORY))
+                .powder(medicineRepository.sumStockByCategory(POWDER_CATEGORY))
                 .statusBreakdown(StockStatusBreakdownResponse.builder()
                         .inStock(medicineRepository.countByStockStatusAndDeletedFalse(MedicineStockStatus.IN_STOCK))
                         .outOfStock(medicineRepository.countByStockStatusAndDeletedFalse(MedicineStockStatus.OUT_OF_STOCK))

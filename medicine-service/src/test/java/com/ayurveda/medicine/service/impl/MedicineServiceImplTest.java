@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,11 +34,11 @@ import com.ayurveda.medicine.dto.request.UpdateMedicineRequest;
 import com.ayurveda.medicine.dto.response.MedicineNameResponse;
 import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.entity.Medicine;
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStatus;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 import com.ayurveda.medicine.mapper.MedicineMapper;
 import com.ayurveda.medicine.repository.MedicineRepository;
+import com.ayurveda.medicine.service.MedicineCategoryService;
 
 @ExtendWith(MockitoExtension.class)
 class MedicineServiceImplTest {
@@ -46,6 +48,9 @@ class MedicineServiceImplTest {
 
     @Mock
     private MedicineMapper medicineMapper;
+
+    @Mock
+    private MedicineCategoryService medicineCategoryService;
 
     @Mock
     private ActivityLogPublisher activityLogPublisher;
@@ -63,7 +68,7 @@ class MedicineServiceImplTest {
         medicineId = UUID.randomUUID();
         medicine = Medicine.builder()
                 .medicineName("Ashwagandha")
-                .category(MedicineCategory.POWDER)
+                .category("POWDER")
                 .quantity(50)
                 .lowStockThreshold(20)
                 .status(MedicineStatus.ACTIVE)
@@ -81,7 +86,7 @@ class MedicineServiceImplTest {
     void createMedicines_savesAndReturnsResponses() {
         CreateMedicineRequest request = CreateMedicineRequest.builder()
                 .medicineName("Ashwagandha")
-                .category(MedicineCategory.POWDER)
+                .category("POWDER")
                 .manufacturer("Ayur")
                 .batchNumber("B1")
                 .quantity(50)
@@ -177,7 +182,7 @@ class MedicineServiceImplTest {
     void updateMedicine_updatesExisting() {
         UpdateMedicineRequest request = UpdateMedicineRequest.builder()
                 .medicineName("Updated")
-                .category(MedicineCategory.TABLET)
+                .category("TABLET")
                 .manufacturer("M")
                 .batchNumber("B")
                 .quantity(10)
@@ -197,8 +202,26 @@ class MedicineServiceImplTest {
     }
 
     @Test
-    void getCategories_returnsAll() {
-        assertEquals(MedicineCategory.values().length, medicineService.getCategories().getData().size());
+    void updateMedicine_invalidCategory_throwsAndDoesNotSave() {
+        UpdateMedicineRequest request = UpdateMedicineRequest.builder()
+                .medicineName("Updated")
+                .category("UNKNOWN")
+                .build();
+
+        when(medicineRepository.findByIdAndDeletedFalse(medicineId)).thenReturn(Optional.of(medicine));
+        doThrow(new BadRequestException("invalid")).when(medicineCategoryService).assertActiveCode("UNKNOWN");
+
+        assertThrows(BadRequestException.class, () -> medicineService.updateMedicine(medicineId, request));
+        verify(medicineRepository, never()).save(any(Medicine.class));
+    }
+
+    @Test
+    void getCategories_returnsActiveMasterCodes() {
+        when(medicineCategoryService.getActiveCategoryCodes()).thenReturn(List.of("TABLET", "SYRUP", "POWDER", "DROPS"));
+
+        List<String> categories = medicineService.getCategories().getData();
+
+        assertEquals(List.of("TABLET", "SYRUP", "POWDER", "DROPS"), categories);
     }
 
     @Test

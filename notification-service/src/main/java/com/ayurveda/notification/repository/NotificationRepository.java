@@ -16,20 +16,19 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     Optional<Notification> findByIdAndDeletedFalse(UUID id);
 
+    /** Notifications addressed to the user, plus role-wide notifications for the user's role. */
     @Query("""
             SELECT n FROM Notification n
             WHERE n.deleted = false
-              AND n.recipientUserId = :userId
-              AND (:unreadOnly = false OR n.read = false)
+              AND (n.recipientUserId = :userId
+                   OR (n.recipientUserId IS NULL AND UPPER(n.recipientRole) = UPPER(:roleId)))
               AND (:type IS NULL OR n.type = :type)
             ORDER BY n.createdAt DESC
             """)
-    List<Notification> findForUser(
+    List<Notification> findForRecipient(
             @Param("userId") UUID userId,
-            @Param("unreadOnly") boolean unreadOnly,
+            @Param("roleId") String roleId,
             @Param("type") NotificationType type);
-
-    long countByRecipientUserIdAndReadFalseAndDeletedFalse(UUID recipientUserId);
 
     @Modifying
     @Query("""

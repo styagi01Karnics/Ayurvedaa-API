@@ -11,24 +11,24 @@ import com.ayurveda.notification.enums.NotificationType;
 
 public interface NotificationService {
 
-    /** Creates a new notification for a recipient user. */
+    /** Creates a notification for a user and/or a role. */
     ApiResponse<NotificationResponse> createNotification(CreateNotificationRequest request);
 
-    /** Lists notifications for a user, optionally filtered by unread and type. */
+    /** Lists notifications for a user and their role, optionally filtered by unread and type. */
     ApiResponse<List<NotificationResponse>> getNotifications(
-            UUID userId, Boolean unreadOnly, NotificationType type);
+            UUID userId, String roleId, Boolean unreadOnly, NotificationType type);
 
     /** Returns a single active notification by ID. */
     ApiResponse<NotificationResponse> getNotificationById(UUID notificationId);
 
-    /** Marks a notification as read. */
-    ApiResponse<NotificationResponse> markAsRead(UUID notificationId);
+    /** Marks a notification as read for the given user (role-wide notifications are tracked per user). */
+    ApiResponse<NotificationResponse> markAsRead(UUID notificationId, UUID userId, String roleId);
 
-    /** Marks all unread notifications as read for the given user. */
-    ApiResponse<Void> markAllAsRead(UUID userId);
+    /** Marks all unread notifications visible to the user (by user ID and role) as read. */
+    ApiResponse<Void> markAllAsRead(UUID userId, String roleId);
 
-    /** Returns the unread notification count for a user. */
-    ApiResponse<UnreadCountResponse> getUnreadCount(UUID userId);
+    /** Returns the unread notification count for a user and their role. */
+    ApiResponse<UnreadCountResponse> getUnreadCount(UUID userId, String roleId);
 
     /** Soft-deletes a notification by ID. */
     ApiResponse<Void> deleteNotification(UUID notificationId);

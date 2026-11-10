@@ -127,7 +127,7 @@ public class AuthServiceImpl implements AuthService {
             throw new ForbiddenException(AuthMessages.USER_ACCOUNT_NOT_ACTIVE_WITH_STATUS + user.getStatus());
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        if (!passwordMatches(request.getPassword(), user.getPasswordHash())) {
             throw new UnauthorizedException(AuthMessages.INVALID_CREDENTIALS);
         }
 
@@ -272,12 +272,17 @@ public class AuthServiceImpl implements AuthService {
         TenantRole tenantRole = resolveTenantRoleForRegistration(tenant, request.getTenantRoleId());
         UserRole role = userRoleFromTenantRole(tenantRole);
 
+        boolean hasPassword = StringUtils.hasText(request.getPassword());
+        if (!hasPassword && role != UserRole.DOCTOR) {
+            throw new BadRequestException(AuthMessages.PASSWORD_REQUIRED_FOR_USER);
+        }
+
         AuthUser user = AuthUser.builder()
                 .tenant(tenant)
                 .email(email)
                 .fullName(request.getFullName().trim())
                 .mobileNumber(request.getMobileNumber().trim())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .passwordHash(hasPassword ? passwordEncoder.encode(request.getPassword()) : null)
                 .role(role)
                 .tenantRole(tenantRole)
                 .status(UserStatus.ACTIVE)
@@ -472,7 +477,7 @@ public class AuthServiceImpl implements AuthService {
         AuthUser user = authUserRepository.findByIdAndDeletedFalse(principal.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND));
 
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+        if (!passwordMatches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new BadRequestException(AuthMessages.CURRENT_PASSWORD_INCORRECT);
         }
 
@@ -654,7 +659,7 @@ public class AuthServiceImpl implements AuthService {
         List<AuthUser> candidates = authUserRepository.findAllByEmailIgnoreCaseAndDeletedFalse(loginId).stream()
                 .filter(u -> u.getRole() != UserRole.SUPER_ADMIN)
                 .filter(u -> u.getTenant() != null && !Boolean.TRUE.equals(u.getTenant().getPlatform()))
-                .filter(u -> passwordEncoder.matches(password, u.getPasswordHash()))
+                .filter(u -> passwordMatches(password, u.getPasswordHash()))
                 .toList();
 
         if (candidates.isEmpty()) {
@@ -741,6 +746,11 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException(AuthMessages.HOSPITAL_LOGIN_CANNOT_USE_PLATFORM_TENANT);
         }
         return tenant;
+    }
+
+    /** Users created without a password (doctors) have a null hash and cannot log in until they set one. */
+    private boolean passwordMatches(String rawPassword, String passwordHash) {
+        return passwordHash != null && passwordEncoder.matches(rawPassword, passwordHash);
     }
 
     private String hashToken(String rawToken) {

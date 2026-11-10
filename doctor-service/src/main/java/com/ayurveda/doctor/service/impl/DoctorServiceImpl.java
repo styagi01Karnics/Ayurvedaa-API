@@ -58,6 +58,7 @@ public class DoctorServiceImpl implements DoctorService {
                 .doctorName(request.getName().trim())
                 .doctorCode(doctorCodeGenerator.generate())
                 .mobileNumber(request.getMobileNumber().trim())
+                .email(request.getEmail().trim().toLowerCase())
                 .specialization(request.getSpecialization().trim())
                 .status(status)
                 .consultationFees(request.getConsultationFees())
@@ -97,7 +98,6 @@ public class DoctorServiceImpl implements DoctorService {
         AuthUserClientRequest authRequest = AuthUserClientRequest.builder()
                 .fullName(request.getName().trim())
                 .email(request.getEmail().trim().toLowerCase())
-                .password(request.getPassword())
                 .mobileNumber(request.getMobileNumber().trim())
                 .tenantRoleId(doctorRole.getId())
                 .build();

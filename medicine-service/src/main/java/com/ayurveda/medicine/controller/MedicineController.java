@@ -8,7 +8,6 @@ import com.ayurveda.medicine.dto.response.CategoryStockCountResponse;
 import com.ayurveda.medicine.dto.response.MedicineNameResponse;
 import com.ayurveda.medicine.dto.response.MedicineResponse;
 import com.ayurveda.medicine.dto.response.StockSummaryResponse;
-import com.ayurveda.medicine.enums.MedicineCategory;
 import com.ayurveda.medicine.enums.MedicineStockStatus;
 import com.ayurveda.medicine.service.MedicineService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -68,7 +67,7 @@ public class MedicineController {
     @GetMapping
     public ResponseEntity<?> getMedicines(
             @RequestParam(required = false) String medicineName,
-            @RequestParam(required = false) MedicineCategory category,
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) MedicineStockStatus stockStatus,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -98,7 +97,7 @@ public class MedicineController {
     @Operation(summary = "Total stock count for a category")
     @GetMapping("/stock/category/{category}")
     public ResponseEntity<ApiResponse<CategoryStockCountResponse>> getStockCountByCategory(
-            @PathVariable MedicineCategory category) {
+            @PathVariable String category) {
 
         return ResponseEntity.ok(medicineService.getStockCountByCategory(category));
     }
@@ -128,7 +127,7 @@ public class MedicineController {
 
     @Operation(summary = "List medicine categories (dropdown)")
     @GetMapping("/meta/categories")
-    public ResponseEntity<ApiResponse<List<MedicineCategory>>> getCategories() {
+    public ResponseEntity<ApiResponse<List<String>>> getCategories() {
         return ResponseEntity.ok(medicineService.getCategories());
     }
 

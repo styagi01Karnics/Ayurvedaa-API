@@ -67,16 +67,19 @@ public class NotificationController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<NotificationResponse>>> getNotifications(
             @RequestParam UUID userId,
+            @RequestParam(required = false) String roleId,
             @RequestParam(required = false) Boolean unreadOnly,
             @RequestParam(required = false) NotificationType type) {
 
-        return ResponseEntity.ok(notificationService.getNotifications(userId, unreadOnly, type));
+        return ResponseEntity.ok(notificationService.getNotifications(userId, roleId, unreadOnly, type));
     }
 
-    @Operation(summary = "Unread notification count")
+    @Operation(summary = "Unread notification count for a user and/or role")
     @GetMapping("/unread-count")
-    public ResponseEntity<ApiResponse<UnreadCountResponse>> getUnreadCount(@RequestParam UUID userId) {
-        return ResponseEntity.ok(notificationService.getUnreadCount(userId));
+    public ResponseEntity<ApiResponse<UnreadCountResponse>> getUnreadCount(
+            @RequestParam UUID userId,
+            @RequestParam(required = false) String roleId) {
+        return ResponseEntity.ok(notificationService.getUnreadCount(userId, roleId));
     }
 
     @Operation(summary = "Get notification by id")
@@ -90,15 +93,19 @@ public class NotificationController {
     @Operation(summary = "Mark notification as read")
     @PutMapping("/{notificationId}/read")
     public ResponseEntity<ApiResponse<NotificationResponse>> markAsRead(
-            @PathVariable UUID notificationId) {
+            @PathVariable UUID notificationId,
+            @RequestParam(required = false) UUID userId,
+            @RequestParam(required = false) String roleId) {
 
-        return ResponseEntity.ok(notificationService.markAsRead(notificationId));
+        return ResponseEntity.ok(notificationService.markAsRead(notificationId, userId, roleId));
     }
 
-    @Operation(summary = "Mark all notifications as read for a user")
+    @Operation(summary = "Mark all notifications as read for a user and/or role")
     @PutMapping("/read-all")
-    public ResponseEntity<ApiResponse<Void>> markAllAsRead(@RequestParam UUID userId) {
-        return ResponseEntity.ok(notificationService.markAllAsRead(userId));
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(
+            @RequestParam UUID userId,
+            @RequestParam(required = false) String roleId) {
+        return ResponseEntity.ok(notificationService.markAllAsRead(userId, roleId));
     }
 
     @Operation(summary = "Soft delete notification")

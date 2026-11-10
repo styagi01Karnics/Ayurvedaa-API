@@ -64,9 +64,13 @@ Accepts a **single** object, a **JSON array**, or `{ "medicines": [ … ] }`. Re
 | PUT | `/{medicineId}` | `UpdateMedicineRequest` (same fields as create + status) |
 | GET | `/` | Query `medicineName?`, `category?`, `stockStatus?` |
 | GET | `/stock/summary` | Totals by category |
-| GET | `/stock/category/{category}` | Path `MedicineCategory` |
+| GET | `/stock/category/{category}` | Path category code (master code, e.g. `SYRUP`) |
 | GET | `/low-stock` | Below threshold |
-| GET | `/meta/categories` | Category enum list |
+| GET | `/meta/categories` | Active category codes from the master |
+| GET | `/categories` (under `/api/v1/medicines`) | Category master list |
+| POST | `/categories` | Create master code `{ code, name }` |
+| PUT | `/categories/{categoryId}` | Update `{ name, active }` |
+| DELETE | `/categories/{categoryId}` | Soft delete; blocked while in use |
 | GET | `/meta/manufacturers` | Distinct manufacturer names |
 | GET | `/meta/names` | `{ id, medicineName }` dropdown |
 | GET | `/{medicineId}` | By id |
