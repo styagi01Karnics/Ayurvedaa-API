@@ -400,119 +400,119 @@ timestamps {
                     ]) {
                         sh '''
                             set -eu
-
+                
                             command -v sshpass
                             test -f docker-compose.yml
-
+                
                             export SSHPASS="$SSH_PASSWORD"
                             trap 'unset SSHPASS' EXIT
-
+                
                             echo "=========================================="
                             echo "TRANSFERRING DOCKER COMPOSE FILE"
                             echo "=========================================="
-
+                
                             sshpass -e scp \
                                 -o StrictHostKeyChecking=no \
                                 -o UserKnownHostsFile=/dev/null \
                                 docker-compose.yml \
                                 "$SSH_USERNAME@$DEPLOY_SERVER:$DEPLOY_PATH/docker-compose.yml"
-
+                
                             echo "Compose file transferred successfully."
-
+                
                             sshpass -e ssh \
                                 -o StrictHostKeyChecking=no \
                                 -o UserKnownHostsFile=/dev/null \
                                 "$SSH_USERNAME@$DEPLOY_SERVER" \
                                 "IMAGE_TAG='$IMAGE_TAG' APP_DIR='$DEPLOY_PATH' bash -s" <<'REMOTE_SCRIPT'
-set -eu
-
-echo "=========================================="
-echo "AYURVEDAA API DEPLOYMENT"
-echo "Image Tag: ${IMAGE_TAG}"
-echo "=========================================="
-
-exec 9>/var/lock/ayurvedaa-api-deployment.lock
-
-flock -n 9 || {
-    echo "ERROR: Another deployment is already running."
-    exit 1
-}
-
-cd "$APP_DIR"
-
-if [ ! -f .env ]; then
-    echo "ERROR: Server .env file not found."
-    exit 1
-fi
-
-COMPOSE_FILE="docker-compose.yml"
-
-if [ ! -f "$COMPOSE_FILE" ]; then
-    echo "ERROR: Docker Compose file not found."
-    exit 1
-fi
-
-# Update only IMAGE_TAG and preserve all other settings.
-if grep -q '^IMAGE_TAG=' .env; then
-    sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
-else
-    printf '\\nIMAGE_TAG=%s\\n' "$IMAGE_TAG" >> .env
-fi
-
-echo "Validating Compose configuration..."
-
-docker compose --env-file .env -f "$COMPOSE_FILE" config --quiet
-
-echo "Checking API Gateway service..."
-
-if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
-    grep -Fxq api-gateway; then
-    echo "ERROR: api-gateway is missing from Compose configuration."
-    exit 1
-fi
-
-echo "OK: API Gateway found in Compose configuration."
-
-// ==========================================
-// DOCKER PULL WITH AUTOMATIC RETRY
-// ==========================================
-
-retry_docker_pull() {
-    attempt=1
-    max_attempts=4
-
-    while [ "$attempt" -le "$max_attempts" ]; do
-        echo "Docker Compose pull attempt $attempt/$max_attempts"
-
-        if docker compose --env-file .env -f "$COMPOSE_FILE" pull; then
-            echo "All Docker Compose images pulled successfully."
-            return 0
-        fi
-
-        if [ "$attempt" -eq "$max_attempts" ]; then
-            echo "ERROR: Docker Compose image pull failed after $max_attempts attempts."
-            return 1
-        fi
-
-        delay=$((10 * (2 ** (attempt - 1))))
-        echo "Docker Compose pull failed. Retrying in $delay seconds..."
-        sleep "$delay"
-        attempt=$((attempt + 1))
-    done
-}
-
-echo "Pulling updated images with automatic retry..."
-
-retry_docker_pull
-
-echo "Starting updated services..."
-
-docker compose --env-file .env -f "$COMPOSE_FILE" up -d --remove-orphans
-
-echo "Deployment command completed."
-
-docker compose --env-file .env -f "$COMPOSE_FILE" ps
-REMOTE_SCRIPT
+                set -eu
+                
+                echo "=========================================="
+                echo "AYURVEDAA API DEPLOYMENT"
+                echo "Image Tag: ${IMAGE_TAG}"
+                echo "=========================================="
+                
+                exec 9>/var/lock/ayurvedaa-api-deployment.lock
+                
+                flock -n 9 || {
+                    echo "ERROR: Another deployment is already running."
+                    exit 1
+                }
+                
+                cd "$APP_DIR"
+                
+                if [ ! -f .env ]; then
+                    echo "ERROR: Server .env file not found."
+                    exit 1
+                fi
+                
+                COMPOSE_FILE="docker-compose.yml"
+                
+                if [ ! -f "$COMPOSE_FILE" ]; then
+                    echo "ERROR: Docker Compose file not found."
+                    exit 1
+                fi
+                
+                # Update only IMAGE_TAG and preserve all other settings.
+                if grep -q '^IMAGE_TAG=' .env; then
+                    sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+                else
+                    printf '\\nIMAGE_TAG=%s\\n' "$IMAGE_TAG" >> .env
+                fi
+                
+                echo "Validating Compose configuration..."
+                
+                docker compose --env-file .env -f "$COMPOSE_FILE" config --quiet
+                
+                echo "Checking API Gateway service..."
+                
+                if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
+                    grep -Fxq api-gateway; then
+                    echo "ERROR: api-gateway is missing from Compose configuration."
+                    exit 1
+                fi
+                
+                echo "OK: API Gateway found in Compose configuration."
+                
+                # ==========================================
+                # DOCKER PULL WITH AUTOMATIC RETRY
+                # ==========================================
+                
+                retry_docker_pull() {
+                    attempt=1
+                    max_attempts=4
+                
+                    while [ "$attempt" -le "$max_attempts" ]; do
+                        echo "Docker Compose pull attempt $attempt/$max_attempts"
+                
+                        if docker compose --env-file .env -f "$COMPOSE_FILE" pull; then
+                            echo "All Docker Compose images pulled successfully."
+                            return 0
+                        fi
+                
+                        if [ "$attempt" -eq "$max_attempts" ]; then
+                            echo "ERROR: Docker Compose image pull failed after $max_attempts attempts."
+                            return 1
+                        fi
+                
+                        delay=$((10 * (2 ** (attempt - 1))))
+                        echo "Docker Compose pull failed. Retrying in $delay seconds..."
+                        sleep "$delay"
+                        attempt=$((attempt + 1))
+                    done
+                }
+                
+                echo "Pulling updated images with automatic retry..."
+                
+                retry_docker_pull
+                
+                echo "Starting updated services..."
+                
+                docker compose --env-file .env -f "$COMPOSE_FILE" up -d --remove-orphans
+                
+                echo "Deployment command completed."
+                
+                docker compose --env-file .env -f "$COMPOSE_FILE" ps
+                REMOTE_SCRIPT
                         '''
                     }
                 }
