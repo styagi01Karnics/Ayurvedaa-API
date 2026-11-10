@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.exception.BadRequestException;
+import com.ayurveda.common.tenant.TenantContext;
+import com.ayurveda.common.tenant.TenantSchemaNames;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.notification.constant.NotificationMessages;
 import com.ayurveda.notification.dto.request.CreateNotificationRequest;
@@ -38,6 +40,13 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationMapper notificationMapper;
     private final PushNotificationDispatcher pushNotificationDispatcher;
 
+    /**
+     * Platform super-admin tokens run on the public schema, which has no notification tables.
+     */
+    private boolean hasHospitalSchema() {
+        return TenantSchemaNames.isHospitalSchema(TenantContext.getSchemaName());
+    }
+
     @Override
     public ApiResponse<NotificationResponse> createNotification(CreateNotificationRequest request) {
         log.info("Creating {} notification for user {} / role {}",
@@ -60,6 +69,10 @@ public class NotificationServiceImpl implements NotificationService {
 
         log.info("Fetching notifications for userId={}, roleId={}, unreadOnly={}, type={}",
                 userId, roleId, unreadOnly, type);
+
+        if (!hasHospitalSchema()) {
+            return ApiResponse.success(NotificationMessages.NOTIFICATIONS_FETCHED_SUCCESSFULLY, List.of());
+        }
 
         boolean onlyUnread = Boolean.TRUE.equals(unreadOnly);
         Set<UUID> readRoleNotifications = notificationReadRepository.findReadNotificationIdsByUserId(userId);
@@ -150,6 +163,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional(readOnly = true)
     public ApiResponse<UnreadCountResponse> getUnreadCount(UUID userId, String roleId) {
         log.info("Fetching unread notification count for userId: {}, roleId: {}", userId, roleId);
+
+        if (!hasHospitalSchema()) {
+            return ApiResponse.success(
+                    NotificationMessages.UNREAD_COUNT_FETCHED_SUCCESSFULLY,
+                    UnreadCountResponse.builder().unreadCount(0L).build());
+        }
 
         Set<UUID> readIds = notificationReadRepository.findReadNotificationIdsByUserId(userId);
         long count = notificationRepository.findForRecipient(userId, roleId, null).stream()
