@@ -26,7 +26,7 @@ import lombok.Setter;
 @Table(name = "notifications")
 public class Notification extends BaseEntity {
 
-    @Column(nullable = false)
+    /** Null for role-wide notifications; those are addressed by recipientRole. */
     private UUID recipientUserId;
 
     @Column(length = 150)

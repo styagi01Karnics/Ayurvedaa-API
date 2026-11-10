@@ -19,6 +19,7 @@ import com.ayurveda.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -114,8 +115,12 @@ public class MedicalAssessmentServiceImpl implements MedicalAssessmentService {
         return ApiResponse.success(Constants.MEDICAL_ASSESSMENT_SAVED, responseBuilder.build());
     }
 
+    /**
+     * Runs without a shared transaction: each section is loaded in its own read transaction,
+     * so a section with no record cannot mark this read as rollback-only.
+     */
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.NOT_SUPPORTED)
     public ApiResponse<MedicalAssessmentResponse> getMedicalAssessmentByPatientId(UUID patientId) {
 
         log.info("Fetching complete medical assessment for patient {}", patientId);

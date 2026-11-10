@@ -17,7 +17,6 @@ public class AuthUserClientRequest {
 
     private String fullName;
     private String email;
-    private String password;
     private String mobileNumber;
     private UUID tenantRoleId;
 

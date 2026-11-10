@@ -136,7 +136,6 @@ class DoctorServiceImplTest {
         request.setFollowUpFees(BigDecimal.valueOf(300));
         request.setAvailability(" Mon-Fri ");
         request.setEmail(" Sheekha@Gmail.com ");
-        request.setPassword("secret123");
         request.setMobileNumber("9876543210");
         return request;
     }
