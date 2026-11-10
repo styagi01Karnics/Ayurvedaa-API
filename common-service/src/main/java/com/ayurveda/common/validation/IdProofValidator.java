@@ -16,7 +16,7 @@ public final class IdProofValidator {
             return;
         }
 
-        String normalized = proofNumber.trim().toUpperCase();
+        String normalized = proofNumber.trim().toUpperCase().replaceAll("[\\s-]", "");
 
         switch (proofType) {
             case AADHAAR -> requireMatch(normalized, ValidationPatterns.AADHAAR, AppConstants.INVALID_AADHAAR);
