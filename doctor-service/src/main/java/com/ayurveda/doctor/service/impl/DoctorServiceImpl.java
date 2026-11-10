@@ -212,7 +212,9 @@ public class DoctorServiceImpl implements DoctorService {
                 .map(existingDoctor -> {
                     existingDoctor.setDoctorName(request.getName());
                     existingDoctor.setSpecialization(request.getSpecialization());
-                    existingDoctor.setStatus(request.getStatus());
+                    if (request.getStatus() != null) {
+                        existingDoctor.setStatus(request.getStatus());
+                    }
                     existingDoctor.setConsultationFees(request.getConsultationFees());
                     existingDoctor.setFollowUpFees(request.getFollowUpFees());
                     existingDoctor.setAvailability(request.getAvailability());
