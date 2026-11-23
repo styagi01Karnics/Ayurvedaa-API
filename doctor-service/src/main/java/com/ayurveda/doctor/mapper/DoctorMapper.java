@@ -15,6 +15,7 @@ public final class DoctorMapper {
                 .specialization(doctor.getSpecialization())
                 .qualification(doctor.getQualification())
                 .mobileNumber(doctor.getMobileNumber())
+                .email(doctor.getEmail())
                 .status(doctor.getStatus())
                 .consultationFees(doctor.getConsultationFees())
                 .followUpFees(doctor.getFollowUpFees())

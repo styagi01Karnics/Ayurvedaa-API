@@ -7,6 +7,7 @@ import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface DoctorService {
@@ -23,8 +24,8 @@ public interface DoctorService {
     /** Lists active non-deleted doctors (paginated). */
     ApiResponse<PagedResponse<DoctorResponse>> getActiveDoctors(int page, int size);
 
-    /** Lists active non-deleted doctors that have a user code (paginated). */
-    ApiResponse<PagedResponse<DoctorResponse>> getActiveDoctorsWithoutUserCode(int page, int size);
+    /** Lists active non-deleted doctors without a user code, for dropdowns (not paginated). */
+    ApiResponse<List<DoctorResponse>> getActiveDoctorsWithoutUserCode();
 
     /** Updates doctor status (ACTIVE / INACTIVE). */
     ApiResponse<DoctorResponse> updateDoctorStatus(UUID doctorId, UpdateDoctorStatusRequest request);

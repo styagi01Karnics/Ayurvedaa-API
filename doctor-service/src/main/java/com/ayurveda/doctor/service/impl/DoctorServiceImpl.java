@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -125,18 +126,18 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<PagedResponse<DoctorResponse>> getActiveDoctorsWithoutUserCode(int page, int size) {
-        log.info("Fetching active doctors without user code page={}, size={}", page, size);
+    public ApiResponse<List<DoctorResponse>> getActiveDoctorsWithoutUserCode() {
+        log.info("Fetching active doctors without user code");
 
-        Page<Doctor> result = doctorRepository.findAllByStatusAndDeletedFalseAndUserCodeIsNull(
-                DoctorStatus.ACTIVE,
-                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "doctorName")));
-        PagedResponse<DoctorResponse> paged = PagedResponse.of(result.map(DoctorMapper::toResponse));
+        List<DoctorResponse> doctors = doctorRepository
+                .findAllByStatusAndDeletedFalseAndUserCodeIsNullOrderByDoctorNameAsc(DoctorStatus.ACTIVE)
+                .stream()
+                .map(DoctorMapper::toResponse)
+                .toList();
 
-        log.info("Successfully fetched {} active doctors without user code (total={})",
-                paged.getContent().size(), paged.getTotalElements());
+        log.info("Successfully fetched {} active doctors without user code", doctors.size());
 
-        return ApiResponse.success(AppConstants.ACTIVE_DOCTORS_FETCHED_SUCCESSFULLY, paged);
+        return ApiResponse.success(AppConstants.ACTIVE_DOCTORS_FETCHED_SUCCESSFULLY, doctors);
     }
 
     @Override
