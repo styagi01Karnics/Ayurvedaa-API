@@ -28,7 +28,7 @@ public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
 
     boolean existsByUserCodeIgnoreCaseAndDeletedFalse(String userCode);
 
-    Page<Doctor> findAllByStatusAndDeletedFalseAndUserCodeIsNull(DoctorStatus status, Pageable pageable);
+    List<Doctor> findAllByStatusAndDeletedFalseAndUserCodeIsNullOrderByDoctorNameAsc(DoctorStatus status);
 
     Optional<Doctor> findTopByDoctorCodeStartingWithOrderByDoctorCodeDesc(String prefix);
 

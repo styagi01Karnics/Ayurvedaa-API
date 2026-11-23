@@ -47,3 +47,7 @@ uploads/
 
 # Archives
 *.zip
+
+# YAML config is local only (never commit)
+*.yml
+*.yaml

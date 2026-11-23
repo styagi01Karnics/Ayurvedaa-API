@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Doctor", description = "Doctor master APIs")
@@ -54,13 +55,11 @@ public class DoctorController {
     }
 
     @Operation(
-            summary = "List active doctors without a user code (paginated)",
-            description = "Doctors available to link to a new DOCTOR user. page default 0, size default 20 (max 100). Response: data.content")
+            summary = "List active doctors without a user code (dropdown)",
+            description = "Doctors available to link to a new DOCTOR user. Not paginated.")
     @GetMapping("/active/without-user-code")
-    public ResponseEntity<ApiResponse<PagedResponse<DoctorResponse>>> getActiveDoctorsWithoutUserCode(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(doctorService.getActiveDoctorsWithoutUserCode(page, size));
+    public ResponseEntity<ApiResponse<List<DoctorResponse>>> getActiveDoctorsWithoutUserCode() {
+        return ResponseEntity.ok(doctorService.getActiveDoctorsWithoutUserCode());
     }
 
     @Operation(summary = "Get doctor by ID")

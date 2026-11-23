@@ -17,6 +17,7 @@ public class DoctorResponse {
     private String specialization;
     private String qualification;
     private String mobileNumber;
+    private String email;
     private DoctorStatus status;
     private BigDecimal consultationFees;
     private BigDecimal followUpFees;
