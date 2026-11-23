@@ -26,7 +26,7 @@ public class ActivityLogPublisher {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${services.activity-log.url:http://localhost:8107}")
+    @Value("${services.activity-log.url:http://45.195.229.15:8107}")
     private String activityLogBaseUrl;
 
     @Value("${services.activity-log.enabled:true}")

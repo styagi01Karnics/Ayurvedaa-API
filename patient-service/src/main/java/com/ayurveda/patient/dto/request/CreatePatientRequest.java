@@ -1,6 +1,7 @@
 package com.ayurveda.patient.dto.request;
 
 import com.ayurveda.common.enums.IdProofType;
+import com.ayurveda.common.validation.ValidName;
 import com.ayurveda.common.validation.ValidationPatterns;
 import com.ayurveda.patient.enums.Gender;
 import jakarta.validation.constraints.Email;
@@ -18,8 +19,7 @@ import java.time.LocalDate;
 public class CreatePatientRequest {
 
     @NotBlank(message = "Full name is required")
-    @Size(min = 3, max = 150, message = "Full name must be between 3 and 150 characters")
-    @Pattern(regexp = ValidationPatterns.FULL_NAME, message = "Full name contains invalid characters")
+    @ValidName
     private String fullName;
 
     @NotNull(message = "Gender is required")
@@ -56,10 +56,7 @@ public class CreatePatientRequest {
     @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 
-    @Size(max = 100, message = "Emergency contact name must not exceed 100 characters")
-    @Pattern(
-            regexp = ValidationPatterns.PERSON_NAME_OPTIONAL,
-            message = "Emergency contact name contains invalid characters")
+    @ValidName
     private String emergencyContactName;
 
     @Size(max = 50, message = "Emergency relationship must not exceed 50 characters")

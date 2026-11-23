@@ -26,6 +26,10 @@ public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
 
     boolean existsByEmailAndDeletedFalse(String email);
 
+    boolean existsByUserCodeIgnoreCaseAndDeletedFalse(String userCode);
+
+    Page<Doctor> findAllByStatusAndDeletedFalseAndUserCodeIsNull(DoctorStatus status, Pageable pageable);
+
     Optional<Doctor> findTopByDoctorCodeStartingWithOrderByDoctorCodeDesc(String prefix);
 
     List<Doctor> findByDoctorCodeStartingWith(String prefix);

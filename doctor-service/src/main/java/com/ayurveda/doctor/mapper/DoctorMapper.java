@@ -19,6 +19,7 @@ public final class DoctorMapper {
                 .consultationFees(doctor.getConsultationFees())
                 .followUpFees(doctor.getFollowUpFees())
                 .availability(doctor.getAvailability())
+                .userCode(doctor.getUserCode())
                 .build();
     }
 

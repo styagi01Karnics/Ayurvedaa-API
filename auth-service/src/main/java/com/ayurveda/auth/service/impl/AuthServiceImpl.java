@@ -20,9 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.ayurveda.auth.client.DoctorServiceClient;
 import com.ayurveda.auth.config.ResetPasswordProperties;
 import com.ayurveda.auth.constant.AuthMessages;
-import com.ayurveda.auth.mail.UserWelcomeEmailTemplate;
 import com.ayurveda.auth.dto.request.ChangePasswordRequest;
 import com.ayurveda.auth.dto.request.ForgotPasswordRequest;
 import com.ayurveda.auth.dto.request.LoginRequest;
@@ -41,6 +41,7 @@ import com.ayurveda.auth.entity.AuthUser;
 import com.ayurveda.auth.entity.PasswordResetToken;
 import com.ayurveda.auth.entity.Tenant;
 import com.ayurveda.auth.entity.TenantRole;
+import com.ayurveda.auth.enums.Profession;
 import com.ayurveda.auth.enums.TenantStatus;
 import com.ayurveda.auth.enums.UserRole;
 import com.ayurveda.auth.enums.UserStatus;
@@ -87,6 +88,7 @@ public class AuthServiceImpl implements AuthService {
     private final ActivityLogPublisher activityLogPublisher;
     private final EmailNotificationPublisher emailNotificationPublisher;
     private final ResetPasswordProperties resetPasswordProperties;
+    private final DoctorServiceClient doctorServiceClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -269,7 +271,19 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateResourceException(AuthMessages.USER_EXISTS_FOR_TENANT_EMAIL + email);
         }
 
-        TenantRole tenantRole = resolveTenantRoleForRegistration(tenant, request.getTenantRoleId());
+        String userCode = request.getUserCode().trim();
+        if (authUserRepository.existsByTenantIdAndUserCodeIgnoreCase(tenant.getId(), userCode)) {
+            throw new DuplicateResourceException(AuthMessages.USER_CODE_ALREADY_EXISTS + userCode);
+        }
+
+        if (request.getProfession() == Profession.DOCTOR && request.getDoctorId() == null) {
+            throw new BadRequestException(AuthMessages.DOCTOR_ID_REQUIRED_FOR_DOCTOR_USER);
+        }
+
+        TenantRole tenantRole = tenantRoleRepository
+                .findByIdAndTenantIdAndDeletedFalse(request.getTenantRoleId(), tenant.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.TENANT_ROLE_NOT_FOUND));
+
         UserRole role = userRoleFromTenantRole(tenantRole);
 
         boolean hasPassword = StringUtils.hasText(request.getPassword());
@@ -282,6 +296,8 @@ public class AuthServiceImpl implements AuthService {
                 .email(email)
                 .fullName(request.getFullName().trim())
                 .mobileNumber(request.getMobileNumber().trim())
+                .userCode(userCode)
+                .profession(request.getProfession())
                 .passwordHash(hasPassword ? passwordEncoder.encode(request.getPassword()) : null)
                 .role(role)
                 .tenantRole(tenantRole)
@@ -289,11 +305,12 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         AuthUser saved = authUserRepository.saveAndFlush(user);
+        if (request.getProfession() == Profession.DOCTOR) {
+            doctorServiceClient.assignUserCodeToDoctor(request.getDoctorId(), saved.getUserCode());
+        }
         List<String> pageCodes = pageAccessService.resolvePageCodes(saved);
 
         log.info("Registered user {} with role {} for tenant {}", email, role, tenant.getTenantCode());
-
-        sendWelcomeEmail(saved, tenant, tenantRole);
 
         activityLogPublisher.record(
                 "Settings",
@@ -322,6 +339,15 @@ public class AuthServiceImpl implements AuthService {
 
         if (StringUtils.hasText(request.getFullName())) {
             user.setFullName(request.getFullName().trim());
+        }
+
+        if (StringUtils.hasText(request.getUserCode())
+                && !request.getUserCode().trim().equals(user.getUserCode())) {
+            throw new BadRequestException(AuthMessages.USER_CODE_NOT_EDITABLE);
+        }
+
+        if (request.getProfession() != null) {
+            user.setProfession(request.getProfession());
         }
 
         if (StringUtils.hasText(request.getEmail())) {
@@ -606,48 +632,19 @@ public class AuthServiceImpl implements AuthService {
         return new IssuedResetToken(rawToken, expiresAt, expiryMinutes);
     }
 
-    /**
-     * Sends the new user a welcome email with tenant code, login email and a set-password link.
-     * Failures are logged so user creation still succeeds.
-     */
-    private void sendWelcomeEmail(AuthUser user, Tenant tenant, TenantRole tenantRole) {
-        try {
-            IssuedResetToken issued = issueResetToken(user);
-            String setPasswordUrl = buildResetLink(issued.rawToken());
-            String hospitalName = tenant.getName();
-            String roleLabel = tenantRole.getRoleName() != null
-                    ? tenantRole.getRoleName()
-                    : tenantRole.getRoleCode();
-
-            String html = UserWelcomeEmailTemplate.render(
-                    hospitalName,
-                    tenant.getLogoUrl(),
-                    user.getFullName(),
-                    tenant.getTenantCode(),
-                    user.getEmail(),
-                    roleLabel,
-                    setPasswordUrl,
-                    issued.expiryMinutes());
-
-            emailNotificationPublisher.sendHtmlEmail(
-                    user.getEmail(),
-                    UserWelcomeEmailTemplate.subject(hospitalName),
-                    html,
-                    tenant.getTenantCode());
-        } catch (Exception ex) {
-            log.warn("Welcome email not sent to {}: {}", user.getEmail(), ex.getMessage());
-        }
-    }
-
     private Optional<AuthUser> resolveSuperAdminByEmail(String emailOrLogin) {
         String loginId = emailOrLogin.toLowerCase();
         return authUserRepository.findByRoleAndEmailIgnoreCaseAndDeletedFalse(
                 UserRole.SUPER_ADMIN, loginId);
     }
 
-    private Optional<AuthUser> resolveUserForTenant(UUID tenantId, String emailOrLogin) {
-        String loginId = emailOrLogin.toLowerCase();
-        return authUserRepository.findByTenantIdAndEmailIgnoreCaseAndDeletedFalse(tenantId, loginId);
+    private Optional<AuthUser> resolveUserForTenant(UUID tenantId, String emailOrUserCode) {
+        String loginId = emailOrUserCode.toLowerCase();
+        Optional<AuthUser> byEmail = authUserRepository.findByTenantIdAndEmailIgnoreCaseAndDeletedFalse(tenantId, loginId);
+        if (byEmail.isPresent()) {
+            return byEmail;
+        }
+        return authUserRepository.findByTenantIdAndUserCodeIgnoreCaseAndDeletedFalse(tenantId, emailOrUserCode);
     }
 
     /**
@@ -698,7 +695,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     /** Maps the selected tenant role code to the system authority; SUPER_ADMIN is never assignable. */
+    /** Uses the tenant role's base role when set; otherwise matches the role code to a system role name. */
     private UserRole userRoleFromTenantRole(TenantRole tenantRole) {
+        if (tenantRole.getBaseRole() != null) {
+            if (tenantRole.getBaseRole() == UserRole.SUPER_ADMIN) {
+                throw new BadRequestException(
+                        String.format(AuthMessages.TENANT_ROLE_NOT_MAPPED_TO_SYSTEM_ROLE, tenantRole.getRoleCode()));
+            }
+            return tenantRole.getBaseRole();
+        }
         String code = tenantRole.getRoleCode();
         if (TenantBootstrapService.HOSPITAL_ADMIN_ROLE_CODE.equalsIgnoreCase(code)) {
             return UserRole.ADMIN;

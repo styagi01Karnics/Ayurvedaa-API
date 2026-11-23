@@ -29,6 +29,7 @@ public final class AuthMessages {
     public static final String PASSWORD_RESET_SUCCESSFUL = "Password reset successful.";
     public static final String USER_REGISTERED_SUCCESSFULLY = "User registered successfully.";
     public static final String PASSWORD_REQUIRED_FOR_USER = "Password is required for this user role.";
+    public static final String DOCTOR_ID_REQUIRED_FOR_DOCTOR_USER = "Doctor ID is required to register a doctor user.";
     public static final String HOSPITAL_PROFILE_UPDATED = "Hospital profile updated successfully.";
 
     public static final String TENANT_CODE_ALREADY_EXISTS = "Tenant code already exists: ";
@@ -56,6 +57,10 @@ public final class AuthMessages {
             "Tenant is not available for user registration.";
     public static final String USER_EXISTS_FOR_TENANT_EMAIL =
             "User already exists for this tenant with email: ";
+    public static final String USER_CODE_ALREADY_EXISTS =
+            "User code already exists for this hospital: ";
+    public static final String USER_CODE_NOT_EDITABLE =
+            "User code cannot be changed once created.";
     public static final String ADMIN_EMAIL_ALREADY_IN_USE =
             "An account with this email already exists: ";
     public static final String CANNOT_CREATE_SUPER_ADMIN_VIA_TENANT_REGISTRATION =

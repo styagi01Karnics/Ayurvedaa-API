@@ -1,6 +1,7 @@
 package com.ayurveda.appointment.dto.request;
 
 import com.ayurveda.appointment.enums.TreatmentCategoryStatus;
+import com.ayurveda.common.validation.ValidName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -13,7 +14,7 @@ import lombok.*;
 public class CreateTreatmentCategoryRequest {
 
     @NotBlank
-    @Size(max = 100)
+    @ValidName
     private String categoryName;
 
     @Size(max = 255)

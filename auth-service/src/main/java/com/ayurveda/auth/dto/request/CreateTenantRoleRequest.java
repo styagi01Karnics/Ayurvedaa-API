@@ -2,8 +2,11 @@ package com.ayurveda.auth.dto.request;
 
 import java.util.List;
 
+import com.ayurveda.auth.enums.UserRole;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,5 +42,9 @@ public class CreateTenantRoleRequest {
 
     /** Figma Active toggle; defaults to true. */
     private Boolean active;
+
+    /** System role that users with this tenant role log in as (e.g. DOCTOR). */
+    @NotNull(message = "Base role is required")
+    private UserRole baseRole;
 
 }

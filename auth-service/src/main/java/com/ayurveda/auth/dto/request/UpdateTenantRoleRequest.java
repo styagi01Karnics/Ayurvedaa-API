@@ -2,6 +2,8 @@ package com.ayurveda.auth.dto.request;
 
 import java.util.List;
 
+import com.ayurveda.auth.enums.UserRole;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
@@ -29,5 +31,8 @@ public class UpdateTenantRoleRequest {
     private List<@NotBlank String> pageCodes;
 
     private Boolean active;
+
+    /** Optional; keeps the existing base role when omitted. */
+    private UserRole baseRole;
 
 }

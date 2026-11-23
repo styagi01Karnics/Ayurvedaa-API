@@ -1,8 +1,11 @@
 package com.ayurveda.auth.entity;
 
+import com.ayurveda.auth.enums.UserRole;
 import com.ayurveda.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -44,6 +47,11 @@ public class TenantRole extends BaseEntity {
 
     @Column(length = 255)
     private String description;
+
+    /** System role used for auth-user login and access (e.g. DOCTOR for a custom doctor-type role). */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private UserRole baseRole;
 
     /** Seeded system role (e.g. HOSPITAL_ADMIN) — cannot be deleted. */
     @Column(nullable = false)

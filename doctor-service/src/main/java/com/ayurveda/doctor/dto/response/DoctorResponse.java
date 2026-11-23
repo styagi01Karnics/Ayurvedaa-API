@@ -21,5 +21,6 @@ public class DoctorResponse {
     private BigDecimal consultationFees;
     private BigDecimal followUpFees;
     private String availability;
+    private String userCode;
 
 }

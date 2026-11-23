@@ -1,0 +1,13 @@
+api-gateway,8100,28724
+patient-service,8101,28736
+doctor-service,8102,26424
+appointment-service,8103,26588
+therapist-service,8104,3432
+file-upload-service,8105,8304
+attendance-service,8106,6892
+activity-log-service,8107,26364
+medicine-service,8108,25480
+billing-service,8109,30252
+notification-service,8110,30500
+auth-service,8111,9080
+payment-service,8112,7184

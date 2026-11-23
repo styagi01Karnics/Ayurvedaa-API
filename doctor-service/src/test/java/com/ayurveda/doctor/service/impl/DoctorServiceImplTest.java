@@ -17,7 +17,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,11 +24,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.activity.ActivityLogPublisher;
+import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
-import com.ayurveda.doctor.client.AuthServiceClient;
-import com.ayurveda.doctor.dto.client.AuthUserClientRequest;
-import com.ayurveda.doctor.dto.client.AuthUserClientResponse;
-import com.ayurveda.doctor.dto.client.TenantRoleClientResponse;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -41,9 +37,6 @@ import com.ayurveda.doctor.util.DoctorCodeGenerator;
 @ExtendWith(MockitoExtension.class)
 class DoctorServiceImplTest {
 
-    private static final UUID DOCTOR_ROLE_ID = UUID.randomUUID();
-    private static final UUID AUTH_USER_ID = UUID.randomUUID();
-
     @Mock
     private DoctorRepository doctorRepository;
 
@@ -52,9 +45,6 @@ class DoctorServiceImplTest {
 
     @Mock
     private ActivityLogPublisher activityLogPublisher;
-
-    @Mock
-    private AuthServiceClient authServiceClient;
 
     @InjectMocks
     private DoctorServiceImpl doctorService;
@@ -78,11 +68,11 @@ class DoctorServiceImplTest {
     }
 
     @Test
-    void createDoctor_defaultsActiveAndSaves() {
+    void createDoctor_defaultsActiveAndSavesUserCode() {
         CreateDoctorRequest request = validCreateRequest();
+        request.setUserCode(" DR-SHEEKHA ");
 
-        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of(doctorRole())));
-        when(authServiceClient.registerUser(any())).thenReturn(ApiResponse.success(authUser()));
+        when(doctorRepository.existsByUserCodeIgnoreCaseAndDeletedFalse("DR-SHEEKHA")).thenReturn(false);
         when(doctorCodeGenerator.generate()).thenReturn("GAN-DL-DOC-00001");
         when(doctorRepository.saveAndFlush(any(Doctor.class))).thenAnswer(inv -> {
             Doctor saved = inv.getArgument(0);
@@ -95,37 +85,30 @@ class DoctorServiceImplTest {
         assertTrue(response.isSuccess());
         assertEquals("Dr. Sheekha", response.getData().getName());
         assertEquals(DoctorStatus.ACTIVE, response.getData().getStatus());
-
-        ArgumentCaptor<AuthUserClientRequest> captor = ArgumentCaptor.forClass(AuthUserClientRequest.class);
-        verify(authServiceClient).registerUser(captor.capture());
-        assertEquals("9876543210", captor.getValue().getMobileNumber());
-        assertEquals(DOCTOR_ROLE_ID, captor.getValue().getTenantRoleId());
-        assertEquals("sheekha@gmail.com", captor.getValue().getEmail());
+        assertEquals("DR-SHEEKHA", response.getData().getUserCode());
     }
 
     @Test
-    void createDoctor_missingDoctorRole_failsBeforeCreatingLogin() {
-        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of()));
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> doctorService.createDoctor(validCreateRequest()));
-
-        verify(authServiceClient, never()).registerUser(any());
-        verify(doctorRepository, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void createDoctor_doctorSaveFails_rollsBackLogin() {
-        when(authServiceClient.listRoles()).thenReturn(ApiResponse.success(List.of(doctorRole())));
-        when(authServiceClient.registerUser(any())).thenReturn(ApiResponse.success(authUser()));
+    void createDoctor_withoutUserCode_savesNullUserCode() {
         when(doctorCodeGenerator.generate()).thenReturn("GAN-DL-DOC-00001");
-        when(doctorRepository.saveAndFlush(any(Doctor.class)))
-                .thenThrow(new IllegalStateException("db down"));
+        when(doctorRepository.saveAndFlush(any(Doctor.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThrows(IllegalStateException.class,
-                () -> doctorService.createDoctor(validCreateRequest()));
+        ApiResponse<DoctorResponse> response = doctorService.createDoctor(validCreateRequest());
 
-        verify(authServiceClient).deleteUser(AUTH_USER_ID);
+        assertEquals(null, response.getData().getUserCode());
+        verify(doctorRepository, never()).existsByUserCodeIgnoreCaseAndDeletedFalse(any());
+    }
+
+    @Test
+    void createDoctor_duplicateUserCode_failsWithoutSaving() {
+        CreateDoctorRequest request = validCreateRequest();
+        request.setUserCode("DR-SHEEKHA");
+
+        when(doctorRepository.existsByUserCodeIgnoreCaseAndDeletedFalse("DR-SHEEKHA")).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class, () -> doctorService.createDoctor(request));
+
+        verify(doctorRepository, never()).saveAndFlush(any());
     }
 
     private CreateDoctorRequest validCreateRequest() {
@@ -138,20 +121,6 @@ class DoctorServiceImplTest {
         request.setEmail(" Sheekha@Gmail.com ");
         request.setMobileNumber("9876543210");
         return request;
-    }
-
-    private TenantRoleClientResponse doctorRole() {
-        TenantRoleClientResponse role = new TenantRoleClientResponse();
-        role.setId(DOCTOR_ROLE_ID);
-        role.setRoleCode("DOCTOR");
-        role.setActive(true);
-        return role;
-    }
-
-    private AuthUserClientResponse authUser() {
-        AuthUserClientResponse user = new AuthUserClientResponse();
-        user.setId(AUTH_USER_ID);
-        return user;
     }
 
     @Test

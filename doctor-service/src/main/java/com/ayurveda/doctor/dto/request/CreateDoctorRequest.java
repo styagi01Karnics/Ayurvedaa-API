@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.ayurveda.common.validation.ValidName;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,7 +17,7 @@ import lombok.Setter;
 public class CreateDoctorRequest {
 
     @NotBlank(message = "Name is required")
-    @Size(max = 150, message = "Name must not exceed 150 characters")
+    @ValidName(allowPeriod = true)
     private String name;
 
     @NotBlank(message = "Specialization is required")
@@ -44,5 +45,10 @@ public class CreateDoctorRequest {
     @NotBlank(message = "Email is required")
     @Size(max = 150, message = "Email must not exceed 150 characters")
     private String email;
+
+    @Size(min = 3, max = 20, message = "User code must be between 3 and 20 characters")
+    @Pattern(regexp = "^(?=.*[A-Za-z])[A-Za-z0-9][A-Za-z0-9_-]*$",
+            message = "User code can contain only letters, digits, - and _, must include a letter, and cannot be only numbers")
+    private String userCode;
 
 }

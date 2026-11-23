@@ -93,6 +93,7 @@ public class RoleServiceImpl implements RoleService {
                 .description(request.getDescription())
                 .systemRole(false)
                 .active(active)
+                .baseRole(validateBaseRole(request.getBaseRole()))
                 .build();
         TenantRole saved = tenantRoleRepository.save(role);
         replaceRolePages(saved, pages);
@@ -148,6 +149,9 @@ public class RoleServiceImpl implements RoleService {
         List<UiPage> pages = resolvePages(request.getPageCodes());
         role.setRoleName(request.getRoleName().trim());
         role.setDescription(request.getDescription());
+        if (request.getBaseRole() != null) {
+            role.setBaseRole(validateBaseRole(request.getBaseRole()));
+        }
         if (request.getActive() != null) {
             role.setActive(request.getActive());
         }
@@ -182,6 +186,17 @@ public class RoleServiceImpl implements RoleService {
     private TenantRoleResponse toResponse(TenantRole role, List<String> pageCodes) {
         long userCount = authUserRepository.countByTenantRoleIdAndDeletedFalse(role.getId());
         return authMapper.toTenantRoleResponse(role, pageCodes, userCount);
+    }
+
+    /** Base role decides the login authority; SUPER_ADMIN can never be assigned to a hospital role. */
+    private UserRole validateBaseRole(UserRole baseRole) {
+        if (baseRole == null) {
+            throw new BadRequestException("Base role is required.");
+        }
+        if (baseRole == UserRole.SUPER_ADMIN) {
+            throw new BadRequestException("Base role SUPER_ADMIN cannot be assigned to a hospital role.");
+        }
+        return baseRole;
     }
 
     private String resolveRoleCode(String roleCode, String roleName) {

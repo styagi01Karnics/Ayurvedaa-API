@@ -1,5 +1,6 @@
 package com.ayurveda.auth.entity;
 
+import com.ayurveda.auth.enums.Profession;
 import com.ayurveda.auth.enums.UserRole;
 import com.ayurveda.auth.enums.UserStatus;
 import com.ayurveda.common.BaseEntity;
@@ -27,7 +28,8 @@ import lombok.Setter;
 @Table(
         name = "auth_users",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_auth_users_tenant_email", columnNames = {"tenant_id", "email"})
+                @UniqueConstraint(name = "uk_auth_users_tenant_email", columnNames = {"tenant_id", "email"}),
+                @UniqueConstraint(name = "uk_auth_users_tenant_user_code", columnNames = {"tenant_id", "user_code"})
         }
 )
 public class AuthUser extends BaseEntity {
@@ -45,6 +47,14 @@ public class AuthUser extends BaseEntity {
 
     @Column(length = 20)
     private String mobileNumber;
+
+    /** Entered manually when the user is created; required, unique within a tenant (case-insensitive). */
+    @Column(nullable = false, length = 30)
+    private String userCode;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Profession profession;
 
     /** Null until the user sets a password through the reset-password link (doctors). */
     @Column(length = 255)
