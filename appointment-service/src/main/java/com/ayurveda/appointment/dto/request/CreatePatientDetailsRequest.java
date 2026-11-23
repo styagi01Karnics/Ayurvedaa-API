@@ -2,6 +2,7 @@ package com.ayurveda.appointment.dto.request;
 
 import java.time.LocalDate;
 
+import com.ayurveda.common.validation.ValidName;
 import com.ayurveda.common.validation.ValidationPatterns;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -22,10 +23,7 @@ import lombok.Setter;
 public class CreatePatientDetailsRequest {
 
     @NotBlank(message = "Full name is required")
-    @Size(min = 3, max = 150, message = "Full name must be between 3 and 150 characters")
-    @Pattern(
-            regexp = ValidationPatterns.FULL_NAME_ALPHABETS_SPACES,
-            message = "Full name should contain only alphabets and spaces")
+    @ValidName
     private String fullName;
 
     @NotBlank(message = "Gender is required")
@@ -67,10 +65,7 @@ public class CreatePatientDetailsRequest {
     @Size(max = 500, message = "Address must not exceed 500 characters")
     private String address;
 
-    @Size(max = 100, message = "Emergency contact name must not exceed 100 characters")
-    @Pattern(
-            regexp = ValidationPatterns.ALPHABETS_AND_SPACES_OPTIONAL,
-            message = "Emergency contact name should contain only alphabets")
+    @ValidName
     private String emergencyContactName;
 
     @Size(max = 50, message = "Emergency relationship must not exceed 50 characters")

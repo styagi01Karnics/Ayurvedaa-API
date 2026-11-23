@@ -61,4 +61,7 @@ public class Doctor extends BaseEntity {
     @Column(length = 100)
     private String consultationRoom;
 
+    @Column(length = 20)
+    private String userCode;
+
 }

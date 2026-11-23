@@ -1,5 +1,7 @@
 package com.ayurveda.common;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.*;
 
 /**
@@ -15,6 +17,8 @@ public class ApiResponse<T> {
     private boolean success;
     private int status;
     private String message;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String errorCode;
     private T data;
 
     public static <T> ApiResponse<T> success(T data) {
@@ -49,6 +53,16 @@ public class ApiResponse<T> {
                 .success(false)
                 .status(status)
                 .message(message)
+                .data(data)
+                .build();
+    }
+
+    public static <T> ApiResponse<T> failureWithCode(int status, String errorCode, String message, T data) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .status(status)
+                .message(message)
+                .errorCode(errorCode)
                 .data(data)
                 .build();
     }

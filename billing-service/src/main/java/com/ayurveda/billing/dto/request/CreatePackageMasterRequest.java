@@ -8,6 +8,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import com.ayurveda.common.validation.ValidName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +23,7 @@ import lombok.Setter;
 public class CreatePackageMasterRequest {
 
     @NotBlank(message = "Package name is required")
-    @Size(max = 150)
+    @ValidName
     private String name;
 
     @NotNull(message = "Package price is required")

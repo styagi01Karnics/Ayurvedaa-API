@@ -2,6 +2,7 @@ package com.ayurveda.appointment.dto.request;
 
 import com.ayurveda.appointment.enums.ConsultationTypeMasterStatus;
 
+import com.ayurveda.common.validation.ValidName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -18,7 +19,7 @@ import lombok.Setter;
 public class CreateConsultationTypeRequest {
 
     @NotBlank(message = "Consultation type name is required")
-    @Size(max = 100)
+    @ValidName
     private String name;
 
     private ConsultationTypeMasterStatus status;

@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.ayurveda.appointment.enums.TherapyMasterStatus;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
+import com.ayurveda.common.validation.ValidName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -23,7 +24,7 @@ import lombok.Setter;
 public class UpdateTherapyRequest {
 
     @NotBlank(message = "Name is required")
-    @Size(max = 150)
+    @ValidName
     private String name;
 
     @NotNull(message = "Category id is required")

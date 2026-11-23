@@ -2,6 +2,7 @@ package com.ayurveda.appointment.dto.request;
 
 import com.ayurveda.appointment.enums.TreatmentPlanMasterStatus;
 
+import com.ayurveda.common.validation.ValidName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -18,7 +19,7 @@ import lombok.Setter;
 public class CreateTreatmentPlanMasterRequest {
 
     @NotBlank(message = "Treatment plan name is required")
-    @Size(max = 150)
+    @ValidName
     private String name;
 
     private TreatmentPlanMasterStatus status;

@@ -3,6 +3,7 @@ package com.ayurveda.medicine.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.ayurveda.common.validation.ValidName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +23,7 @@ public class CreateMedicineCategoryRequest {
     private String code;
 
     @NotBlank(message = "Category name is required")
-    @Size(max = 100)
+    @ValidName
     private String name;
 
 }

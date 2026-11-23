@@ -5,11 +5,11 @@ import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
 import com.ayurveda.common.dto.PagedResponse;
+import com.ayurveda.common.exception.BadRequestException;
+import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.util.PageRequests;
-import com.ayurveda.doctor.client.AuthServiceClient;
-import com.ayurveda.doctor.dto.client.AuthUserClientRequest;
-import com.ayurveda.doctor.dto.client.TenantRoleClientResponse;
+import com.ayurveda.doctor.dto.request.AssignDoctorUserCodeRequest;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -25,9 +25,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -35,22 +34,23 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
 
-    private static final String DOCTOR_ROLE_CODE = "DOCTOR";
-    private static final String DOCTOR_ROLE_NOT_FOUND =
-            "DOCTOR role not found for this hospital. Create the DOCTOR role before adding a doctor.";
+    private static final String DOCTOR_USER_CODE_ALREADY_EXISTS = "Doctor user code already exists: ";
+    private static final String DOCTOR_USER_CODE_ALREADY_ASSIGNED = "Doctor already has user code: ";
+    private static final String DOCTOR_USER_CODE_ASSIGNED = "Doctor user code assigned successfully.";
 
     private final DoctorRepository doctorRepository;
     private final DoctorCodeGenerator doctorCodeGenerator;
     private final ActivityLogPublisher activityLogPublisher;
-    private final AuthServiceClient authServiceClient;
 
     @Override
     @Transactional
     public ApiResponse<DoctorResponse> createDoctor(CreateDoctorRequest request) {
         log.info("Creating doctor: {}", request.getName());
 
-        TenantRoleClientResponse doctorRole = findActiveDoctorRole();
-        UUID authUserId = createDoctorLogin(request, doctorRole);
+        String userCode = StringUtils.hasText(request.getUserCode()) ? request.getUserCode().trim() : null;
+        if (userCode != null && doctorRepository.existsByUserCodeIgnoreCaseAndDeletedFalse(userCode)) {
+            throw new DuplicateResourceException(DOCTOR_USER_CODE_ALREADY_EXISTS + userCode);
+        }
 
         DoctorStatus status = request.getStatus() != null ? request.getStatus() : DoctorStatus.ACTIVE;
 
@@ -64,17 +64,12 @@ public class DoctorServiceImpl implements DoctorService {
                 .consultationFees(request.getConsultationFees())
                 .followUpFees(request.getFollowUpFees())
                 .availability(request.getAvailability().trim())
+                .userCode(userCode)
                 .build();
 
-        Doctor savedDoctor;
-        try {
-            savedDoctor = doctorRepository.saveAndFlush(doctor);
-        } catch (RuntimeException ex) {
-            deleteDoctorLogin(authUserId);
-            throw ex;
-        }
+        Doctor savedDoctor = doctorRepository.saveAndFlush(doctor);
 
-        log.info("Doctor created successfully. Doctor ID: {}, Auth user ID: {}", savedDoctor.getId(), authUserId);
+        log.info("Doctor created successfully. Doctor ID: {}", savedDoctor.getId());
 
         activityLogPublisher.record(
                 "Doctors",
@@ -82,36 +77,6 @@ public class DoctorServiceImpl implements DoctorService {
                 "Doctor " + savedDoctor.getDoctorName());
 
         return ApiResponse.success(AppConstants.DOCTOR_CREATED_SUCCESSFULLY, DoctorMapper.toResponse(savedDoctor));
-    }
-
-    private TenantRoleClientResponse findActiveDoctorRole() {
-        List<TenantRoleClientResponse> roles = Optional.ofNullable(authServiceClient.listRoles().getData())
-                .orElse(List.of());
-        return roles.stream()
-                .filter(role -> DOCTOR_ROLE_CODE.equalsIgnoreCase(role.getRoleCode())
-                        && Boolean.TRUE.equals(role.getActive()))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException(DOCTOR_ROLE_NOT_FOUND));
-    }
-
-    private UUID createDoctorLogin(CreateDoctorRequest request, TenantRoleClientResponse doctorRole) {
-        AuthUserClientRequest authRequest = AuthUserClientRequest.builder()
-                .fullName(request.getName().trim())
-                .email(request.getEmail().trim().toLowerCase())
-                .mobileNumber(request.getMobileNumber().trim())
-                .tenantRoleId(doctorRole.getId())
-                .build();
-        return authServiceClient.registerUser(authRequest).getData().getId();
-    }
-
-    private void deleteDoctorLogin(UUID authUserId) {
-        try {
-            authServiceClient.deleteUser(authUserId);
-            log.info("Rolled back auth user {} after doctor save failed", authUserId);
-        } catch (RuntimeException ex) {
-            log.error("Failed to roll back auth user {} after doctor save failed; remove it manually",
-                    authUserId, ex);
-        }
     }
 
     @Override
@@ -156,6 +121,47 @@ public class DoctorServiceImpl implements DoctorService {
                 paged.getContent().size(), paged.getTotalElements());
 
         return ApiResponse.success(AppConstants.ACTIVE_DOCTORS_FETCHED_SUCCESSFULLY, paged);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<PagedResponse<DoctorResponse>> getActiveDoctorsWithoutUserCode(int page, int size) {
+        log.info("Fetching active doctors without user code page={}, size={}", page, size);
+
+        Page<Doctor> result = doctorRepository.findAllByStatusAndDeletedFalseAndUserCodeIsNull(
+                DoctorStatus.ACTIVE,
+                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "doctorName")));
+        PagedResponse<DoctorResponse> paged = PagedResponse.of(result.map(DoctorMapper::toResponse));
+
+        log.info("Successfully fetched {} active doctors without user code (total={})",
+                paged.getContent().size(), paged.getTotalElements());
+
+        return ApiResponse.success(AppConstants.ACTIVE_DOCTORS_FETCHED_SUCCESSFULLY, paged);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<DoctorResponse> assignUserCode(UUID doctorId, AssignDoctorUserCodeRequest request) {
+        log.info("Assigning user code to doctor. Doctor ID: {}", doctorId);
+
+        Doctor doctor = doctorRepository.findByIdAndDeletedFalse(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException(AppConstants.DOCTOR_NOT_FOUND));
+
+        if (StringUtils.hasText(doctor.getUserCode())) {
+            throw new BadRequestException(DOCTOR_USER_CODE_ALREADY_ASSIGNED + doctor.getUserCode());
+        }
+
+        String userCode = request.getUserCode().trim();
+        if (doctorRepository.existsByUserCodeIgnoreCaseAndDeletedFalse(userCode)) {
+            throw new DuplicateResourceException(DOCTOR_USER_CODE_ALREADY_EXISTS + userCode);
+        }
+
+        doctor.setUserCode(userCode);
+        Doctor savedDoctor = doctorRepository.saveAndFlush(doctor);
+
+        log.info("User code assigned to doctor. Doctor ID: {}", doctorId);
+
+        return ApiResponse.success(DOCTOR_USER_CODE_ASSIGNED, DoctorMapper.toResponse(savedDoctor));
     }
 
     @Override

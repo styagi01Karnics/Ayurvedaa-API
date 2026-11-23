@@ -1,6 +1,7 @@
 package com.ayurveda.appointment.dto.request;
 
 import com.ayurveda.appointment.enums.DoshaMasterStatus;
+import com.ayurveda.common.validation.ValidName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -17,7 +18,7 @@ import lombok.Setter;
 public class CreateDoshaRequest {
 
     @NotBlank(message = "Dosha name is required")
-    @Size(max = 100)
+    @ValidName
     private String name;
 
     private String elements;

@@ -2,6 +2,7 @@ package com.ayurveda.doctor.controller;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.dto.PagedResponse;
+import com.ayurveda.doctor.dto.request.AssignDoctorUserCodeRequest;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -52,6 +53,16 @@ public class DoctorController {
         return ResponseEntity.ok(doctorService.getActiveDoctors(page, size));
     }
 
+    @Operation(
+            summary = "List active doctors without a user code (paginated)",
+            description = "Doctors available to link to a new DOCTOR user. page default 0, size default 20 (max 100). Response: data.content")
+    @GetMapping("/active/without-user-code")
+    public ResponseEntity<ApiResponse<PagedResponse<DoctorResponse>>> getActiveDoctorsWithoutUserCode(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(doctorService.getActiveDoctorsWithoutUserCode(page, size));
+    }
+
     @Operation(summary = "Get doctor by ID")
     @GetMapping("/{doctorId}")
     public ResponseEntity<ApiResponse<DoctorResponse>> getDoctorById(@PathVariable UUID doctorId) {
@@ -82,6 +93,16 @@ public class DoctorController {
     @DeleteMapping("/{doctorId}")
     public ResponseEntity<ApiResponse<Void>> deleteDoctor(@PathVariable UUID doctorId) {
         return ResponseEntity.ok(doctorService.deleteDoctor(doctorId));
+    }
+
+    @Operation(
+            summary = "Assign user code to doctor",
+            description = "Links a user code to an existing doctor. Fails if the doctor already has one or the code is used by another doctor.")
+    @PutMapping("/{doctorId}/user-code")
+    public ResponseEntity<ApiResponse<DoctorResponse>> assignUserCode(
+            @PathVariable UUID doctorId,
+            @Valid @RequestBody AssignDoctorUserCodeRequest request) {
+        return ResponseEntity.ok(doctorService.assignUserCode(doctorId, request));
     }
 
     @Operation(summary = "Update doctor data", description = "Updates a doctor's data by its ID.")

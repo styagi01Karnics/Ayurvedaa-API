@@ -1,6 +1,7 @@
 package com.ayurveda.auth.dto.request;
 
 import com.ayurveda.auth.constant.AuthValidation;
+import com.ayurveda.auth.enums.Profession;
 
 import java.util.UUID;
 
@@ -34,6 +35,18 @@ public class RegisterUserRequest {
     @Size(max = 150)
     @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)
     private String email;
+
+    /** Manually entered code, unique per hospital. Must contain at least one letter. */
+    @NotBlank(message = "User code is required")
+    @Size(min = 3, max = 20, message = "User code must be between 3 and 20 characters")
+    @Pattern(regexp = AuthValidation.USER_CODE,
+            message = "User code can contain only letters, digits, - and _, must include a letter, and cannot be only numbers")
+    private String userCode;
+
+    private Profession profession;
+
+    /** Required when profession is DOCTOR: the existing doctor this user code is linked to. */
+    private UUID doctorId;
 
     /** Required for all roles except DOCTOR, which sets its password from the welcome email link. */
     @Size(min = 8, max = 100)

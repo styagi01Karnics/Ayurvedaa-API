@@ -22,7 +22,7 @@ public class EmailNotificationPublisher {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${services.notification.url:http://localhost:8110}")
+    @Value("${services.notification.url:http://45.195.229.15:8110}")
     private String notificationBaseUrl;
 
     @Value("${services.notification.enabled:true}")

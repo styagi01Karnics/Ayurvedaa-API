@@ -2,6 +2,7 @@ package com.ayurveda.doctor.service;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.dto.PagedResponse;
+import com.ayurveda.doctor.dto.request.AssignDoctorUserCodeRequest;
 import com.ayurveda.doctor.dto.request.CreateDoctorRequest;
 import com.ayurveda.doctor.dto.request.UpdateDoctorStatusRequest;
 import com.ayurveda.doctor.dto.response.DoctorResponse;
@@ -22,6 +23,9 @@ public interface DoctorService {
     /** Lists active non-deleted doctors (paginated). */
     ApiResponse<PagedResponse<DoctorResponse>> getActiveDoctors(int page, int size);
 
+    /** Lists active non-deleted doctors that have a user code (paginated). */
+    ApiResponse<PagedResponse<DoctorResponse>> getActiveDoctorsWithoutUserCode(int page, int size);
+
     /** Updates doctor status (ACTIVE / INACTIVE). */
     ApiResponse<DoctorResponse> updateDoctorStatus(UUID doctorId, UpdateDoctorStatusRequest request);
 
@@ -30,5 +34,8 @@ public interface DoctorService {
 
     /** Updates doctor data by id. */
     ApiResponse<DoctorResponse> updateDoctorData(UUID doctorId, CreateDoctorRequest request);
+
+    /** Links a user code to an existing doctor. Set once; unique among non-deleted doctors. */
+    ApiResponse<DoctorResponse> assignUserCode(UUID doctorId, AssignDoctorUserCodeRequest request);
 
 }

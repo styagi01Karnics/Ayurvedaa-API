@@ -2,6 +2,7 @@ package com.ayurveda.common.exception;
 
 import com.ayurveda.common.ApiResponse;
 import com.ayurveda.common.constant.AppConstants;
+import com.ayurveda.common.validation.ValidationErrorCode;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 
@@ -100,9 +101,7 @@ public class GlobalExceptionHandler {
             errors.put(error.getField(), error.getDefaultMessage());
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.failure(
-                        HttpStatus.BAD_REQUEST.value(), AppConstants.VALIDATION_FAILED, errors));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationFailure(errors));
     }
 
     @ExceptionHandler(BindException.class)
@@ -114,9 +113,7 @@ public class GlobalExceptionHandler {
             errors.put(error.getField(), error.getDefaultMessage());
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.failure(
-                        HttpStatus.BAD_REQUEST.value(), AppConstants.VALIDATION_FAILED, errors));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationFailure(errors));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -129,9 +126,7 @@ public class GlobalExceptionHandler {
             errors.put(field, violation.getMessage());
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.failure(
-                        HttpStatus.BAD_REQUEST.value(), AppConstants.VALIDATION_FAILED, errors));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationFailure(errors));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -273,6 +268,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.failure(
                         HttpStatus.SERVICE_UNAVAILABLE.value(), AppConstants.SERVICE_TEMPORARILY_UNAVAILABLE));
+    }
+
+    private ApiResponse<Object> validationFailure(Map<String, String> rawErrors) {
+        Map<String, String> errors = new HashMap<>();
+        String errorCode = null;
+        for (Map.Entry<String, String> entry : rawErrors.entrySet()) {
+            ValidationErrorCode code = ValidationErrorCode.fromName(entry.getValue());
+            if (code != null) {
+                errorCode = errorCode != null ? errorCode : code.name();
+                errors.put(entry.getKey(), code.getMessage());
+            } else {
+                errors.put(entry.getKey(), entry.getValue());
+            }
+        }
+        if (errorCode == null) {
+            return ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), AppConstants.VALIDATION_FAILED, errors);
+        }
+        return ApiResponse.failureWithCode(
+                HttpStatus.BAD_REQUEST.value(), errorCode, AppConstants.VALIDATION_FAILED, errors);
     }
 
     private ResponseEntity<ApiResponse<Object>> toInvalidFormatResponse(Throwable throwable) {

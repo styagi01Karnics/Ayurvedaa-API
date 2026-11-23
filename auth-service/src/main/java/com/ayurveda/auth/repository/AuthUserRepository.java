@@ -15,6 +15,8 @@ public interface AuthUserRepository extends JpaRepository<AuthUser, UUID> {
 
     Optional<AuthUser> findByTenantIdAndEmailIgnoreCaseAndDeletedFalse(UUID tenantId, String email);
 
+    Optional<AuthUser> findByTenantIdAndUserCodeIgnoreCaseAndDeletedFalse(UUID tenantId, String userCode);
+
     Optional<AuthUser> findByEmailIgnoreCaseAndDeletedFalse(String email);
 
     List<AuthUser> findAllByEmailIgnoreCaseAndDeletedFalse(String email);
@@ -22,6 +24,11 @@ public interface AuthUserRepository extends JpaRepository<AuthUser, UUID> {
     Optional<AuthUser> findByRoleAndEmailIgnoreCaseAndDeletedFalse(UserRole role, String email);
 
     boolean existsByTenantIdAndEmailIgnoreCaseAndDeletedFalse(UUID tenantId, String email);
+
+    /** Includes soft-deleted rows, matching the database unique constraint on (tenant_id, user_code). */
+    boolean existsByTenantIdAndUserCodeIgnoreCase(UUID tenantId, String userCode);
+
+    boolean existsByTenantIdAndUserCodeIgnoreCaseAndIdNot(UUID tenantId, String userCode, UUID id);
 
     boolean existsByEmailIgnoreCaseAndDeletedFalse(String email);
 

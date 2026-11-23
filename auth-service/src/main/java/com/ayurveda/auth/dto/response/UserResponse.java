@@ -3,6 +3,7 @@ package com.ayurveda.auth.dto.response;
 import java.util.List;
 import java.util.UUID;
 
+import com.ayurveda.auth.enums.Profession;
 import com.ayurveda.auth.enums.UserRole;
 import com.ayurveda.auth.enums.UserStatus;
 
@@ -26,6 +27,8 @@ public class UserResponse {
     private String email;
     private String fullName;
     private String mobileNumber;
+    private String userCode;
+    private Profession profession;
     private UserRole role;
     private UUID tenantRoleId;
     private String tenantRoleCode;
