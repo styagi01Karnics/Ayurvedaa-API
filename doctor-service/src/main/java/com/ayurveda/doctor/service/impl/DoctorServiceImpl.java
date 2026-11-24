@@ -27,8 +27,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import static com.ayurveda.common.constant.AppConstants.INVALID_PAGINATION_PARAMS;
 
 @Slf4j
 @Service
@@ -61,11 +64,13 @@ public class DoctorServiceImpl implements DoctorService {
                 .mobileNumber(request.getMobileNumber().trim())
                 .email(request.getEmail().trim().toLowerCase())
                 .specialization(request.getSpecialization().trim())
+                .qualification(request.getQualification())
                 .status(status)
                 .consultationFees(request.getConsultationFees())
                 .followUpFees(request.getFollowUpFees())
                 .availability(request.getAvailability().trim())
                 .userCode(userCode)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         Doctor savedDoctor = doctorRepository.saveAndFlush(doctor);
@@ -97,9 +102,12 @@ public class DoctorServiceImpl implements DoctorService {
     @Transactional(readOnly = true)
     public ApiResponse<PagedResponse<DoctorResponse>> getAllDoctors(int page, int size) {
         log.info("Fetching doctors page={}, size={}", page, size);
+        if(page < 0 || size <= 0){
+            throw new BadRequestException(INVALID_PAGINATION_PARAMS);
+        }
 
         Page<Doctor> result = doctorRepository.findAllByDeletedFalse(
-                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "doctorName")));
+                PageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         PagedResponse<DoctorResponse> paged = PagedResponse.of(result.map(DoctorMapper::toResponse));
 
         log.info("Successfully fetched {} doctors (total={})",

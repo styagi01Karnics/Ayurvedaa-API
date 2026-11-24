@@ -47,6 +47,7 @@ public final class AppConstants {
     public static final String DOCTOR_STATUS_UPDATED_SUCCESSFULLY = "Doctor status updated successfully.";
     public static final String DOCTOR_NOT_FOUND = "Doctor not found.";
     public static final String DOCTOR_NOT_FOUND_WITH_ID = "Doctor not found with id: ";
+    public static final String INVALID_PAGINATION_PARAMS = "Invalid pagination values.";
 
     // ===========================
     // Therapist
