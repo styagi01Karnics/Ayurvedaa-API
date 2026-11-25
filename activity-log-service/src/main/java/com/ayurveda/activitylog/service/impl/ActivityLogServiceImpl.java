@@ -44,7 +44,7 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         if (TenantContext.getUserId() != null) {
             entity.setPerformedByUserId(TenantContext.getUserId());
             entity.setPerformedByRole(TenantContext.getRole());
-            entity.setPerformedByUserName(TenantContext.getUserName());
+            entity.setPerformedByUserName(TenantContext.getUserCode());
         }
 
         ActivityLog saved = activityLogRepository.save(entity);
