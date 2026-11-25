@@ -122,7 +122,7 @@ public class TherapistServiceImpl implements TherapistService {
 
         Map<UUID, String> therapyNames = loadTherapyNameMap();
         Page<Therapist> result = therapistRepository.findAllByDeletedFalse(
-                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "therapistName")));
+                PageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
 
         PagedResponse<TherapistResponse> paged = PagedResponse.of(result.map(therapist ->
                 TherapistMapper.toResponse(

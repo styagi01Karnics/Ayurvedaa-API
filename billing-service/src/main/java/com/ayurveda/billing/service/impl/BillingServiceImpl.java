@@ -116,7 +116,7 @@ public class BillingServiceImpl implements BillingService {
     public ApiResponse<PagedResponse<BillingResponse>> getBillingsByPatientId(
             UUID patientId, int page, int size) {
         List<Billing> billings = billingRepository
-                .findAllByPatientIdAndDeletedFalseOrderByBillingDateDescCreatedAtDesc(patientId);
+                .findAllByPatientIdAndDeletedFalseOrderByCreatedAtDesc(patientId);
         Map<UUID, List<BillingServiceItem>> itemsByBilling = loadItemsGrouped(billings);
 
         List<BillingResponse> responses = billings.stream()
