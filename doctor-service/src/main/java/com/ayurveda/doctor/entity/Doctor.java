@@ -2,7 +2,7 @@ package com.ayurveda.doctor.entity;
 
 import java.math.BigDecimal;
 
-import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.AuditedEntity;
 import com.ayurveda.doctor.enums.DoctorStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,7 +22,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "mst_doctor")
-public class Doctor extends BaseEntity {
+public class Doctor extends AuditedEntity {
 
     @Column(nullable = false, length = 150)
     private String doctorName;

@@ -8,7 +8,7 @@ import java.util.UUID;
 
 import com.ayurveda.billing.enums.InvoiceStatus;
 import com.ayurveda.billing.enums.VisitType;
-import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.AuditedEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -30,7 +30,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "billing_invoices")
-public class Invoice extends BaseEntity {
+public class Invoice extends AuditedEntity {
 
     @Column(nullable = false, unique = true, length = 50)
     private String invoiceNumber;

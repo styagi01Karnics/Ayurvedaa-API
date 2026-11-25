@@ -37,6 +37,7 @@ public class JwtClaimParser {
                 .tenantCode(claims.get("tenantCode", String.class))
                 .schemaName(claims.get("schemaName", String.class))
                 .email(claims.get("email", String.class))
+                .userCode(claims.get("userCode", String.class))
                 .role(claims.get("role", String.class))
                 .build();
     }

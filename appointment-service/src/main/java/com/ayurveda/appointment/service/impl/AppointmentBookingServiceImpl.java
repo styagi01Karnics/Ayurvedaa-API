@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -498,6 +499,29 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         return ApiResponse.success(
                 AppMessages.APPOINTMENTS_FETCHED,
                 PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointments(
+            BookingStatus bookingStatus, int page, int size) {
+
+        log.info("Listing appointments status={} page={} size={}",
+                bookingStatus == null ? "ALL" : bookingStatus, page, size);
+
+        Page<AppointmentBooking> result = appointmentBookingRepository.findTablePageByOptionalStatus(
+                bookingStatus,
+                PageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+
+        if (result.isEmpty()) {
+            return ApiResponse.success(
+                    AppMessages.NO_APPOINTMENTS_AVAILABLE,
+                    PagedResponse.of(result.map(this::toResponse)));
+        }
+
+        return ApiResponse.success(
+                AppMessages.APPOINTMENTS_FETCHED,
+                PagedResponse.of(result.map(this::toResponse)));
     }
 
     @Override

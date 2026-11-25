@@ -14,6 +14,7 @@ public class TenantClaims {
     private final String tenantCode;
     private final String schemaName;
     private final String email;
+    private final String userCode;
     private final String role;
 
 }

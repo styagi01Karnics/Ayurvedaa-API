@@ -54,6 +54,24 @@ public class AppointmentBookingController {
     }
 
     @Operation(
+            summary = "Get appointments (paginated, table)",
+            description = """
+                    Returns appointments ordered by createdAt descending, for table views.
+                    Optional bookingStatus filter (SCHEDULED, CANCELLED, RESCHEDULED,
+                    IN_CONSULTATION, COMPLETED); omit or use ALL for every status.
+                    Pagination: page (default 0), size (default 20).
+                    """)
+    @GetMapping
+    public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getAppointments(
+            @RequestParam(required = false) String bookingStatus,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        return ResponseEntity.ok(appointmentBookingService.getAppointments(
+                resolveBookingStatusFilter(bookingStatus), page, size));
+    }
+
+    @Operation(
             summary = "Appointment stats",
             description = "Current month count, completed, ongoing (month - completed), and today count. Cancelled excluded.")
     @GetMapping("/stats")

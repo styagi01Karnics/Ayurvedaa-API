@@ -48,6 +48,20 @@ public interface AppointmentBookingRepository
             @Param("today") LocalDate today,
             Pageable pageable);
 
+    @Query(value = """
+            SELECT a FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND (:status IS NULL OR a.bookingStatus = :status)
+            """,
+            countQuery = """
+            SELECT COUNT(a) FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND (:status IS NULL OR a.bookingStatus = :status)
+            """)
+    Page<AppointmentBooking> findTablePageByOptionalStatus(
+            @Param("status") BookingStatus status,
+            Pageable pageable);
+
     List<AppointmentBooking> findByRegistrationDateAndDeletedFalse(LocalDate registrationDate);
 
     long countByRegistrationDateBetweenAndDeletedFalseAndBookingStatusNot(

@@ -1,6 +1,6 @@
 package com.ayurveda.patient.entity;
 
-import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.AuditedEntity;
 import com.ayurveda.common.enums.IdProofType;
 import com.ayurveda.patient.enums.Gender;
 import com.ayurveda.patient.enums.PatientStatus;
@@ -25,7 +25,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Entity
 @Table(name = "mst_patient")
-public class Patient extends BaseEntity {
+public class Patient extends AuditedEntity {
 
     /**
      * Tenant-scoped business code, e.g. GAN-DL-PT-00001.

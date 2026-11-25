@@ -99,7 +99,7 @@ public class DoctorServiceImpl implements DoctorService {
         log.info("Fetching doctors page={}, size={}", page, size);
 
         Page<Doctor> result = doctorRepository.findAllByDeletedFalse(
-                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "doctorName")));
+                PageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         PagedResponse<DoctorResponse> paged = PagedResponse.of(result.map(DoctorMapper::toResponse));
 
         log.info("Successfully fetched {} doctors (total={})",
@@ -115,7 +115,7 @@ public class DoctorServiceImpl implements DoctorService {
 
         Page<Doctor> result = doctorRepository.findAllByStatusAndDeletedFalse(
                 DoctorStatus.ACTIVE,
-                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "doctorName")));
+                PageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         PagedResponse<DoctorResponse> paged = PagedResponse.of(result.map(DoctorMapper::toResponse));
 
         log.info("Successfully fetched {} active doctors (total={})",
@@ -130,7 +130,7 @@ public class DoctorServiceImpl implements DoctorService {
         log.info("Fetching active doctors without user code");
 
         List<DoctorResponse> doctors = doctorRepository
-                .findAllByStatusAndDeletedFalseAndUserCodeIsNullOrderByDoctorNameAsc(DoctorStatus.ACTIVE)
+                .findAllByStatusAndDeletedFalseAndUserCodeIsNullOrderByCreatedAtDesc(DoctorStatus.ACTIVE)
                 .stream()
                 .map(DoctorMapper::toResponse)
                 .toList();
