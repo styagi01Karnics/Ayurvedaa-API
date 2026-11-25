@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.AuditedEntity;
 import com.ayurveda.therapist.enums.TherapistStatus;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -28,7 +28,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "mst_therapist")
-public class Therapist extends BaseEntity {
+public class Therapist extends AuditedEntity {
 
     @Column(nullable = false, length = 150)
     private String therapistName;

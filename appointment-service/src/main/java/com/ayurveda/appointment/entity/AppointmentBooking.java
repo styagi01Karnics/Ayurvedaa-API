@@ -5,7 +5,7 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 import com.ayurveda.appointment.enums.BookingStatus;
-import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.AuditedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,7 +24,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "appointment_bookings")
-public class AppointmentBooking extends BaseEntity {
+public class AppointmentBooking extends AuditedEntity {
 
     @Column(nullable = false)
     private UUID patientId;

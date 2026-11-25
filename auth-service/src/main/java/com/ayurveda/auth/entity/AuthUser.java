@@ -3,7 +3,7 @@ package com.ayurveda.auth.entity;
 import com.ayurveda.auth.enums.Profession;
 import com.ayurveda.auth.enums.UserRole;
 import com.ayurveda.auth.enums.UserStatus;
-import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.AuditedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,7 +32,7 @@ import lombok.Setter;
                 @UniqueConstraint(name = "uk_auth_users_tenant_user_code", columnNames = {"tenant_id", "user_code"})
         }
 )
-public class AuthUser extends BaseEntity {
+public class AuthUser extends AuditedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "tenant_id", nullable = false)
