@@ -18,7 +18,7 @@ import lombok.Setter;
 public class UpdateMedicineCategoryRequest {
 
     @NotBlank(message = "Category name is required")
-    @ValidName
+    @ValidName(allowSpecialCharacters = true)
     private String name;
 
     @NotNull(message = "Active flag is required")

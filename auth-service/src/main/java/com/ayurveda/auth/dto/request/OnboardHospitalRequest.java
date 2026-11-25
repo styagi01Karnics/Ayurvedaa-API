@@ -71,6 +71,12 @@ public class OnboardHospitalRequest {
     @Size(max = 100)
     private String fullName;
 
+    /** Admin login user code, entered by the super admin. Must be unique within the clinic. */
+    @NotBlank(message = "User code is required")
+    @Size(max = 30)
+    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z0-9]+$", message = "User code must mix letters and numbers")
+    private String userCode;
+
     @Size(max = 20)
     private String mobileNumber;
 

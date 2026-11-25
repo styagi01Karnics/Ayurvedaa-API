@@ -19,7 +19,7 @@ import lombok.Setter;
 public class CreateTreatmentPlanMasterRequest {
 
     @NotBlank(message = "Treatment plan name is required")
-    @ValidName
+    @ValidName(allowSpecialCharacters = true)
     private String name;
 
     private TreatmentPlanMasterStatus status;

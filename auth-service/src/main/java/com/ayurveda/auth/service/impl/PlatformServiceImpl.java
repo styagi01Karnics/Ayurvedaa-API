@@ -169,7 +169,7 @@ public class PlatformServiceImpl implements PlatformService {
             AuthUser admin = AuthUser.builder()
                     .tenant(saved)
                     .email(loginEmail)
-                    .userCode(adminUserCode(tenantCode))
+                    .userCode(request.getUserCode().trim())
                     .fullName(request.getFullName().trim())
                     .mobileNumber(trimToNull(request.getMobileNumber()))
                     .passwordHash(passwordEncoder.encode(request.getPassword()))

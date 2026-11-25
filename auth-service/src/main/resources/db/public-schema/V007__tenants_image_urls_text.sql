@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS public.tenants ALTER COLUMN logo_url TYPE TEXT;
+ALTER TABLE IF EXISTS public.tenants ALTER COLUMN photo_url TYPE TEXT;

@@ -25,8 +25,8 @@ public final class AuthValidation {
     public static final String EMAIL_MESSAGE =
             "Enter a valid email address (Gmail or Microsoft)";
 
-    /** User code: 3-20 characters, letters/digits/-/_ only, must contain at least one letter. */
+    /** User code: 3-20 characters, letters and digits only, must mix at least one letter and one digit. */
     public static final String USER_CODE =
-            "^(?=.*[A-Za-z])[A-Za-z0-9][A-Za-z0-9_-]*$";
+            "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z0-9]+$";
 
 }
