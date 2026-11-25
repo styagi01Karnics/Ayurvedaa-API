@@ -34,6 +34,9 @@ public class CreateDoctorRequest {
     @DecimalMin(value = "0.0", inclusive = true, message = "Follow up fees must be 0 or more")
     private BigDecimal followUpFees;
 
+    @Size(max = 100, message = "Qualification must not exceed 100 characters")
+    private String qualification;
+
     @NotBlank(message = "Availability is required")
     @Size(max = 255, message = "Availability must not exceed 255 characters")
     private String availability;

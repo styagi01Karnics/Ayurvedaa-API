@@ -61,6 +61,7 @@ public class DoctorServiceImpl implements DoctorService {
                 .mobileNumber(request.getMobileNumber().trim())
                 .email(request.getEmail().trim().toLowerCase())
                 .specialization(request.getSpecialization().trim())
+                .qualification(StringUtils.hasText(request.getQualification()) ? request.getQualification().trim() : null)
                 .status(status)
                 .consultationFees(request.getConsultationFees())
                 .followUpFees(request.getFollowUpFees())
@@ -219,6 +220,7 @@ public class DoctorServiceImpl implements DoctorService {
                 .map(existingDoctor -> {
                     existingDoctor.setDoctorName(request.getName());
                     existingDoctor.setSpecialization(request.getSpecialization());
+                    existingDoctor.setQualification(StringUtils.hasText(request.getQualification()) ? request.getQualification().trim() : null);
                     if (request.getStatus() != null) {
                         existingDoctor.setStatus(request.getStatus());
                     }

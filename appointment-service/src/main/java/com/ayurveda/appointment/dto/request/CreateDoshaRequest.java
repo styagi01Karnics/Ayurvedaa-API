@@ -18,7 +18,7 @@ import lombok.Setter;
 public class CreateDoshaRequest {
 
     @NotBlank(message = "Dosha name is required")
-    @ValidName
+    @ValidName(allowSpecialCharacters = true)
     private String name;
 
     private String elements;

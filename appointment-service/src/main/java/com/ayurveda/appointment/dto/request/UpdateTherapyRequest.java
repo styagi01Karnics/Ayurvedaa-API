@@ -24,7 +24,7 @@ import lombok.Setter;
 public class UpdateTherapyRequest {
 
     @NotBlank(message = "Name is required")
-    @ValidName
+    @ValidName(allowSpecialCharacters = true)
     private String name;
 
     @NotNull(message = "Category id is required")
