@@ -3,7 +3,6 @@ package com.ayurveda.auth.dto.response;
 import java.util.List;
 import java.util.UUID;
 
-import com.ayurveda.auth.enums.UserRole;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,7 +24,6 @@ public class TenantRoleResponse {
     private String description;
     private Boolean systemRole;
     private Boolean active;
-    private UserRole baseRole;
     private List<String> pageCodes;
     /** Users assigned to this role (Figma card footer). */
     private Long userCount;

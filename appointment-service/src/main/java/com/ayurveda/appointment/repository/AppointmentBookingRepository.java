@@ -26,13 +26,27 @@ public interface AppointmentBookingRepository
 
     List<AppointmentBooking> findByBookingStatusAndDeletedFalse(BookingStatus bookingStatus);
 
-    @Query("""
+    @Query(value = """
             SELECT a FROM AppointmentBooking a
             WHERE a.deleted = false
               AND (:status IS NULL OR a.bookingStatus = :status)
+            ORDER BY CASE WHEN a.registrationDate IS NULL THEN 2
+                          WHEN a.registrationDate < :today THEN 1
+                          ELSE 0 END ASC,
+                     CASE WHEN a.registrationDate < :today THEN a.registrationDate END DESC,
+                     CASE WHEN a.registrationDate >= :today THEN a.registrationDate END ASC,
+                     a.slotTime ASC,
+                     a.createdAt ASC
+            """,
+            countQuery = """
+            SELECT COUNT(a) FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND (:status IS NULL OR a.bookingStatus = :status)
             """)
-    List<AppointmentBooking> findByOptionalStatusAndDeletedFalse(
-            @Param("status") BookingStatus status);
+    Page<AppointmentBooking> findPageByOptionalStatusAndDeletedFalse(
+            @Param("status") BookingStatus status,
+            @Param("today") LocalDate today,
+            Pageable pageable);
 
     List<AppointmentBooking> findByRegistrationDateAndDeletedFalse(LocalDate registrationDate);
 
