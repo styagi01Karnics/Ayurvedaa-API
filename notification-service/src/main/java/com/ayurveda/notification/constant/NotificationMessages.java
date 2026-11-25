@@ -36,5 +36,6 @@ public final class NotificationMessages {
 
     public static final String DEVICE_TOKEN_REGISTERED = "Device token registered successfully.";
     public static final String DEVICE_TOKEN_REMOVED = "Device token removed successfully.";
+    public static final String TOKEN_NOT_FOUND = "No such token found.";
 
 }

@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -73,6 +75,8 @@ import com.ayurveda.common.validation.IdProofValidator;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import static com.ayurveda.appointment.common.Constants.INDIA;
 
 @Slf4j
 @Service
@@ -758,6 +762,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     @Transactional(readOnly = true)
     public ApiResponse<DashboardTodaysScheduleResponse> getDashboardTodaysSchedule(UUID doctorId) {
         LocalDate today = LocalDate.now();
+        ZonedDateTime indiaDateTime = ZonedDateTime.now(ZoneId.of(INDIA));
         log.info("Fetching dashboard today's schedule for date {}, doctorId={}", today, doctorId);
 
         if (doctorId != null) {
@@ -789,6 +794,7 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         DashboardTodaysScheduleResponse response = DashboardTodaysScheduleResponse.builder()
                 .date(today)
                 .currentDateTime(LocalDateTime.now())
+                .indianTimezoneOffset(indiaDateTime.getOffset())
                 .ongoingAppointment(ongoing != null ? toScheduleItem(ongoing) : null)
                 .nextAppointment(next != null ? toScheduleItem(next) : null)
                 .remainingToday(remainingToday)
