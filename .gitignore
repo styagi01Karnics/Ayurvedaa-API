@@ -48,7 +48,9 @@ uploads/
 # Archives
 *.zip
 
-# YAML config is local only (never commit), except the compose file used by CI/deploy
+# YAML config is local only (never commit), except the compose file and service application configs
 *.yml
 *.yaml
 !docker-compose.yml
+!**/src/main/resources/application.yml
+!**/src/main/resources/application-tenant.yml
