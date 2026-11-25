@@ -2,6 +2,7 @@ package com.ayurveda.auth.service.impl;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,6 +51,7 @@ import com.ayurveda.common.exception.DuplicateResourceException;
 import com.ayurveda.common.exception.ForbiddenException;
 import com.ayurveda.common.exception.ResourceNotFoundException;
 import com.ayurveda.common.exception.UnauthorizedException;
+import com.ayurveda.common.tenant.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -152,7 +154,8 @@ public class PlatformServiceImpl implements PlatformService {
 
         try {
             String provisionMessage = schemaProvisioningService.provisionSchema(schemaName);
-            TenantRole hospitalAdminRole = tenantBootstrapService.ensureHospitalAdminRole(saved);
+            TenantRole hospitalAdminRole = withTenantSchema(saved,
+                    () -> tenantBootstrapService.ensureHospitalAdminRole(saved));
             saved.setStatus(TenantStatus.ACTIVE);
             saved.setProvisionMessage(provisionMessage);
             tenantRepository.save(saved);
@@ -205,6 +208,27 @@ public class PlatformServiceImpl implements PlatformService {
 
     private static String adminUserCode(String tenantCode) {
         return tenantCode + "-admin";
+    }
+
+    /**
+     * Runs the action with TenantContext pointed at the given tenant's schema, so
+     * tenant-scoped writes land there rather than in the caller's (super admin) schema.
+     */
+    private static <T> T withTenantSchema(Tenant tenant, Supplier<T> action) {
+        UUID callerTenantId = TenantContext.getTenantId();
+        String callerTenantCode = TenantContext.getTenantCode();
+        String callerSchema = TenantContext.getSchemaName();
+        UUID callerUserId = TenantContext.getUserId();
+        String callerRole = TenantContext.getRole();
+        String callerAuth = TenantContext.getAuthorizationHeader();
+        TenantContext.set(tenant.getId(), tenant.getTenantCode(), tenant.getSchemaName(),
+                callerUserId, callerRole, callerAuth);
+        try {
+            return action.get();
+        } finally {
+            TenantContext.set(callerTenantId, callerTenantCode, callerSchema,
+                    callerUserId, callerRole, callerAuth);
+        }
     }
 
     private static String trimToNull(String value) {
@@ -306,7 +330,8 @@ public class PlatformServiceImpl implements PlatformService {
             throw new DuplicateResourceException(AuthMessages.USER_EXISTS_FOR_TENANT_EMAIL + email);
         }
 
-        TenantRole hospitalAdminRole = tenantBootstrapService.ensureHospitalAdminRole(hospital);
+        TenantRole hospitalAdminRole = withTenantSchema(hospital,
+                () -> tenantBootstrapService.ensureHospitalAdminRole(hospital));
 
         String adminUserCode = adminUserCode(hospital.getTenantCode());
         if (authUserRepository.existsByTenantIdAndUserCodeIgnoreCase(hospital.getId(), adminUserCode)) {
@@ -409,7 +434,7 @@ public class PlatformServiceImpl implements PlatformService {
 
         try {
             String provisionMessage = schemaProvisioningService.provisionSchema(hospital.getSchemaName());
-            tenantBootstrapService.ensureHospitalAdminRole(hospital);
+            withTenantSchema(hospital, () -> tenantBootstrapService.ensureHospitalAdminRole(hospital));
             hospital.setStatus(TenantStatus.ACTIVE);
             hospital.setProvisionMessage(provisionMessage);
             tenantRepository.save(hospital);
