@@ -166,6 +166,7 @@ public class PlatformServiceImpl implements PlatformService {
             AuthUser admin = AuthUser.builder()
                     .tenant(saved)
                     .email(loginEmail)
+                    .userCode(adminUserCode(tenantCode))
                     .fullName(request.getFullName().trim())
                     .mobileNumber(trimToNull(request.getMobileNumber()))
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -200,6 +201,10 @@ public class PlatformServiceImpl implements PlatformService {
             tenantRepository.save(saved);
             throw new BadRequestException("Hospital schema provision failed: " + ex.getMessage());
         }
+    }
+
+    private static String adminUserCode(String tenantCode) {
+        return tenantCode + "-admin";
     }
 
     private static String trimToNull(String value) {
@@ -303,9 +308,15 @@ public class PlatformServiceImpl implements PlatformService {
 
         TenantRole hospitalAdminRole = tenantBootstrapService.ensureHospitalAdminRole(hospital);
 
+        String adminUserCode = adminUserCode(hospital.getTenantCode());
+        if (authUserRepository.existsByTenantIdAndUserCodeIgnoreCase(hospital.getId(), adminUserCode)) {
+            throw new DuplicateResourceException(AuthMessages.USER_CODE_ALREADY_EXISTS + adminUserCode);
+        }
+
         AuthUser admin = AuthUser.builder()
                 .tenant(hospital)
                 .email(email)
+                .userCode(adminUserCode)
                 .fullName(request.getFullName().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(UserRole.ADMIN)

@@ -11,7 +11,7 @@ public class TenantAuditorAware implements AuditorAware<String> {
 
     @Override
     public Optional<String> getCurrentAuditor() {
-        return Optional.ofNullable(TenantContext.getUserName());
+        return Optional.ofNullable(TenantContext.getUserCode());
     }
 
 }
