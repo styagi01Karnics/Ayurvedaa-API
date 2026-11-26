@@ -66,6 +66,27 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.appointment: DEBUG
+    com.ayurveda.appointment.controller.AppointmentAyurvedicAssessmentController: DEBUG
+    com.ayurveda.appointment.controller.AppointmentBookingController: DEBUG
+    com.ayurveda.appointment.controller.AppointmentLifestyleInformationController: DEBUG
+    com.ayurveda.appointment.controller.AppointmentMedicalHistoryController: DEBUG
+    com.ayurveda.appointment.controller.AppointmentPhysicalExaminationController: DEBUG
+    com.ayurveda.appointment.controller.AppointmentSystemicExaminationController: DEBUG
+    com.ayurveda.appointment.controller.AppointmentTherapyController: DEBUG
+    com.ayurveda.appointment.controller.AppointmentTreatmentPlanController: DEBUG
+    com.ayurveda.appointment.controller.ConsultationTypeMasterController: DEBUG
+    com.ayurveda.appointment.controller.DashboardController: DEBUG
+    com.ayurveda.appointment.controller.DoshaMasterController: DEBUG
+    com.ayurveda.appointment.controller.FollowUpController: DEBUG
+    com.ayurveda.appointment.controller.MedicalAssessmentController: DEBUG
+    com.ayurveda.appointment.controller.PrescriptionController: DEBUG
+    com.ayurveda.appointment.controller.TherapyController: DEBUG
+    com.ayurveda.appointment.controller.TreatmentCategoryController: DEBUG
+    com.ayurveda.appointment.controller.TreatmentController: DEBUG
+    com.ayurveda.appointment.controller.TreatmentPlanMasterController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
 

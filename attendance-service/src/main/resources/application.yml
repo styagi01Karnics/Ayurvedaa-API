@@ -58,6 +58,14 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.attendance: DEBUG
+    com.ayurveda.attendance.controller.AdmsDeviceController: DEBUG
+    com.ayurveda.attendance.controller.AdmsLegacyAliasController: DEBUG
+    com.ayurveda.attendance.controller.AttendanceController: DEBUG
+    com.ayurveda.attendance.controller.DailyEmployeeAttendanceController: DEBUG
+    com.ayurveda.attendance.controller.EmployeeAttendanceMasterController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
 
