@@ -32,6 +32,8 @@ timestamps {
             'api-gateway'
         ]
 
+        env.SERVICE_LIST = services.join(' ')
+
         try {
 
             // ==========================================
@@ -101,23 +103,12 @@ timestamps {
                 sh '''
                     set -eu
 
-                    for service in \
-                        patient-service \
-                        doctor-service \
-                        appointment-service \
-                        therapist-service \
-                        file-upload-service \
-                        attendance-service \
-                        activity-log-service \
-                        medicine-service \
-                        billing-service \
-                        notification-service \
-                        auth-service \
-                        payment-service \
-                        api-gateway
-                    do
+                    for service in $SERVICE_LIST; do
+
                         test -f "./${service}/Dockerfile"
+
                         echo "Verified: ${service}/Dockerfile"
+
                     done
 
                     test -f docker-compose.yml
@@ -173,6 +164,7 @@ timestamps {
 
                             login_attempt=1
                             max_login_attempts=4
+                            delay=10
 
                             while [ "$login_attempt" -le "$max_login_attempts" ]; do
 
@@ -188,16 +180,16 @@ timestamps {
                                 fi
 
                                 if [ "$login_attempt" -eq "$max_login_attempts" ]; then
-                                    echo "ERROR: Docker Hub login failed after $max_login_attempts attempts."
+                                    echo "ERROR: Docker Hub login failed."
                                     exit 1
                                 fi
 
-                                delay=$((10 * (2 ** (login_attempt - 1))))
-
-                                echo "Docker Hub login failed. Retrying in $delay seconds..."
+                                echo "Login failed. Retrying in $delay seconds..."
 
                                 sleep "$delay"
+
                                 login_attempt=$((login_attempt + 1))
+                                delay=$((delay * 2))
                             done
                         '''
                     }
@@ -211,26 +203,14 @@ timestamps {
                     sh '''
                         set -eu
 
-                        for service in \
-                            patient-service \
-                            doctor-service \
-                            appointment-service \
-                            therapist-service \
-                            file-upload-service \
-                            attendance-service \
-                            activity-log-service \
-                            medicine-service \
-                            billing-service \
-                            notification-service \
-                            auth-service \
-                            payment-service \
-                            api-gateway
-                        do
+                        for service in $SERVICE_LIST; do
+
                             image="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
 
                             echo "Building: $image"
 
                             docker build -t "$image" "./${service}"
+
                         done
 
                         echo "All Docker images built successfully."
@@ -239,9 +219,12 @@ timestamps {
 
                 // ==========================================
                 // PUSH DOCKER IMAGES
+                // PARALLEL PUSH: 3 AT A TIME
+                // FOUR RETRIES PER IMAGE
                 // ==========================================
 
                 stage('Push Docker Images') {
+
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'dockerhub-creds',
@@ -249,12 +232,17 @@ timestamps {
                             passwordVariable: 'DOCKER_PASSWORD'
                         )
                     ]) {
+
                         sh '''
                             set -eu
+
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
+
+                            # Docker Hub login with retry
 
                             login_attempt=1
                             max_login_attempts=4
+                            delay=10
 
                             while [ "$login_attempt" -le "$max_login_attempts" ]; do
 
@@ -270,22 +258,28 @@ timestamps {
                                 fi
 
                                 if [ "$login_attempt" -eq "$max_login_attempts" ]; then
-                                    echo "ERROR: Docker Hub login failed after $max_login_attempts attempts."
+                                    echo "ERROR: Docker Hub login failed."
                                     exit 1
                                 fi
 
-                                delay=$((10 * (2 ** (login_attempt - 1))))
-
-                                echo "Docker Hub login failed. Retrying in $delay seconds..."
+                                echo "Retrying login in $delay seconds..."
 
                                 sleep "$delay"
+
                                 login_attempt=$((login_attempt + 1))
+                                delay=$((delay * 2))
                             done
 
+                            # ======================================
+                            # DOCKER PUSH RETRY FUNCTION
+                            # ======================================
+
                             retry_docker_push() {
+
                                 image="$1"
                                 attempt=1
                                 max_attempts=4
+                                delay=10
 
                                 while [ "$attempt" -le "$max_attempts" ]; do
 
@@ -301,48 +295,101 @@ timestamps {
                                         return 1
                                     fi
 
-                                    delay=$((10 * (2 ** (attempt - 1))))
-
-                                    echo "Docker push failed. Retrying in $delay seconds..."
+                                    echo "Push failed. Retrying in $delay seconds..."
 
                                     sleep "$delay"
+
                                     attempt=$((attempt + 1))
+                                    delay=$((delay * 2))
+
                                 done
+
+                                return 1
                             }
 
-                            for service in \
-                                patient-service \
-                                doctor-service \
-                                appointment-service \
-                                therapist-service \
-                                file-upload-service \
-                                attendance-service \
-                                activity-log-service \
-                                medicine-service \
-                                billing-service \
-                                notification-service \
-                                auth-service \
-                                payment-service \
-                                api-gateway
-                            do
+                            # ======================================
+                            # PARALLEL BATCH MANAGEMENT
+                            # ======================================
+
+                            MAX_PARALLEL_PUSHES=3
+
+                            PUSH_PIDS=""
+                            PUSH_COUNT=0
+                            PUSH_FAILED=0
+
+                            wait_for_push_batch() {
+
+                                batch_failed=0
+
+                                echo "=========================================="
+                                echo "Waiting for $PUSH_COUNT parallel image pushes"
+                                echo "=========================================="
+
+                                for pid in $PUSH_PIDS; do
+
+                                    if wait "$pid"; then
+                                        echo "Push process $pid completed."
+                                    else
+                                        echo "ERROR: Push process $pid failed."
+                                        batch_failed=1
+                                    fi
+
+                                done
+
+                                if [ "$batch_failed" -ne 0 ]; then
+                                    PUSH_FAILED=1
+                                fi
+
+                                PUSH_PIDS=""
+                                PUSH_COUNT=0
+                            }
+
+                            # ======================================
+                            # PUSH IMAGES IN GROUPS OF THREE
+                            # ======================================
+
+                            for service in $SERVICE_LIST; do
+
                                 image="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
 
-                                echo "Pushing: $image"
+                                echo "Starting parallel push: $image"
 
-                                retry_docker_push "$image"
+                                retry_docker_push "$image" &
+
+                                PUSH_PIDS="$PUSH_PIDS $!"
+                                PUSH_COUNT=$((PUSH_COUNT + 1))
+
+                                if [ "$PUSH_COUNT" -ge "$MAX_PARALLEL_PUSHES" ]; then
+                                    wait_for_push_batch
+                                fi
+
                             done
 
-                            echo "All Docker images pushed successfully."
+                            # Wait for remaining images
+
+                            if [ "$PUSH_COUNT" -gt 0 ]; then
+                                wait_for_push_batch
+                            fi
+
+                            if [ "$PUSH_FAILED" -ne 0 ]; then
+                                echo "ERROR: One or more Docker images failed to push."
+                                exit 1
+                            fi
+
+                            echo "=========================================="
+                            echo "ALL 13 DOCKER IMAGES PUSHED SUCCESSFULLY"
+                            echo "=========================================="
                         '''
                     }
                 }
 
                 // ==========================================
                 // MONITORING SERVER IMAGE RETENTION
-                // Current image only per service.
+                // CURRENT IMAGE ONLY PER SERVICE
                 // ==========================================
 
                 stage('Monitoring Server Image Retention') {
+
                     sh '''
                         set -eu
 
@@ -352,21 +399,8 @@ timestamps {
                         echo "Current tag: ${IMAGE_TAG}"
                         echo "=========================================="
 
-                        for service in \
-                            patient-service \
-                            doctor-service \
-                            appointment-service \
-                            therapist-service \
-                            file-upload-service \
-                            attendance-service \
-                            activity-log-service \
-                            medicine-service \
-                            billing-service \
-                            notification-service \
-                            auth-service \
-                            payment-service \
-                            api-gateway
-                        do
+                        for service in $SERVICE_LIST; do
+
                             repo="${DOCKER_ORG}/${PROJECT_NAME}-${service}"
                             current="${repo}:${IMAGE_TAG}"
 
@@ -406,10 +440,11 @@ timestamps {
 
                                 docker image rm "$image" ||
                                     echo "WARNING: Could not remove $image"
+
                             done
+
                         done
 
-                        echo ""
                         echo "Monitoring server image retention completed."
                     '''
                 }
@@ -437,9 +472,7 @@ timestamps {
 
                             test -f docker-compose.yml
 
-                            echo "=========================================="
-                            echo "TRANSFERRING DOCKER COMPOSE FILE"
-                            echo "=========================================="
+                            echo "Transferring Docker Compose file..."
 
                             scp -i "$SSH_KEY" \
                                 -o IdentitiesOnly=yes \
@@ -497,8 +530,6 @@ echo "Validating Compose configuration..."
 
 docker compose --env-file .env -f "$COMPOSE_FILE" config --quiet
 
-echo "Checking API Gateway service..."
-
 if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
     grep -Fxq api-gateway; then
 
@@ -506,7 +537,7 @@ if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
     exit 1
 fi
 
-echo "OK: API Gateway found in Compose configuration."
+echo "API Gateway found."
 
 # ==========================================
 # DOCKER PULL WITH AUTOMATIC RETRY
@@ -516,6 +547,7 @@ retry_docker_pull() {
 
     attempt=1
     max_attempts=4
+    delay=10
 
     while [ "$attempt" -le "$max_attempts" ]; do
 
@@ -527,20 +559,21 @@ retry_docker_pull() {
         fi
 
         if [ "$attempt" -eq "$max_attempts" ]; then
-            echo "ERROR: Docker Compose image pull failed after $max_attempts attempts."
+            echo "ERROR: Docker Compose image pull failed."
             return 1
         fi
 
-        delay=$((10 * (2 ** (attempt - 1))))
-
-        echo "Docker Compose pull failed. Retrying in $delay seconds..."
+        echo "Pull failed. Retrying in $delay seconds..."
 
         sleep "$delay"
+
         attempt=$((attempt + 1))
+        delay=$((delay * 2))
+
     done
 }
 
-echo "Pulling updated images with automatic retry..."
+echo "Pulling updated images..."
 
 retry_docker_pull
 
@@ -659,7 +692,7 @@ for service in $SERVICES; do
     if [ "$actual_image" != "$expected_image" ]; then
         echo "ERROR: Unexpected image for $service"
         echo "Expected: $expected_image"
-        echo "Actual:   $actual_image"
+        echo "Actual: $actual_image"
         exit 1
     fi
 
@@ -677,9 +710,8 @@ REMOTE
                 }
 
                 // ==========================================
-                // APPLICATION SERVER IMAGE RETENTION
-                // Current + 2 newest other images.
-                // SSH PRIVATE KEY AUTHENTICATION
+                // APP SERVER IMAGE RETENTION
+                // CURRENT + 2 NEWEST OTHER IMAGES
                 // ==========================================
 
                 stage('App Server Image Retention') {
@@ -743,9 +775,6 @@ for service in "${SERVICES[@]}"; do
     echo "Processing repository: $repo"
     echo "KEEP: $current (current deployment)"
 
-    # Collect every tag regardless of branch name.
-    # Sort images by Docker creation timestamp.
-
     mapfile -t TAGS < <(
         while IFS= read -r tag; do
 
@@ -774,8 +803,6 @@ for service in "${SERVICES[@]}"; do
             continue
         fi
 
-        # Keep two newest other images.
-
         if [ "$previous_kept" -lt 2 ]; then
 
             previous_kept=$((previous_kept + 1))
@@ -784,8 +811,6 @@ for service in "${SERVICES[@]}"; do
 
             continue
         fi
-
-        # Protect images referenced by containers.
 
         if docker ps -a \
             --filter "ancestor=$image" \
@@ -807,7 +832,6 @@ for service in "${SERVICES[@]}"; do
 
 done
 
-echo ""
 echo "=========================================="
 echo "APPLICATION SERVER IMAGE RETENTION DONE"
 echo "=========================================="
@@ -842,9 +866,9 @@ REMOTE
 
             echo '=========================================='
             echo 'AYURVEDAA API PIPELINE SUCCESS'
-            echo "Branch    : ${branchName}"
-            echo "Build     : ${env.BUILD_NUMBER}"
-            echo "Image Tag : ${env.IMAGE_TAG}"
+            echo "Branch: ${branchName}"
+            echo "Build: ${env.BUILD_NUMBER}"
+            echo "Image Tag: ${env.IMAGE_TAG}"
             echo '=========================================='
 
         } catch (err) {
