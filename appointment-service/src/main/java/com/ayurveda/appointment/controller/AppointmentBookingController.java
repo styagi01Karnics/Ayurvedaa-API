@@ -9,6 +9,7 @@ import com.ayurveda.appointment.enums.BookingStatus;
 import com.ayurveda.appointment.enums.PatientListTab;
 import com.ayurveda.appointment.service.AppointmentBookingService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.DashboardPeriod;
 import com.ayurveda.common.dto.PagedResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -73,11 +74,13 @@ public class AppointmentBookingController {
 
     @Operation(
             summary = "Appointment stats",
-            description = "Current month count, completed, ongoing (month - completed), and today count. Cancelled excluded.")
+            description = "Current month count, completed, ongoing (month - completed), and today count. Cancelled excluded. Optional doctorId limits to that doctor's appointments.")
     @GetMapping("/stats")
-    public ResponseEntity<ApiResponse<AppointmentStatsResponse>> getAppointmentStats() {
+    public ResponseEntity<ApiResponse<AppointmentStatsResponse>> getAppointmentStats(
+            @RequestParam(required = false) DashboardPeriod period,
+            @RequestParam(required = false) UUID doctorId) {
 
-        return ResponseEntity.ok(appointmentBookingService.getAppointmentStats());
+        return ResponseEntity.ok(appointmentBookingService.getAppointmentStats(period, doctorId));
     }
 
     @Operation(
@@ -240,20 +243,25 @@ public class AppointmentBookingController {
     @Operation(
             summary = "Get appointments by booking status (paginated)",
             description = """
-                    Returns non-deleted appointments for the given bookingStatus.
+                    Returns non-deleted appointments for the given bookingStatus, newest created first.
                     Use ALL for no status filter (all appointments).
-                    Order: today first, then tomorrow, day after tomorrow, then later;
-                    past dates after that.
+                    Optional filters: search (patient name, code or mobile), visitType (CONSULTATION or THERAPY),
+                    and date (registration date). Results are paged.
                     """)
     @GetMapping("/status/{bookingStatus}")
     public ResponseEntity<ApiResponse<PagedResponse<AppointmentBookingResponse>>> getAppointmentsByBookingStatus(
             @PathVariable String bookingStatus,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String visitType,
+            @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) UUID doctorId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         BookingStatus status = resolveBookingStatusFilter(bookingStatus);
         return ResponseEntity.ok(
-                appointmentBookingService.getAppointmentsByBookingStatus(status, page, size));
+                appointmentBookingService.getAppointmentsByBookingStatus(
+                        status, search, visitType, date, doctorId, page, size));
     }
 
     private BookingStatus resolveBookingStatusFilter(String bookingStatus) {

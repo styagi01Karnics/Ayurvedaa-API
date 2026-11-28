@@ -89,7 +89,7 @@ public class Tenant extends BaseEntity {
     @Column(nullable = false, length = 20)
     private TenantStatus status;
 
-    @Column(length = 500)
+    @Column(columnDefinition = "TEXT")
     private String provisionMessage;
 
 }

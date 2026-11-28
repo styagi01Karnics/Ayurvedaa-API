@@ -12,7 +12,7 @@ public interface FollowUpService {
 
     ApiResponse<FollowUpResponse> createFollowUp(CreateFollowUpRequest request);
 
-    ApiResponse<PagedResponse<FollowUpResponse>> getAllFollowUps(int page, int size);
+    ApiResponse<PagedResponse<FollowUpResponse>> getAllFollowUps(UUID doctorId, int page, int size);
 
     ApiResponse<PagedResponse<FollowUpResponse>> getFollowUpsByPatientId(
             UUID patientId, int page, int size);
