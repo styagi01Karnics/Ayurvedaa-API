@@ -125,9 +125,13 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.notification: DEBUG
+    com.ayurveda.notification.controller.MessageController: DEBUG
+    com.ayurveda.notification.controller.NotificationController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
-    com.ayurveda.notification: INFO
 
 management:
   endpoints:

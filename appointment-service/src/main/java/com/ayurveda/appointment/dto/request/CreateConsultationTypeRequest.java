@@ -19,7 +19,7 @@ import lombok.Setter;
 public class CreateConsultationTypeRequest {
 
     @NotBlank(message = "Consultation type name is required")
-    @ValidName
+    @ValidName(allowSpecialCharacters = true)
     private String name;
 
     private ConsultationTypeMasterStatus status;

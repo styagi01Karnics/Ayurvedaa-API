@@ -14,7 +14,7 @@ import lombok.*;
 public class CreateTreatmentCategoryRequest {
 
     @NotBlank
-    @ValidName
+    @ValidName(allowSpecialCharacters = true)
     private String categoryName;
 
     @Size(max = 255)

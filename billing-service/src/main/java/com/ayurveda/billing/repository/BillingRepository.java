@@ -15,9 +15,9 @@ public interface BillingRepository extends JpaRepository<Billing, UUID> {
 
     Optional<Billing> findByIdAndDeletedFalse(UUID id);
 
-    List<Billing> findAllByDeletedFalseOrderByBillingDateDescCreatedAtDesc();
+    List<Billing> findAllByDeletedFalseOrderByCreatedAtDesc();
 
-    List<Billing> findAllByPatientIdAndDeletedFalseOrderByBillingDateDescCreatedAtDesc(UUID patientId);
+    List<Billing> findAllByPatientIdAndDeletedFalseOrderByCreatedAtDesc(UUID patientId);
 
     @Query("""
             SELECT b FROM Billing b

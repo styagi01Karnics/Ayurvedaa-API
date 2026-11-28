@@ -78,6 +78,16 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.billing: DEBUG
+    com.ayurveda.billing.controller.BillingController: DEBUG
+    com.ayurveda.billing.controller.DashboardController: DEBUG
+    com.ayurveda.billing.controller.InvoiceController: DEBUG
+    com.ayurveda.billing.controller.PackageMasterController: DEBUG
+    com.ayurveda.billing.controller.PatientBillingController: DEBUG
+    com.ayurveda.billing.controller.PatientPackageController: DEBUG
+    com.ayurveda.billing.controller.SalesController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
 

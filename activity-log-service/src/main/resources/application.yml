@@ -50,6 +50,10 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.activitylog: DEBUG
+    com.ayurveda.activitylog.controller.ActivityLogController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
 

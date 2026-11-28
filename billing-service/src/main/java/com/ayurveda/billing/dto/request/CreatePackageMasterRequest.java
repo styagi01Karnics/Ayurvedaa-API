@@ -23,7 +23,7 @@ import lombok.Setter;
 public class CreatePackageMasterRequest {
 
     @NotBlank(message = "Package name is required")
-    @ValidName
+    @ValidName(allowSpecialCharacters = true)
     private String name;
 
     @NotNull(message = "Package price is required")

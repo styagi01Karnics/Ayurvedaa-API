@@ -36,11 +36,11 @@ public class RegisterUserRequest {
     @Pattern(regexp = AuthValidation.GMAIL, message = AuthValidation.GMAIL_MESSAGE)
     private String email;
 
-    /** Manually entered code, unique per hospital. Must contain at least one letter. */
+    /** Manually entered code, unique per hospital. Must mix letters and digits. */
     @NotBlank(message = "User code is required")
     @Size(min = 3, max = 20, message = "User code must be between 3 and 20 characters")
     @Pattern(regexp = AuthValidation.USER_CODE,
-            message = "User code can contain only letters, digits, - and _, must include a letter, and cannot be only numbers")
+            message = "User code must mix letters and numbers (letters and digits only)")
     private String userCode;
 
     private Profession profession;

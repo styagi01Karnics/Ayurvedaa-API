@@ -92,6 +92,7 @@ public class AuthMapper {
                 .mobileNumber(user.getMobileNumber())
                 .userCode(user.getUserCode())
                 .profession(user.getProfession())
+                .role(user.getRole())
                 .tenantRoleId(tenantRole != null ? tenantRole.getId() : null)
                 .tenantRoleCode(tenantRole != null ? tenantRole.getRoleCode() : null)
                 .tenantRoleName(tenantRole != null ? tenantRole.getRoleName() : null)
@@ -125,7 +126,6 @@ public class AuthMapper {
                 .description(role.getDescription())
                 .systemRole(role.getSystemRole())
                 .active(role.getActive())
-                .baseRole(role.getBaseRole())
                 .pageCodes(pageCodes != null ? pageCodes : List.of())
                 .userCount(userCount != null ? userCount : 0L)
                 .build();

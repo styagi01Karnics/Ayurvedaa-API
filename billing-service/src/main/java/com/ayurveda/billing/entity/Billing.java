@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import com.ayurveda.billing.enums.BillingStatus;
-import com.ayurveda.common.BaseEntity;
+import com.ayurveda.common.AuditedEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,7 +28,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "billings")
-public class Billing extends BaseEntity {
+public class Billing extends AuditedEntity {
 
     @Column(nullable = false)
     private UUID patientId;

@@ -694,16 +694,12 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.TENANT_ROLE_NOT_FOUND));
     }
 
-    /** Maps the selected tenant role code to the system authority; SUPER_ADMIN is never assignable. */
-    /** Uses the tenant role's base role when set; otherwise matches the role code to a system role name. */
+    /**
+     * Maps the tenant role code to the base system role. Custom tenant roles without a matching
+     * system role fall back to RECEPTIONIST; their access is governed by the tenant role's pages.
+     * SUPER_ADMIN is never assignable.
+     */
     private UserRole userRoleFromTenantRole(TenantRole tenantRole) {
-        if (tenantRole.getBaseRole() != null) {
-            if (tenantRole.getBaseRole() == UserRole.SUPER_ADMIN) {
-                throw new BadRequestException(
-                        String.format(AuthMessages.TENANT_ROLE_NOT_MAPPED_TO_SYSTEM_ROLE, tenantRole.getRoleCode()));
-            }
-            return tenantRole.getBaseRole();
-        }
         String code = tenantRole.getRoleCode();
         if (TenantBootstrapService.HOSPITAL_ADMIN_ROLE_CODE.equalsIgnoreCase(code)) {
             return UserRole.ADMIN;
@@ -711,8 +707,7 @@ public class AuthServiceImpl implements AuthService {
         return Arrays.stream(UserRole.values())
                 .filter(r -> r != UserRole.SUPER_ADMIN && r.name().equalsIgnoreCase(code))
                 .findFirst()
-                .orElseThrow(() -> new BadRequestException(
-                        String.format(AuthMessages.TENANT_ROLE_NOT_MAPPED_TO_SYSTEM_ROLE, code)));
+                .orElse(UserRole.RECEPTIONIST);
     }
 
     private TenantRole resolveTenantRoleForUser(UUID tenantId, UserRole role, UUID tenantRoleId) {

@@ -35,6 +35,9 @@ public interface AppointmentBookingService {
     ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByPatientId(
             UUID patientId, int page, int size);
 
+    ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointments(
+            BookingStatus bookingStatus, int page, int size);
+
     ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
             BookingStatus bookingStatus, int page, int size);
 

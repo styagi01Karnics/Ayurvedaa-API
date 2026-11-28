@@ -23,7 +23,7 @@ public class CreateMedicineCategoryRequest {
     private String code;
 
     @NotBlank(message = "Category name is required")
-    @ValidName
+    @ValidName(allowSpecialCharacters = true)
     private String name;
 
 }

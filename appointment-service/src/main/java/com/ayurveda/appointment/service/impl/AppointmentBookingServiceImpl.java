@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -506,56 +507,50 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
     @Override
     @Transactional(readOnly = true)
+    public ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointments(
+            BookingStatus bookingStatus, int page, int size) {
+
+        log.info("Listing appointments status={} page={} size={}",
+                bookingStatus == null ? "ALL" : bookingStatus, page, size);
+
+        Page<AppointmentBooking> result = appointmentBookingRepository.findTablePageByOptionalStatus(
+                bookingStatus,
+                PageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+
+        if (result.isEmpty()) {
+            return ApiResponse.success(
+                    AppMessages.NO_APPOINTMENTS_AVAILABLE,
+                    PagedResponse.of(result.map(this::toResponse)));
+        }
+
+        return ApiResponse.success(
+                AppMessages.APPOINTMENTS_FETCHED,
+                PagedResponse.of(result.map(this::toResponse)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
             BookingStatus bookingStatus, int page, int size) {
 
         log.info("Fetching appointments for booking status: {} page={} size={}",
                 bookingStatus == null ? "ALL" : bookingStatus, page, size);
 
-        List<AppointmentBooking> appointments =
-                appointmentBookingRepository.findByOptionalStatusAndDeletedFalse(bookingStatus);
+        Page<AppointmentBooking> result = appointmentBookingRepository.findPageByOptionalStatusAndDeletedFalse(
+                bookingStatus, LocalDate.now(), toPageRequest(page, size));
 
-        if (appointments.isEmpty()) {
+        if (result.isEmpty()) {
             log.info("No appointments available for status: {}",
                     bookingStatus == null ? "ALL" : bookingStatus);
             return ApiResponse.success(
-                    AppMessages.NO_APPOINTMENTS_AVAILABLE, PagedResponse.of(List.of(), page, size, 0));
+                    AppMessages.NO_APPOINTMENTS_AVAILABLE,
+                    PagedResponse.of(result.map(this::toResponse)));
         }
 
-        LocalDate today = LocalDate.now();
-        List<AppointmentBookingResponse> responses = appointments.stream()
-                .sorted(appointmentDatePriorityComparator(today))
-                .map(this::toResponse)
-                .toList();
-
-        long total = responses.size();
-        log.info("Fetched {} appointments successfully", total);
+        log.info("Fetched {} appointments successfully", result.getTotalElements());
         return ApiResponse.success(
                 AppMessages.APPOINTMENTS_FETCHED,
-                PagedResponse.of(PageRequests.slice(responses, page, size), page, size, total));
-    }
-
-    /**
-     * Today → tomorrow → day after → later future, then past (newest past first), then by slot.
-     */
-    private Comparator<AppointmentBooking> appointmentDatePriorityComparator(LocalDate today) {
-        return Comparator
-                .comparing((AppointmentBooking a) -> {
-                    LocalDate date = a.getRegistrationDate();
-                    if (date == null) {
-                        return 2;
-                    }
-                    return date.isBefore(today) ? 1 : 0;
-                })
-                .thenComparing(AppointmentBooking::getRegistrationDate,
-                        Comparator.nullsLast((d1, d2) -> {
-                            boolean past = d1.isBefore(today);
-                            return past ? d2.compareTo(d1) : d1.compareTo(d2);
-                        }))
-                .thenComparing(AppointmentBooking::getSlotTime,
-                        Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(AppointmentBooking::getCreatedAt,
-                        Comparator.nullsLast(Comparator.naturalOrder()));
+                PagedResponse.of(result.map(this::toResponse)));
     }
 
     @Override

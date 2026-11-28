@@ -64,7 +64,7 @@ public class DoctorServiceImpl implements DoctorService {
                 .mobileNumber(request.getMobileNumber().trim())
                 .email(request.getEmail().trim().toLowerCase())
                 .specialization(request.getSpecialization().trim())
-                .qualification(request.getQualification())
+                .qualification(StringUtils.hasText(request.getQualification()) ? request.getQualification().trim() : null)
                 .status(status)
                 .consultationFees(request.getConsultationFees())
                 .followUpFees(request.getFollowUpFees())
@@ -123,7 +123,7 @@ public class DoctorServiceImpl implements DoctorService {
 
         Page<Doctor> result = doctorRepository.findAllByStatusAndDeletedFalse(
                 DoctorStatus.ACTIVE,
-                PageRequests.of(page, size, Sort.by(Sort.Direction.ASC, "doctorName")));
+                PageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         PagedResponse<DoctorResponse> paged = PagedResponse.of(result.map(DoctorMapper::toResponse));
 
         log.info("Successfully fetched {} active doctors (total={})",
@@ -138,7 +138,7 @@ public class DoctorServiceImpl implements DoctorService {
         log.info("Fetching active doctors without user code");
 
         List<DoctorResponse> doctors = doctorRepository
-                .findAllByStatusAndDeletedFalseAndUserCodeIsNullOrderByDoctorNameAsc(DoctorStatus.ACTIVE)
+                .findAllByStatusAndDeletedFalseAndUserCodeIsNullOrderByCreatedAtDesc(DoctorStatus.ACTIVE)
                 .stream()
                 .map(DoctorMapper::toResponse)
                 .toList();
@@ -227,6 +227,7 @@ public class DoctorServiceImpl implements DoctorService {
                 .map(existingDoctor -> {
                     existingDoctor.setDoctorName(request.getName());
                     existingDoctor.setSpecialization(request.getSpecialization());
+                    existingDoctor.setQualification(StringUtils.hasText(request.getQualification()) ? request.getQualification().trim() : null);
                     if (request.getStatus() != null) {
                         existingDoctor.setStatus(request.getStatus());
                     }

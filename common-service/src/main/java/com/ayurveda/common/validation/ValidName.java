@@ -10,8 +10,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Person/master name rule: 2-150 characters after trim, letters, spaces, hyphen and parentheses only.
- * Blank or null values are left to {@code @NotBlank}. Set {@code allowPeriod} for doctor names.
+ * Name rule: 3-80 characters after trim. By default only letters, spaces and hyphen are allowed (person names).
+ * Set {@code allowPeriod} for doctor names and {@code allowSpecialCharacters} for master names, which allow
+ * letters, digits and symbols. Blank or null values are left to {@code @NotBlank}.
  */
 @Documented
 @Constraint(validatedBy = ValidNameValidator.class)
@@ -26,5 +27,7 @@ public @interface ValidName {
     Class<? extends Payload>[] payload() default {};
 
     boolean allowPeriod() default false;
+
+    boolean allowSpecialCharacters() default false;
 
 }

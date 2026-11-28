@@ -58,6 +58,10 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.doctor: DEBUG
+    com.ayurveda.doctor.controller.DoctorController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
 

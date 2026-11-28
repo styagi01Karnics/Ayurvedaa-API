@@ -7,16 +7,19 @@ import java.util.regex.Pattern;
 
 public class ValidNameValidator implements ConstraintValidator<ValidName, String> {
 
-    private static final int MIN_LENGTH = 2;
-    private static final int MAX_LENGTH = 150;
-    private static final Pattern NAME_CHARACTERS = Pattern.compile("^[\\p{L} \\-()]+$");
-    private static final Pattern NAME_CHARACTERS_WITH_PERIOD = Pattern.compile("^[\\p{L} \\-().]+$");
+    private static final int MIN_LENGTH = 3;
+    private static final int MAX_LENGTH = 80;
+    private static final Pattern NAME_CHARACTERS = Pattern.compile("^[\\p{L} \\-]+$");
+    private static final Pattern NAME_CHARACTERS_WITH_PERIOD = Pattern.compile("^[\\p{L} \\-.]+$");
+    private static final Pattern NAME_CHARACTERS_WITH_SPECIAL = Pattern.compile("^[\\p{L}\\p{N}\\p{P}\\p{S} ]+$");
 
     private boolean allowPeriod;
+    private boolean allowSpecialCharacters;
 
     @Override
     public void initialize(ValidName annotation) {
         this.allowPeriod = annotation.allowPeriod();
+        this.allowSpecialCharacters = annotation.allowSpecialCharacters();
     }
 
     @Override
@@ -28,7 +31,8 @@ public class ValidNameValidator implements ConstraintValidator<ValidName, String
         if (name.length() < MIN_LENGTH || name.length() > MAX_LENGTH) {
             return reject(context, ValidationErrorCode.NAME_LENGTH_INVALID);
         }
-        Pattern allowed = allowPeriod ? NAME_CHARACTERS_WITH_PERIOD : NAME_CHARACTERS;
+        Pattern allowed = allowSpecialCharacters ? NAME_CHARACTERS_WITH_SPECIAL
+                : allowPeriod ? NAME_CHARACTERS_WITH_PERIOD : NAME_CHARACTERS;
         if (!allowed.matcher(name).matches()) {
             return reject(context, allowPeriod
                     ? ValidationErrorCode.NAME_INVALID_CHARACTERS_WITH_PERIOD

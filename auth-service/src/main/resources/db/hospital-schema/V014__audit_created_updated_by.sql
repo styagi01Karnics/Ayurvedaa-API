@@ -1,0 +1,12 @@
+ALTER TABLE ${schema}.mst_patient ADD COLUMN IF NOT EXISTS created_by VARCHAR(150);
+ALTER TABLE ${schema}.mst_patient ADD COLUMN IF NOT EXISTS updated_by VARCHAR(150);
+ALTER TABLE ${schema}.mst_doctor ADD COLUMN IF NOT EXISTS created_by VARCHAR(150);
+ALTER TABLE ${schema}.mst_doctor ADD COLUMN IF NOT EXISTS updated_by VARCHAR(150);
+ALTER TABLE ${schema}.mst_therapist ADD COLUMN IF NOT EXISTS created_by VARCHAR(150);
+ALTER TABLE ${schema}.mst_therapist ADD COLUMN IF NOT EXISTS updated_by VARCHAR(150);
+ALTER TABLE ${schema}.appointment_bookings ADD COLUMN IF NOT EXISTS created_by VARCHAR(150);
+ALTER TABLE ${schema}.appointment_bookings ADD COLUMN IF NOT EXISTS updated_by VARCHAR(150);
+ALTER TABLE ${schema}.billings ADD COLUMN IF NOT EXISTS created_by VARCHAR(150);
+ALTER TABLE ${schema}.billings ADD COLUMN IF NOT EXISTS updated_by VARCHAR(150);
+ALTER TABLE ${schema}.billing_invoices ADD COLUMN IF NOT EXISTS created_by VARCHAR(150);
+ALTER TABLE ${schema}.billing_invoices ADD COLUMN IF NOT EXISTS updated_by VARCHAR(150);
