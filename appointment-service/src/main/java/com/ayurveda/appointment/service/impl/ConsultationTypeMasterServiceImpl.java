@@ -77,7 +77,7 @@ public class ConsultationTypeMasterServiceImpl implements ConsultationTypeMaster
         log.info("Fetching active consultation types");
 
         List<ConsultationTypeResponse> types = consultationTypeMasterRepository
-                .findAllByStatusAndDeletedFalseOrderByCreatedAtDesc(ConsultationTypeMasterStatus.ACTIVE)
+                .findAllByStatusAndDeletedFalseOrderByNameAsc(ConsultationTypeMasterStatus.ACTIVE)
                 .stream()
                 .map(consultationTypeMapper::toResponse)
                 .toList();
