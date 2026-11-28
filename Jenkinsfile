@@ -94,23 +94,24 @@ timestamps {
                         variable: 'TEAMS_WEBHOOK_URL'
                     )
                 ]) {
-
-                    sh(
-                        script: """
+                
+                    withEnv(["NOTIFICATION_FILE=${notificationFile}"]) {
+                
+                        sh '''
                             set +x
-
-                            HTTP_CODE=\\$(curl -sS \\
-                                --connect-timeout 10 \\
-                                --max-time 30 \\
-                                -o /dev/null \\
-                                -w "%{http_code}" \\
-                                -H "Content-Type: application/json" \\
-                                --data-binary @'${notificationFile}' \\
-                                "\\$TEAMS_WEBHOOK_URL")
-
-                            echo "Teams HTTP response: \\$HTTP_CODE"
-
-                            case "\\$HTTP_CODE" in
+                
+                            HTTP_CODE=$(curl -sS \
+                                --connect-timeout 10 \
+                                --max-time 30 \
+                                -o /dev/null \
+                                -w "%{http_code}" \
+                                -H "Content-Type: application/json" \
+                                --data-binary @"$NOTIFICATION_FILE" \
+                                "$TEAMS_WEBHOOK_URL")
+                
+                            echo "Teams HTTP response: $HTTP_CODE"
+                
+                            case "$HTTP_CODE" in
                                 2*)
                                     echo "Teams notification accepted."
                                     ;;
@@ -119,8 +120,8 @@ timestamps {
                                     exit 1
                                     ;;
                             esac
-                        """
-                    )
+                        '''
+                    }
                 }
 
                 echo "Teams ${status} notification sent successfully."
