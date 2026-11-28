@@ -32,7 +32,7 @@ public interface TherapistRepository extends JpaRepository<Therapist, UUID> {
             JOIN t.assignedTherapyIds therapyId
             WHERE t.deleted = false
               AND therapyId IN :therapyIds
-            ORDER BY t.therapistName ASC
+            ORDER BY t.createdAt DESC
             """)
     List<Therapist> findByAssignedTherapyIds(
             @Param("therapyIds") Collection<UUID> therapyIds);

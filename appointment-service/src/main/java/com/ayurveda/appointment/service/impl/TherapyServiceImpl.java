@@ -87,8 +87,8 @@ public class TherapyServiceImpl implements TherapyService {
         log.info("Fetching all therapies with status filter : {}", status);
 
         List<TherapyMaster> therapies = status == null
-                ? therapyRepository.findAllByDeletedFalse()
-                : therapyRepository.findAllByDeletedFalseAndStatus(status);
+                ? therapyRepository.findAllByDeletedFalseOrderByCreatedAtDesc()
+                : therapyRepository.findAllByDeletedFalseAndStatusOrderByCreatedAtDesc(status);
 
         List<TherapyResponse> response = therapies.stream()
                 .map(this::toEnrichedResponse)

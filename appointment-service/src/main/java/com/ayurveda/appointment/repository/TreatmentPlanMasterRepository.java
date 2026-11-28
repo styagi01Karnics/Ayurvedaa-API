@@ -30,17 +30,17 @@ public interface TreatmentPlanMasterRepository extends JpaRepository<TreatmentPl
     @Query("""
             SELECT t FROM TreatmentPlanMaster t
             WHERE COALESCE(t.deleted, false) = false
-            ORDER BY t.name ASC
+            ORDER BY t.createdAt DESC
             """)
-    List<TreatmentPlanMaster> findAllByDeletedFalseOrderByNameAsc();
+    List<TreatmentPlanMaster> findAllByDeletedFalseOrderByCreatedAtDesc();
 
     @Query("""
             SELECT t FROM TreatmentPlanMaster t
             WHERE t.status = :status
               AND COALESCE(t.deleted, false) = false
-            ORDER BY t.name ASC
+            ORDER BY t.createdAt DESC
             """)
-    List<TreatmentPlanMaster> findAllByStatusAndDeletedFalseOrderByNameAsc(
+    List<TreatmentPlanMaster> findAllByStatusAndDeletedFalseOrderByCreatedAtDesc(
             @Param("status") TreatmentPlanMasterStatus status);
 
     @Query("""

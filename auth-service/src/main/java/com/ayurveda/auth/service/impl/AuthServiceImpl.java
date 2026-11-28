@@ -527,7 +527,7 @@ public class AuthServiceImpl implements AuthService {
         requireTenantAdmin(principal);
 
         List<UserResponse> users = authUserRepository
-                .findByTenantIdAndDeletedFalse(principal.getTenantId())
+                .findByTenantIdAndDeletedFalseOrderByCreatedAtDesc(principal.getTenantId())
                 .stream()
                 .map(user -> authMapper.toUserResponse(user, pageAccessService.resolvePageCodes(user)))
                 .toList();

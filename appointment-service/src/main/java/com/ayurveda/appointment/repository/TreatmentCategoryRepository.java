@@ -21,4 +21,6 @@ public interface TreatmentCategoryRepository
 
     List<TreatmentCategoryMaster> findByCategoryCodeStartingWith(String prefix);
 
+    List<TreatmentCategoryMaster> findAllByOrderByCreatedAtDesc();
+
 }

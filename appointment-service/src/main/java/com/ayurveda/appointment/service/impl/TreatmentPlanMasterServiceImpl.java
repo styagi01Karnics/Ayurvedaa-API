@@ -64,7 +64,7 @@ public class TreatmentPlanMasterServiceImpl implements TreatmentPlanMasterServic
         log.info("Fetching all treatment plan masters");
 
         List<TreatmentPlanMasterResponse> plans = treatmentPlanMasterRepository
-                .findAllByDeletedFalseOrderByNameAsc()
+                .findAllByDeletedFalseOrderByCreatedAtDesc()
                 .stream()
                 .map(treatmentPlanMasterMapper::toResponse)
                 .toList();
@@ -79,7 +79,7 @@ public class TreatmentPlanMasterServiceImpl implements TreatmentPlanMasterServic
         log.info("Fetching active treatment plan masters");
 
         List<TreatmentPlanMasterResponse> plans = treatmentPlanMasterRepository
-                .findAllByStatusAndDeletedFalseOrderByNameAsc(TreatmentPlanMasterStatus.ACTIVE)
+                .findAllByStatusAndDeletedFalseOrderByCreatedAtDesc(TreatmentPlanMasterStatus.ACTIVE)
                 .stream()
                 .map(treatmentPlanMasterMapper::toResponse)
                 .toList();

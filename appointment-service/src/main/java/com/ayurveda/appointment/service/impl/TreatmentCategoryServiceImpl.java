@@ -90,7 +90,7 @@ public class TreatmentCategoryServiceImpl implements TreatmentCategoryService {
         log.info("Fetching all treatment categories");
 
         List<TreatmentCategoryResponse> response =
-                treatmentCategoryRepository.findAll()
+                treatmentCategoryRepository.findAllByOrderByCreatedAtDesc()
                         .stream()
                         .map(treatmentCategoryMapper::toResponse)
                         .toList();
