@@ -1,6 +1,7 @@
 package com.ayurveda.patient.service.impl;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.DashboardPeriod;
 import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
@@ -35,6 +36,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -252,13 +254,28 @@ public class PatientServiceImpl implements PatientService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<PatientCountResponse> getTotalPatientCount() {
+    public ApiResponse<PatientCountResponse> getTotalPatientCount(DashboardPeriod period) {
 
-        log.info("Fetching patient counts (total, active, inactive).");
+        log.info("Fetching patient counts (total, active, inactive). period={}", period);
 
-        long totalPatients = patientRepository.countByDeletedFalse();
-        long activePatients = patientRepository.countByDeletedFalseAndStatus(PatientStatus.ACTIVE);
-        long inactivePatients = patientRepository.countByDeletedFalseAndStatus(PatientStatus.INACTIVE);
+        long totalPatients;
+        long activePatients;
+        long inactivePatients;
+
+        if (period == null) {
+            totalPatients = patientRepository.countByDeletedFalse();
+            activePatients = patientRepository.countByDeletedFalseAndStatus(PatientStatus.ACTIVE);
+            inactivePatients = patientRepository.countByDeletedFalseAndStatus(PatientStatus.INACTIVE);
+        } else {
+            LocalDate[] range = period.range();
+            LocalDateTime from = range[0].atStartOfDay();
+            LocalDateTime to = range[1].atTime(LocalTime.MAX);
+            totalPatients = patientRepository.countByDeletedFalseAndCreatedAtBetween(from, to);
+            activePatients = patientRepository.countByDeletedFalseAndStatusAndCreatedAtBetween(
+                    PatientStatus.ACTIVE, from, to);
+            inactivePatients = patientRepository.countByDeletedFalseAndStatusAndCreatedAtBetween(
+                    PatientStatus.INACTIVE, from, to);
+        }
 
         log.info("Patient counts — total: {}, active: {}, inactive: {}",
                 totalPatients, activePatients, inactivePatients);

@@ -52,6 +52,7 @@ public class FollowUpController {
             description = "Returns non-deleted follow-ups ordered by appointment date. page/size supported.")
     @GetMapping
     public ResponseEntity<?> getAllFollowUps(
+            @RequestParam(required = false) UUID doctorId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
@@ -67,7 +68,7 @@ public class FollowUpController {
             return ResponseEntity.badRequest().body("Page size must not exceed 100.");
         }
 
-        return ResponseEntity.ok(followUpService.getAllFollowUps(page, size));
+        return ResponseEntity.ok(followUpService.getAllFollowUps(doctorId, page, size));
     }
 
     @Operation(

@@ -11,9 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ayurveda.appointment.dto.response.DashboardPatientTrendsResponse;
 import com.ayurveda.appointment.dto.response.DashboardTodaysScheduleResponse;
+import com.ayurveda.appointment.dto.response.DoctorPatientCountResponse;
 import com.ayurveda.appointment.service.AppointmentBookingService;
 import com.ayurveda.appointment.service.DashboardPatientTrendsService;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.DashboardPeriod;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -64,8 +66,17 @@ public class DashboardController {
                     """)
     @GetMapping("/patient-trends")
     public ResponseEntity<ApiResponse<DashboardPatientTrendsResponse>> getPatientTrends(
-            @RequestParam(required = false) Integer year) {
-        return ResponseEntity.ok(dashboardPatientTrendsService.getPatientTrends(year));
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) UUID doctorId) {
+        return ResponseEntity.ok(dashboardPatientTrendsService.getPatientTrends(year, doctorId));
+    }
+
+    @Operation(summary = "Get new patient count for one doctor within a period (default MONTHLY)")
+    @GetMapping("/doctor-patient-count")
+    public ResponseEntity<ApiResponse<DoctorPatientCountResponse>> getDoctorPatientCount(
+            @RequestParam UUID doctorId,
+            @RequestParam(required = false) DashboardPeriod period) {
+        return ResponseEntity.ok(dashboardPatientTrendsService.getDoctorPatientCount(doctorId, period));
     }
 
 }

@@ -1,6 +1,7 @@
 package com.ayurveda.patient.service;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.DashboardPeriod;
 import com.ayurveda.common.dto.PagedResponse;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
 import com.ayurveda.patient.dto.request.UpdatePatientEmailRequest;
@@ -21,8 +22,11 @@ public interface PatientService {
     /** Lists patients for the current tenant (paginated). */
     ApiResponse<PagedResponse<PatientResponse>> getAllPatients(int page, int size);
 
-    /** Returns total, active, and inactive patient counts for the current tenant. */
-    ApiResponse<PatientCountResponse> getTotalPatientCount();
+    /**
+     * Returns total, active, and inactive patient counts for the current tenant.
+     * A null period counts all patients; otherwise only patients created in the period.
+     */
+    ApiResponse<PatientCountResponse> getTotalPatientCount(DashboardPeriod period);
 
     /** Dashboard chart – new patients registered per month in the given year. */
     ApiResponse<DashboardNewPatientsMonthlyResponse> getDashboardNewPatientsByMonth(Integer year);

@@ -31,7 +31,7 @@ spring:
             - id: appointment-service
               uri: ${APPOINTMENT_SERVICE_URL:http://localhost:8103}
               predicates:
-                - Path=/api/v1/appointments/**,/api/v1/ayurvedic-assessments/**,/api/v1/lifestyle-information/**,/api/v1/medical-histories/**,/api/v1/physical-examinations/**,/api/v1/systemic-examinations/**,/api/v1/consultation-types/**,/api/v1/appointment-therapies/**,/api/v1/treatment-plans/**,/api/v1/doshas/**,/api/v1/follow-ups/**,/api/v1/medical-assessment/**,/api/v1/prescriptions/**,/api/v1/therapies/**,/api/v1/treatment-categories/**,/api/v1/treatment-plan-masters/**,/api/v1/treatments/**,/api/v1/dashboard/todays-schedule,/api/v1/dashboard/patient-trends
+                - Path=/api/v1/appointments/**,/api/v1/ayurvedic-assessments/**,/api/v1/lifestyle-information/**,/api/v1/medical-histories/**,/api/v1/physical-examinations/**,/api/v1/systemic-examinations/**,/api/v1/consultation-types/**,/api/v1/appointment-therapies/**,/api/v1/treatment-plans/**,/api/v1/doshas/**,/api/v1/follow-ups/**,/api/v1/medical-assessment/**,/api/v1/prescriptions/**,/api/v1/therapies/**,/api/v1/treatment-categories/**,/api/v1/treatment-plan-masters/**,/api/v1/treatments/**,/api/v1/dashboard/todays-schedule,/api/v1/dashboard/patient-trends,/api/v1/dashboard/doctor-patient-count
             - id: therapist-service
               uri: ${THERAPIST_SERVICE_URL:http://localhost:8104}
               predicates:

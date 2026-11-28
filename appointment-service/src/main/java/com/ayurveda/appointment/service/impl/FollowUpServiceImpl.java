@@ -82,11 +82,13 @@ public class FollowUpServiceImpl implements FollowUpService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<PagedResponse<FollowUpResponse>> getAllFollowUps(int page, int size) {
-        log.info("Fetching all follow-ups page={} size={}", page, size);
+    public ApiResponse<PagedResponse<FollowUpResponse>> getAllFollowUps(UUID doctorId, int page, int size) {
+        log.info("Fetching follow-ups doctorId={} page={} size={}", doctorId, page, size);
 
-        List<FollowUpResponse> responses = followUpRepository
-                .findAllByDeletedFalseOrderByAppointmentDateAsc()
+        List<FollowUp> followUps = doctorId == null
+                ? followUpRepository.findAllByDeletedFalseOrderByAppointmentDateAsc()
+                : followUpRepository.findAllByAssignedDoctorIdAndDeletedFalseOrderByAppointmentDateAsc(doctorId);
+        List<FollowUpResponse> responses = followUps
                 .stream()
                 .map(this::toResponse)
                 .toList();
