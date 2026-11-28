@@ -172,6 +172,12 @@ springdoc:
       - name: Payment
         url: /docs/payment
 
+logging:
+  level:
+    root: INFO
+    com.ayurveda.gateway: DEBUG
+    org.springframework.boot.actuate.health: WARN
+
 management:
   endpoints:
     web:

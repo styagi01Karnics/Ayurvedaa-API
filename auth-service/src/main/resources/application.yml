@@ -65,6 +65,13 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.auth: DEBUG
+    com.ayurveda.auth.controller.AuthController: DEBUG
+    com.ayurveda.auth.controller.PlatformController: DEBUG
+    com.ayurveda.auth.controller.PublicTenantController: DEBUG
+    com.ayurveda.auth.controller.RoleController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG

@@ -106,9 +106,16 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.payment: DEBUG
+    com.ayurveda.payment.controller.PaymentController: DEBUG
+    com.ayurveda.payment.controller.PaymentLinkController: DEBUG
+    com.ayurveda.payment.controller.PayuCallbackController: DEBUG
+    com.ayurveda.payment.controller.PublicPayPageController: DEBUG
+    com.ayurveda.payment.controller.PublicPaymentController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
-    com.ayurveda.payment: INFO
 
 management:
   endpoints:

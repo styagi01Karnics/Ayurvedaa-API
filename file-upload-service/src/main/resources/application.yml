@@ -54,6 +54,10 @@ springdoc:
 
 logging:
   level:
+    root: INFO
+    com.ayurveda.fileupload: DEBUG
+    com.ayurveda.fileupload.controller.AppointmentDocumentController: DEBUG
+    org.springframework.boot.actuate.health: WARN
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
 
