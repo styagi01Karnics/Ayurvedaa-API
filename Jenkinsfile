@@ -34,6 +34,115 @@ timestamps {
 
         env.SERVICE_LIST = services.join(' ')
 
+        // ==========================================
+        // MICROSOFT TEAMS NOTIFICATION HELPER
+        // ONLY USED FOR DEV BRANCH
+        // ==========================================
+
+        def sendTeamsNotification = { String status, String title ->
+
+            def notificationFile =
+                "teams-notification-${env.BUILD_NUMBER}.json"
+
+            try {
+
+                def payload = [
+                    type: 'message',
+                    attachments: [[
+                        contentType: 'application/vnd.microsoft.card.adaptive',
+                        content: [
+                            '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
+                            type: 'AdaptiveCard',
+                            version: '1.4',
+                            body: [
+                                [
+                                    type: 'TextBlock',
+                                    text: title,
+                                    weight: 'Bolder',
+                                    size: 'Large',
+                                    wrap: true
+                                ],
+                                [
+                                    type: 'TextBlock',
+                                    text: "Ayurvedaa API - ${status}",
+                                    wrap: true
+                                ],
+                                [
+                                    type: 'FactSet',
+                                    facts: [
+                                        [title: 'Project', value: 'Ayurvedaa API'],
+                                        [title: 'Branch', value: branchName],
+                                        [title: 'Build', value: "#${env.BUILD_NUMBER}"],
+                                        [title: 'Status', value: status]
+                                    ]
+                                ]
+                            ],
+                            actions: [[
+                                type: 'Action.OpenUrl',
+                                title: 'View Jenkins Build',
+                                url: env.BUILD_URL
+                            ]]
+                        ]
+                    ]]
+                ]
+
+                writeFile(
+                    file: notificationFile,
+                    text: groovy.json.JsonOutput.toJson(payload)
+                )
+
+                withCredentials([
+                    string(
+                        credentialsId: 'teams-jenkins-webhook',
+                        variable: 'TEAMS_WEBHOOK_URL'
+                    )
+                ]) {
+
+                    sh(
+                        script: """
+                            set +x
+
+                            HTTP_CODE=\\$(curl -sS \\
+                                --connect-timeout 10 \\
+                                --max-time 30 \\
+                                -o /dev/null \\
+                                -w "%{http_code}" \\
+                                -H "Content-Type: application/json" \\
+                                --data-binary @${notificationFile} \\
+                                "\\$TEAMS_WEBHOOK_URL")
+
+                            echo "Teams HTTP response: \\$HTTP_CODE"
+
+                            case "\\$HTTP_CODE" in
+                                2*)
+                                    echo "Teams notification accepted."
+                                    ;;
+                                *)
+                                    echo "ERROR: Teams notification failed."
+                                    exit 1
+                                    ;;
+                            esac
+                        """
+                    )
+                }
+
+                echo "Teams ${status} notification sent successfully."
+
+            } catch (Exception notificationError) {
+
+                echo "WARNING: Teams notification could not be delivered."
+                echo "Notification error: ${notificationError.getMessage()}"
+
+            } finally {
+
+                sh(
+                    returnStatus: true,
+                    script: "rm -f '${notificationFile}'"
+                )
+
+            }
+        }
+
         try {
 
             // ==========================================
@@ -871,6 +980,36 @@ REMOTE
             echo "Image Tag: ${env.IMAGE_TAG}"
             echo '=========================================='
 
+            // ==========================================
+            // TEAMS RECOVERY NOTIFICATION
+            // DEV BRANCH ONLY
+            // ONLY AFTER PREVIOUS FAILURE / UNSTABLE
+            // ==========================================
+
+            if (branchName == 'dev') {
+
+                def previousResult = currentBuild.previousBuild?.result
+
+                if (previousResult == 'FAILURE' ||
+                    previousResult == 'UNSTABLE') {
+
+                    sendTeamsNotification(
+                        'RECOVERED',
+                        'AYURVEDAA API BUILD RECOVERED'
+                    )
+
+                } else {
+
+                    echo 'No previous failed or unstable build. Recovery notification skipped.'
+
+                }
+
+            } else {
+
+                echo "Teams recovery notification skipped for branch: ${branchName}"
+
+            }
+
         } catch (err) {
 
             // ==========================================
@@ -884,6 +1023,25 @@ REMOTE
             echo '=========================================='
 
             currentBuild.result = 'FAILURE'
+
+            // ==========================================
+            // TEAMS FAILURE NOTIFICATION
+            // DEV BRANCH ONLY
+            // ==========================================
+
+            if (branchName == 'dev') {
+
+                sendTeamsNotification(
+                    'FAILED',
+                    'AYURVEDAA API BUILD FAILED'
+                )
+
+            } else {
+
+                echo "Teams failure notification skipped for branch: ${branchName}"
+
+            }
+
             throw err
 
         } finally {
