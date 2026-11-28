@@ -36,6 +36,8 @@ public interface AuthUserRepository extends JpaRepository<AuthUser, UUID> {
 
     List<AuthUser> findByTenantIdAndDeletedFalse(UUID tenantId);
 
+    List<AuthUser> findByTenantIdAndDeletedFalseOrderByCreatedAtDesc(UUID tenantId);
+
     Page<AuthUser> findByTenantIdAndDeletedFalse(UUID tenantId, Pageable pageable);
 
     List<AuthUser> findByTenantIdAndRoleAndDeletedFalseOrderByCreatedAtDesc(UUID tenantId, UserRole role);

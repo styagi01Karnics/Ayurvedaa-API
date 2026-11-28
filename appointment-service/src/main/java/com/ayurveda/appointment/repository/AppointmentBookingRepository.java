@@ -26,27 +26,14 @@ public interface AppointmentBookingRepository
 
     List<AppointmentBooking> findByBookingStatusAndDeletedFalse(BookingStatus bookingStatus);
 
-    @Query(value = """
+    @Query("""
             SELECT a FROM AppointmentBooking a
             WHERE a.deleted = false
               AND (:status IS NULL OR a.bookingStatus = :status)
-            ORDER BY CASE WHEN a.registrationDate IS NULL THEN 2
-                          WHEN a.registrationDate < :today THEN 1
-                          ELSE 0 END ASC,
-                     CASE WHEN a.registrationDate < :today THEN a.registrationDate END DESC,
-                     CASE WHEN a.registrationDate >= :today THEN a.registrationDate END ASC,
-                     a.slotTime ASC,
-                     a.createdAt ASC
-            """,
-            countQuery = """
-            SELECT COUNT(a) FROM AppointmentBooking a
-            WHERE a.deleted = false
-              AND (:status IS NULL OR a.bookingStatus = :status)
+            ORDER BY a.createdAt DESC
             """)
-    Page<AppointmentBooking> findPageByOptionalStatusAndDeletedFalse(
-            @Param("status") BookingStatus status,
-            @Param("today") LocalDate today,
-            Pageable pageable);
+    List<AppointmentBooking> findAllByOptionalStatusAndDeletedFalseOrderByCreatedAtDesc(
+            @Param("status") BookingStatus status);
 
     @Query(value = """
             SELECT a FROM AppointmentBooking a
@@ -64,14 +51,43 @@ public interface AppointmentBookingRepository
 
     List<AppointmentBooking> findByRegistrationDateAndDeletedFalse(LocalDate registrationDate);
 
-    long countByRegistrationDateBetweenAndDeletedFalseAndBookingStatusNot(
-            LocalDate startDate, LocalDate endDate, BookingStatus bookingStatus);
+    @Query("""
+            SELECT COUNT(a) FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND a.registrationDate BETWEEN :startDate AND :endDate
+              AND a.bookingStatus <> :excludedStatus
+              AND (:doctorId IS NULL OR a.assignedDoctorId = :doctorId)
+            """)
+    long countStatsBetweenExcluding(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("excludedStatus") BookingStatus excludedStatus,
+            @Param("doctorId") UUID doctorId);
 
-    long countByRegistrationDateBetweenAndDeletedFalseAndBookingStatus(
-            LocalDate startDate, LocalDate endDate, BookingStatus bookingStatus);
+    @Query("""
+            SELECT COUNT(a) FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND a.registrationDate BETWEEN :startDate AND :endDate
+              AND a.bookingStatus = :status
+              AND (:doctorId IS NULL OR a.assignedDoctorId = :doctorId)
+            """)
+    long countStatsBetweenWithStatus(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("status") BookingStatus status,
+            @Param("doctorId") UUID doctorId);
 
-    long countByRegistrationDateAndDeletedFalseAndBookingStatusNot(
-            LocalDate registrationDate, BookingStatus bookingStatus);
+    @Query("""
+            SELECT COUNT(a) FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND a.registrationDate = :date
+              AND a.bookingStatus <> :excludedStatus
+              AND (:doctorId IS NULL OR a.assignedDoctorId = :doctorId)
+            """)
+    long countStatsOnDateExcluding(
+            @Param("date") LocalDate date,
+            @Param("excludedStatus") BookingStatus excludedStatus,
+            @Param("doctorId") UUID doctorId);
 
     @Query("""
             SELECT a FROM AppointmentBooking a
@@ -179,7 +195,7 @@ public interface AppointmentBookingRepository
                           AND aa.deleted = false
                     )
               )
-            ORDER BY a.registrationDate DESC, a.createdAt DESC
+            ORDER BY a.createdAt DESC
             """)
     List<AppointmentBooking> findPatientList(
             @Param("statuses") Collection<BookingStatus> statuses,
@@ -204,6 +220,45 @@ public interface AppointmentBookingRepository
             GROUP BY EXTRACT(MONTH FROM a.registrationDate)
             """)
     List<Object[]> countFirstVisitsByMonth(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("cancelled") BookingStatus cancelled);
+
+    @Query("""
+            SELECT EXTRACT(MONTH FROM a.registrationDate), COUNT(a)
+            FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND a.assignedDoctorId = :doctorId
+              AND a.bookingStatus <> :cancelled
+              AND a.registrationDate >= :from
+              AND a.registrationDate < :to
+              AND a.registrationDate = (
+                  SELECT MIN(b.registrationDate)
+                  FROM AppointmentBooking b
+                  WHERE b.patientId = a.patientId
+                    AND b.assignedDoctorId = :doctorId
+                    AND b.deleted = false
+                    AND b.bookingStatus <> :cancelled
+              )
+            GROUP BY EXTRACT(MONTH FROM a.registrationDate)
+            """)
+    List<Object[]> countFirstVisitsByMonthForDoctor(
+            @Param("doctorId") UUID doctorId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("cancelled") BookingStatus cancelled);
+
+    @Query("""
+            SELECT a.patientId
+            FROM AppointmentBooking a
+            WHERE a.deleted = false
+              AND a.assignedDoctorId = :doctorId
+              AND a.bookingStatus <> :cancelled
+            GROUP BY a.patientId
+            HAVING MIN(a.registrationDate) >= :from AND MIN(a.registrationDate) < :to
+            """)
+    List<UUID> findNewPatientIdsForDoctorBetween(
+            @Param("doctorId") UUID doctorId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
             @Param("cancelled") BookingStatus cancelled);

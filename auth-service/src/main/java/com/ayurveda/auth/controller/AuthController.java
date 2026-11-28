@@ -24,6 +24,7 @@ import com.ayurveda.auth.dto.request.LoginRequest;
 import com.ayurveda.auth.dto.request.RegisterUserRequest;
 import com.ayurveda.auth.dto.request.ResetPasswordRequest;
 import com.ayurveda.auth.dto.request.UpdateProfileRequest;
+import com.ayurveda.auth.dto.request.UpdateTenantLogoRequest;
 import com.ayurveda.auth.dto.request.UpdateUserRequest;
 import com.ayurveda.auth.dto.request.UpdateUserStatusRequest;
 import com.ayurveda.auth.dto.response.AuthTokenResponse;
@@ -165,6 +166,14 @@ public class AuthController {
     @GetMapping("/tenant")
     public ResponseEntity<ApiResponse<TenantResponse>> currentTenant() {
         return ResponseEntity.ok(authService.getCurrentTenant());
+    }
+
+    @Operation(summary = "Update current tenant logo (PNG data URL)", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PutMapping("/tenant/logo")
+    public ResponseEntity<ApiResponse<TenantResponse>> updateTenantLogo(
+            @Valid @RequestBody UpdateTenantLogoRequest request) {
+        return ResponseEntity.ok(authService.updateCurrentTenantLogo(request));
     }
 
 }

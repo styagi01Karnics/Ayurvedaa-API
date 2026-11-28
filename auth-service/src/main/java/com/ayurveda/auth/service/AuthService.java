@@ -9,6 +9,7 @@ import com.ayurveda.auth.dto.request.LoginRequest;
 import com.ayurveda.auth.dto.request.RegisterUserRequest;
 import com.ayurveda.auth.dto.request.ResetPasswordRequest;
 import com.ayurveda.auth.dto.request.UpdateProfileRequest;
+import com.ayurveda.auth.dto.request.UpdateTenantLogoRequest;
 import com.ayurveda.auth.dto.request.UpdateUserRequest;
 import com.ayurveda.auth.dto.request.UpdateUserStatusRequest;
 import com.ayurveda.auth.dto.response.AuthTokenResponse;
@@ -48,6 +49,8 @@ public interface AuthService {
     ApiResponse<PagedResponse<UserResponse>> getUsersForCurrentTenantPaged(int page, int size);
 
     ApiResponse<TenantResponse> getCurrentTenant();
+
+    ApiResponse<TenantResponse> updateCurrentTenantLogo(UpdateTenantLogoRequest request);
 
     ApiResponse<TokenValidationResponse> validateToken(String authorizationHeader);
 

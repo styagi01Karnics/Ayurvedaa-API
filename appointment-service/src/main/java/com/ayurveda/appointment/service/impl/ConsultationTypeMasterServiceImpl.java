@@ -62,7 +62,7 @@ public class ConsultationTypeMasterServiceImpl implements ConsultationTypeMaster
         log.info("Fetching all consultation types");
 
         List<ConsultationTypeResponse> types = consultationTypeMasterRepository
-                .findAllByDeletedFalseOrderByNameAsc()
+                .findAllByDeletedFalseOrderByCreatedAtDesc()
                 .stream()
                 .map(consultationTypeMapper::toResponse)
                 .toList();

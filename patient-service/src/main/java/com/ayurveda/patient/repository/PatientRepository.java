@@ -36,6 +36,11 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
 
     long countByDeletedFalseAndStatus(PatientStatus status);
 
+    long countByDeletedFalseAndCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+
+    long countByDeletedFalseAndStatusAndCreatedAtBetween(
+            PatientStatus status, LocalDateTime from, LocalDateTime to);
+
     @Query("""
             SELECT EXTRACT(MONTH FROM p.createdAt), COUNT(p)
             FROM Patient p

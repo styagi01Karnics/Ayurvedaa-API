@@ -23,6 +23,8 @@ public interface FollowUpRepository extends JpaRepository<FollowUp, UUID> {
 
     List<FollowUp> findAllByPatientIdAndDeletedFalseOrderByAppointmentDateAsc(UUID patientId);
 
+    List<FollowUp> findAllByAssignedDoctorIdAndDeletedFalseOrderByAppointmentDateAsc(UUID assignedDoctorId);
+
     @Query("""
             SELECT DISTINCT f.sourceBookingId
             FROM FollowUp f
@@ -42,6 +44,22 @@ public interface FollowUpRepository extends JpaRepository<FollowUp, UUID> {
             GROUP BY EXTRACT(MONTH FROM f.appointmentDate)
             """)
     List<Object[]> countByAppointmentMonth(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            @Param("cancelled") FollowUpStatus cancelled);
+
+    @Query("""
+            SELECT EXTRACT(MONTH FROM f.appointmentDate), COUNT(f)
+            FROM FollowUp f
+            WHERE f.deleted = false
+              AND f.assignedDoctorId = :doctorId
+              AND f.status <> :cancelled
+              AND f.appointmentDate >= :from
+              AND f.appointmentDate < :to
+            GROUP BY EXTRACT(MONTH FROM f.appointmentDate)
+            """)
+    List<Object[]> countByAppointmentMonthForDoctor(
+            @Param("doctorId") UUID doctorId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
             @Param("cancelled") FollowUpStatus cancelled);

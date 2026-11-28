@@ -64,6 +64,7 @@ import com.ayurveda.appointment.repository.TreatmentCategoryRepository;
 import com.ayurveda.appointment.service.AppointmentBookingService;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.DashboardPeriod;
 import com.ayurveda.common.activity.ActivityActionType;
 import com.ayurveda.common.activity.ActivityLogPublisher;
 import com.ayurveda.common.constant.AppConstants;
@@ -430,6 +431,39 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
         return names;
     }
 
+    private Set<UUID> bookingIdsForVisitType(List<AppointmentBooking> bookings, String visitType) {
+        Set<UUID> bookingIds = bookings.stream()
+                .map(AppointmentBooking::getId)
+                .collect(Collectors.toSet());
+        List<AppointmentConsultationType> mappings =
+                appointmentConsultationTypeRepository.findByBookingIdIn(bookingIds);
+
+        Set<UUID> typeIds = mappings.stream()
+                .map(AppointmentConsultationType::getConsultationTypeId)
+                .collect(Collectors.toSet());
+        Map<UUID, String> typeNames = consultationTypeMasterRepository
+                .findByIdInAndDeletedFalse(typeIds)
+                .stream()
+                .collect(Collectors.toMap(ConsultationTypeMaster::getId,
+                        master -> String.valueOf(master.getName()).toUpperCase(Locale.ROOT),
+                        (left, right) -> left));
+
+        boolean therapy = "THERAPY".equalsIgnoreCase(visitType.trim());
+        Set<UUID> therapyBookingIds = mappings.stream()
+                .filter(mapping -> {
+                    String name = typeNames.get(mapping.getConsultationTypeId());
+                    return name != null && name.contains("THERAPY");
+                })
+                .map(AppointmentConsultationType::getBookingId)
+                .collect(Collectors.toSet());
+        if (therapy) {
+            return therapyBookingIds;
+        }
+        return bookingIds.stream()
+                .filter(id -> !therapyBookingIds.contains(id))
+                .collect(Collectors.toSet());
+    }
+
     private boolean matchesPatientSearch(PatientSummaryResponse patient, String search) {
         if (!StringUtils.hasText(search)) {
             return true;
@@ -531,26 +565,68 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
-            BookingStatus bookingStatus, int page, int size) {
+            BookingStatus bookingStatus, String search, String visitType, LocalDate registrationDate,
+            UUID doctorId, int page, int size) {
 
-        log.info("Fetching appointments for booking status: {} page={} size={}",
-                bookingStatus == null ? "ALL" : bookingStatus, page, size);
+        log.info("Fetching appointments for booking status: {} search={} visitType={} date={} doctorId={} page={} size={}",
+                bookingStatus == null ? "ALL" : bookingStatus, search, visitType,
+                registrationDate, doctorId, page, size);
 
-        Page<AppointmentBooking> result = appointmentBookingRepository.findPageByOptionalStatusAndDeletedFalse(
-                bookingStatus, LocalDate.now(), toPageRequest(page, size));
+        List<AppointmentBooking> bookings = appointmentBookingRepository
+                .findAllByOptionalStatusAndDeletedFalseOrderByCreatedAtDesc(
+                        bookingStatus == BookingStatus.SCHEDULED ? null : bookingStatus);
 
-        if (result.isEmpty()) {
+        if (bookingStatus == BookingStatus.SCHEDULED) {
+            // RESCHEDULED appointments are shown as "Scheduled" in the UI.
+            bookings = bookings.stream()
+                    .filter(booking -> booking.getBookingStatus() == BookingStatus.SCHEDULED
+                            || booking.getBookingStatus() == BookingStatus.RESCHEDULED)
+                    .toList();
+        }
+
+        if (registrationDate != null) {
+            bookings = bookings.stream()
+                    .filter(booking -> registrationDate.equals(booking.getRegistrationDate()))
+                    .toList();
+        }
+
+        if (doctorId != null) {
+            bookings = bookings.stream()
+                    .filter(booking -> doctorId.equals(booking.getAssignedDoctorId()))
+                    .toList();
+        }
+
+        if (StringUtils.hasText(visitType) && !bookings.isEmpty()) {
+            Set<UUID> bookingIdsForVisitType = bookingIdsForVisitType(bookings, visitType);
+            bookings = bookings.stream()
+                    .filter(booking -> bookingIdsForVisitType.contains(booking.getId()))
+                    .toList();
+        }
+
+        if (StringUtils.hasText(search)) {
+            bookings = bookings.stream()
+                    .filter(booking -> matchesPatientSearch(fetchPatientQuietly(booking.getPatientId()), search))
+                    .toList();
+        }
+
+        if (bookings.isEmpty()) {
             log.info("No appointments available for status: {}",
                     bookingStatus == null ? "ALL" : bookingStatus);
             return ApiResponse.success(
                     AppMessages.NO_APPOINTMENTS_AVAILABLE,
-                    PagedResponse.of(result.map(this::toResponse)));
+                    PagedResponse.of(List.of(), page, size, 0));
         }
 
-        log.info("Fetched {} appointments successfully", result.getTotalElements());
+        long total = bookings.size();
+        List<AppointmentBookingResponse> pageItems = PageRequests.slice(bookings, page, size)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+
+        log.info("Fetched {} appointments successfully", total);
         return ApiResponse.success(
                 AppMessages.APPOINTMENTS_FETCHED,
-                PagedResponse.of(result.map(this::toResponse)));
+                PagedResponse.of(pageItems, page, size, total));
     }
 
     @Override
@@ -579,31 +655,30 @@ public class AppointmentBookingServiceImpl implements AppointmentBookingService 
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<AppointmentStatsResponse> getAppointmentStats() {
+    public ApiResponse<AppointmentStatsResponse> getAppointmentStats(DashboardPeriod period, UUID doctorId) {
 
-        YearMonth currentMonth = YearMonth.now();
-        LocalDate monthStart = currentMonth.atDay(1);
-        LocalDate monthEnd = currentMonth.atEndOfMonth();
+        DashboardPeriod effectivePeriod = period == null ? DashboardPeriod.MONTHLY : period;
+        LocalDate[] range = effectivePeriod.range();
+        LocalDate periodStart = range[0];
+        LocalDate periodEnd = range[1];
         LocalDate today = LocalDate.now();
 
-        log.info("Fetching appointment stats for month {} and date {}", currentMonth, today);
+        log.info("Fetching appointment stats for period {} ({} to {}), date {}, doctorId={}",
+                effectivePeriod, periodStart, periodEnd, today, doctorId);
 
-        long currentMonthCount = appointmentBookingRepository
-                .countByRegistrationDateBetweenAndDeletedFalseAndBookingStatusNot(
-                        monthStart, monthEnd, BookingStatus.CANCELLED);
+        long currentMonthCount = appointmentBookingRepository.countStatsBetweenExcluding(
+                periodStart, periodEnd, BookingStatus.CANCELLED, doctorId);
 
-        long completedCount = appointmentBookingRepository
-                .countByRegistrationDateBetweenAndDeletedFalseAndBookingStatus(
-                        monthStart, monthEnd, BookingStatus.COMPLETED);
+        long completedCount = appointmentBookingRepository.countStatsBetweenWithStatus(
+                periodStart, periodEnd, BookingStatus.COMPLETED, doctorId);
 
         long ongoingCount = currentMonthCount - completedCount;
         if (ongoingCount < 0) {
             ongoingCount = 0;
         }
 
-        long todayCount = appointmentBookingRepository
-                .countByRegistrationDateAndDeletedFalseAndBookingStatusNot(
-                        today, BookingStatus.CANCELLED);
+        long todayCount = appointmentBookingRepository.countStatsOnDateExcluding(
+                today, BookingStatus.CANCELLED, doctorId);
 
         AppointmentStatsResponse stats = AppointmentStatsResponse.builder()
                 .currentMonthAppointmentCount(currentMonthCount)

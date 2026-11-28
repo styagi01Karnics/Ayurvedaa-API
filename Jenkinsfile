@@ -6,13 +6,10 @@ timestamps {
             disableConcurrentBuilds()
         ])
 
-        def mvnHome = tool 'Maven'
-
         env.PROJECT_NAME = 'ayurvedaa-api'
         env.DOCKER_ORG = 'sunardock'
         env.DEPLOY_SERVER = '45.195.229.15'
         env.DEPLOY_PATH = '/root/ayurvedaa'
-        env.PATH = "${mvnHome}/bin:${env.PATH}"
 
         def branchName = env.BRANCH_NAME ?: 'unknown'
 
@@ -34,13 +31,130 @@ timestamps {
 
         env.SERVICE_LIST = services.join(' ')
 
+        // ==========================================
+        // MICROSOFT TEAMS NOTIFICATION HELPER
+        // DEV BRANCH ONLY
+        // ==========================================
+
+        def sendTeamsNotification = { String status, String title ->
+
+            def notificationFile =
+                "teams-notification-${env.BUILD_NUMBER}.json"
+
+            try {
+
+                def payload = [
+                    type: 'message',
+                    attachments: [[
+                        contentType: 'application/vnd.microsoft.card.adaptive',
+                        content: [
+                            '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
+                            type: 'AdaptiveCard',
+                            version: '1.4',
+                            body: [
+                                [
+                                    type: 'TextBlock',
+                                    text: title,
+                                    weight: 'Bolder',
+                                    size: 'Large',
+                                    wrap: true
+                                ],
+                                [
+                                    type: 'TextBlock',
+                                    text: "Ayurvedaa API - ${status}",
+                                    wrap: true
+                                ],
+                                [
+                                    type: 'FactSet',
+                                    facts: [
+                                        [title: 'Project', value: 'Ayurvedaa API'],
+                                        [title: 'Branch', value: branchName],
+                                        [title: 'Build', value: "#${env.BUILD_NUMBER}"],
+                                        [title: 'Status', value: status]
+                                    ]
+                                ]
+                            ],
+                            actions: [[
+                                type: 'Action.OpenUrl',
+                                title: 'View Jenkins Build',
+                                url: env.BUILD_URL
+                            ]]
+                        ]
+                    ]]
+                ]
+
+                writeFile(
+                    file: notificationFile,
+                    text: groovy.json.JsonOutput.toJson(payload)
+                )
+
+                withCredentials([
+                    string(
+                        credentialsId: 'teams-jenkins-webhook',
+                        variable: 'TEAMS_WEBHOOK_URL'
+                    )
+                ]) {
+                
+                    withEnv(["NOTIFICATION_FILE=${notificationFile}"]) {
+                
+                        sh '''
+                            set +x
+                
+                            HTTP_CODE=$(curl -sS \
+                                --connect-timeout 10 \
+                                --max-time 30 \
+                                -o /dev/null \
+                                -w "%{http_code}" \
+                                -H "Content-Type: application/json" \
+                                --data-binary @"$NOTIFICATION_FILE" \
+                                "$TEAMS_WEBHOOK_URL")
+                
+                            echo "Teams HTTP response: $HTTP_CODE"
+                
+                            case "$HTTP_CODE" in
+                                2*)
+                                    echo "Teams notification accepted."
+                                    ;;
+                                *)
+                                    echo "ERROR: Teams notification failed."
+                                    exit 1
+                                    ;;
+                            esac
+                        '''
+                    }
+                }
+
+                echo "Teams ${status} notification sent successfully."
+
+            } catch (Exception notificationError) {
+
+                echo "WARNING: Teams notification could not be delivered."
+                echo "Notification error: ${notificationError.getMessage()}"
+
+            } finally {
+
+                sh(
+                    returnStatus: true,
+                    script: "rm -f '${notificationFile}'"
+                )
+            }
+        }
+
         try {
+
+            // ==========================================
+            // MAVEN TOOL CONFIGURATION
+            // ==========================================
+
+            def mvnHome = tool 'Maven'
+            env.PATH = "${mvnHome}/bin:${env.PATH}"
 
             // ==========================================
             // CHECKOUT SOURCE
             // ==========================================
 
             stage('Checkout Source') {
+
                 checkout scm
 
                 env.SAFE_BRANCH = branchName
@@ -67,6 +181,7 @@ timestamps {
             // ==========================================
 
             stage('Environment Check') {
+
                 sh '''
                     set -eu
 
@@ -86,6 +201,7 @@ timestamps {
             // ==========================================
 
             stage('Maven Test & Package') {
+
                 sh '''
                     set -eu
 
@@ -100,6 +216,7 @@ timestamps {
             // ==========================================
 
             stage('Verify Dockerfiles') {
+
                 sh '''
                     set -eu
 
@@ -133,7 +250,9 @@ timestamps {
                 // ==========================================
 
                 stage('SonarQube Analysis') {
+
                     withSonarQubeEnv('SonarQube') {
+
                         sh '''
                             set -eu
 
@@ -151,6 +270,7 @@ timestamps {
                 // ==========================================
 
                 stage('Docker Login') {
+
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'dockerhub-creds',
@@ -158,8 +278,10 @@ timestamps {
                             passwordVariable: 'DOCKER_PASSWORD'
                         )
                     ]) {
+
                         sh '''
                             set -eu
+
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
 
                             login_attempt=1
@@ -200,6 +322,7 @@ timestamps {
                 // ==========================================
 
                 stage('Build Docker Images') {
+
                     sh '''
                         set -eu
 
@@ -238,8 +361,6 @@ timestamps {
 
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
 
-                            # Docker Hub login with retry
-
                             login_attempt=1
                             max_login_attempts=4
                             delay=10
@@ -269,10 +390,6 @@ timestamps {
                                 login_attempt=$((login_attempt + 1))
                                 delay=$((delay * 2))
                             done
-
-                            # ======================================
-                            # DOCKER PUSH RETRY FUNCTION
-                            # ======================================
 
                             retry_docker_push() {
 
@@ -307,10 +424,6 @@ timestamps {
                                 return 1
                             }
 
-                            # ======================================
-                            # PARALLEL BATCH MANAGEMENT
-                            # ======================================
-
                             MAX_PARALLEL_PUSHES=3
 
                             PUSH_PIDS=""
@@ -344,10 +457,6 @@ timestamps {
                                 PUSH_COUNT=0
                             }
 
-                            # ======================================
-                            # PUSH IMAGES IN GROUPS OF THREE
-                            # ======================================
-
                             for service in $SERVICE_LIST; do
 
                                 image="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
@@ -364,8 +473,6 @@ timestamps {
                                 fi
 
                             done
-
-                            # Wait for remaining images
 
                             if [ "$PUSH_COUNT" -gt 0 ]; then
                                 wait_for_push_batch
@@ -518,8 +625,6 @@ if [ ! -f "$COMPOSE_FILE" ]; then
     exit 1
 fi
 
-# Update only IMAGE_TAG and preserve other settings.
-
 if grep -q '^IMAGE_TAG=' .env; then
     sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
 else
@@ -538,10 +643,6 @@ if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
 fi
 
 echo "API Gateway found."
-
-# ==========================================
-# DOCKER PULL WITH AUTOMATIC RETRY
-# ==========================================
 
 retry_docker_pull() {
 
@@ -592,7 +693,6 @@ REMOTE_SCRIPT
 
                 // ==========================================
                 // DEPLOYMENT VERIFICATION
-                // SSH PRIVATE KEY AUTHENTICATION
                 // ==========================================
 
                 stage('Deployment Verification') {
@@ -871,6 +971,35 @@ REMOTE
             echo "Image Tag: ${env.IMAGE_TAG}"
             echo '=========================================='
 
+            // ==========================================
+            // TEAMS RECOVERY NOTIFICATION
+            // DEV BRANCH ONLY
+            // ==========================================
+
+            if (branchName == 'dev') {
+
+                def previousResult = currentBuild.previousBuild?.result
+
+                if (previousResult == 'FAILURE' ||
+                    previousResult == 'UNSTABLE') {
+
+                    sendTeamsNotification(
+                        'RECOVERED',
+                        'AYURVEDAA API BUILD RECOVERED'
+                    )
+
+                } else {
+
+                    echo 'No previous failed or unstable build. Recovery notification skipped.'
+
+                }
+
+            } else {
+
+                echo "Teams recovery notification skipped for branch: ${branchName}"
+
+            }
+
         } catch (err) {
 
             // ==========================================
@@ -884,6 +1013,25 @@ REMOTE
             echo '=========================================='
 
             currentBuild.result = 'FAILURE'
+
+            // ==========================================
+            // TEAMS FAILURE NOTIFICATION
+            // DEV BRANCH ONLY
+            // ==========================================
+
+            if (branchName == 'dev') {
+
+                sendTeamsNotification(
+                    'FAILED',
+                    'AYURVEDAA API BUILD FAILED'
+                )
+
+            } else {
+
+                echo "Teams failure notification skipped for branch: ${branchName}"
+
+            }
+
             throw err
 
         } finally {

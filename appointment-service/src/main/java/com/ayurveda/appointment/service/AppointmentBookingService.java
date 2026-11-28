@@ -13,6 +13,7 @@ import com.ayurveda.appointment.dto.response.PatientAppointmentListItemResponse;
 import com.ayurveda.appointment.enums.BookingStatus;
 import com.ayurveda.appointment.enums.PatientListTab;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.DashboardPeriod;
 import com.ayurveda.common.dto.PagedResponse;
 
 public interface AppointmentBookingService {
@@ -39,12 +40,13 @@ public interface AppointmentBookingService {
             BookingStatus bookingStatus, int page, int size);
 
     ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByBookingStatus(
-            BookingStatus bookingStatus, int page, int size);
+            BookingStatus bookingStatus, String search, String visitType, LocalDate registrationDate,
+            UUID doctorId, int page, int size);
 
     ApiResponse<PagedResponse<AppointmentBookingResponse>> getAppointmentsByDate(
             LocalDate registrationDate, int page, int size);
 
-    ApiResponse<AppointmentStatsResponse> getAppointmentStats();
+    ApiResponse<AppointmentStatsResponse> getAppointmentStats(DashboardPeriod period, UUID doctorId);
 
     ApiResponse<PagedResponse<AppointmentBookingResponse>> getCancelledAppointments(int page, int size);
 

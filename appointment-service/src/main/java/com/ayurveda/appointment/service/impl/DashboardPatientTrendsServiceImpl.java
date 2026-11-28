@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ayurveda.appointment.client.PatientServiceClient;
 import com.ayurveda.appointment.dto.response.DashboardPatientTrendPointResponse;
 import com.ayurveda.appointment.dto.response.DashboardPatientTrendsResponse;
+import com.ayurveda.appointment.dto.response.DoctorPatientCountResponse;
 import com.ayurveda.appointment.dto.response.MonthlyNewPatientsClientResponse;
 import com.ayurveda.appointment.enums.BookingStatus;
 import com.ayurveda.appointment.enums.FollowUpStatus;
@@ -24,6 +26,7 @@ import com.ayurveda.appointment.repository.FollowUpRepository;
 import com.ayurveda.appointment.service.DashboardPatientTrendsService;
 import com.ayurveda.appointment.util.AppMessages;
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.DashboardPeriod;
 import com.ayurveda.common.exception.BadRequestException;
 import com.ayurveda.common.util.ResponseUtil;
 
@@ -42,17 +45,28 @@ public class DashboardPatientTrendsServiceImpl implements DashboardPatientTrends
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<DashboardPatientTrendsResponse> getPatientTrends(Integer year) {
+        return getPatientTrends(year, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<DashboardPatientTrendsResponse> getPatientTrends(Integer year, UUID doctorId) {
         int resolvedYear = resolveYear(year);
         LocalDate fromDate = LocalDate.of(resolvedYear, 1, 1);
         LocalDate toDate = LocalDate.of(resolvedYear + 1, 1, 1);
         LocalDateTime from = fromDate.atStartOfDay();
         LocalDateTime to = toDate.atStartOfDay();
 
-        log.info("Fetching dashboard patient trends for year {}", resolvedYear);
+        log.info("Fetching dashboard patient trends for year {} doctorId={}", resolvedYear, doctorId);
 
-        Map<Integer, Long> newPatients = loadNewPatientsByMonth(resolvedYear, fromDate, toDate);
-        Map<Integer, Long> followUps = toMonthCounts(
-                followUpRepository.countByAppointmentMonth(from, to, FollowUpStatus.CANCELLED));
+        Map<Integer, Long> newPatients = doctorId == null
+                ? loadNewPatientsByMonth(resolvedYear, fromDate, toDate)
+                : toMonthCounts(appointmentBookingRepository.countFirstVisitsByMonthForDoctor(
+                        doctorId, fromDate, toDate, BookingStatus.CANCELLED));
+        Map<Integer, Long> followUps = doctorId == null
+                ? toMonthCounts(followUpRepository.countByAppointmentMonth(from, to, FollowUpStatus.CANCELLED))
+                : toMonthCounts(followUpRepository.countByAppointmentMonthForDoctor(
+                        doctorId, from, to, FollowUpStatus.CANCELLED));
 
         List<DashboardPatientTrendPointResponse> points = new ArrayList<>();
         long totalNew = 0;
@@ -78,6 +92,18 @@ public class DashboardPatientTrendsServiceImpl implements DashboardPatientTrends
                         .totalFollowUps(totalFollowUps)
                         .points(points)
                         .build());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<DoctorPatientCountResponse> getDoctorPatientCount(UUID doctorId, DashboardPeriod period) {
+        DashboardPeriod effectivePeriod = period == null ? DashboardPeriod.MONTHLY : period;
+        LocalDate[] range = effectivePeriod.range();
+        long total = appointmentBookingRepository.findNewPatientIdsForDoctorBetween(
+                doctorId, range[0], range[1].plusDays(1), BookingStatus.CANCELLED).size();
+        return ResponseUtil.success(
+                AppMessages.DASHBOARD_PATIENT_TRENDS_FETCHED,
+                DoctorPatientCountResponse.builder().totalPatients(total).build());
     }
 
     private Map<Integer, Long> loadNewPatientsByMonth(int year, LocalDate fromDate, LocalDate toDate) {

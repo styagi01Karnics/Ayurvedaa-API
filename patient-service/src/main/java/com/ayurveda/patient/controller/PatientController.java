@@ -1,6 +1,7 @@
 package com.ayurveda.patient.controller;
 
 import com.ayurveda.common.ApiResponse;
+import com.ayurveda.common.DashboardPeriod;
 import com.ayurveda.patient.dto.request.CreatePatientRequest;
 import com.ayurveda.patient.dto.request.UpdatePatientEmailRequest;
 import com.ayurveda.patient.dto.response.PatientCountResponse;
@@ -82,11 +83,12 @@ public class PatientController {
 
     @Operation(summary = "Get Patient Counts")
     @GetMapping("/get-patient-count")
-    public ResponseEntity<ApiResponse<PatientCountResponse>> getTotalPatientCount() {
+    public ResponseEntity<ApiResponse<PatientCountResponse>> getTotalPatientCount(
+            @RequestParam(required = false) DashboardPeriod period) {
 
-        log.info("Received request to fetch patient counts.");
+        log.info("Received request to fetch patient counts. period={}", period);
 
-        return ResponseEntity.ok(patientService.getTotalPatientCount());
+        return ResponseEntity.ok(patientService.getTotalPatientCount(period));
     }
 
     @Operation(

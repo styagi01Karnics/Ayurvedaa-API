@@ -109,6 +109,9 @@ public final class AuthMessages {
     public static final String USER_DELETED_SUCCESSFULLY = "User deleted successfully.";
     public static final String PASSWORD_CHANGED_SUCCESSFULLY = "Password changed successfully.";
     public static final String PROFILE_UPDATED_SUCCESSFULLY = "Profile updated successfully.";
+    public static final String TENANT_LOGO_UPDATED_SUCCESSFULLY = "Clinic logo updated successfully.";
+    public static final String TENANT_LOGO_MUST_BE_PNG = "Clinic logo must be a PNG image.";
+    public static final String TENANT_LOGO_TOO_LARGE = "Clinic logo must be under 5MB.";
     public static final String HOSPITAL_ADMINS_FETCHED = "Hospital admins fetched successfully.";
     public static final String HOSPITAL_PROVISION_RETRIED =
             "Hospital schema provision retried successfully.";
