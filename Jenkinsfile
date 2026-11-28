@@ -6,13 +6,10 @@ timestamps {
             disableConcurrentBuilds()
         ])
 
-        def mvnHome = tool 'Maven'
-
         env.PROJECT_NAME = 'ayurvedaa-api'
         env.DOCKER_ORG = 'sunardock'
         env.DEPLOY_SERVER = '45.195.229.15'
         env.DEPLOY_PATH = '/root/ayurvedaa'
-        env.PATH = "${mvnHome}/bin:${env.PATH}"
 
         def branchName = env.BRANCH_NAME ?: 'unknown'
 
@@ -36,7 +33,7 @@ timestamps {
 
         // ==========================================
         // MICROSOFT TEAMS NOTIFICATION HELPER
-        // ONLY USED FOR DEV BRANCH
+        // DEV BRANCH ONLY
         // ==========================================
 
         def sendTeamsNotification = { String status, String title ->
@@ -108,7 +105,7 @@ timestamps {
                                 -o /dev/null \\
                                 -w "%{http_code}" \\
                                 -H "Content-Type: application/json" \\
-                                --data-binary @${notificationFile} \\
+                                --data-binary @'${notificationFile}' \\
                                 "\\$TEAMS_WEBHOOK_URL")
 
                             echo "Teams HTTP response: \\$HTTP_CODE"
@@ -139,17 +136,24 @@ timestamps {
                     returnStatus: true,
                     script: "rm -f '${notificationFile}'"
                 )
-
             }
         }
 
         try {
 
             // ==========================================
+            // MAVEN TOOL CONFIGURATION
+            // ==========================================
+
+            def mvnHome = tool 'Maven'
+            env.PATH = "${mvnHome}/bin:${env.PATH}"
+
+            // ==========================================
             // CHECKOUT SOURCE
             // ==========================================
 
             stage('Checkout Source') {
+
                 checkout scm
 
                 env.SAFE_BRANCH = branchName
@@ -176,6 +180,7 @@ timestamps {
             // ==========================================
 
             stage('Environment Check') {
+
                 sh '''
                     set -eu
 
@@ -195,6 +200,7 @@ timestamps {
             // ==========================================
 
             stage('Maven Test & Package') {
+
                 sh '''
                     set -eu
 
@@ -209,6 +215,7 @@ timestamps {
             // ==========================================
 
             stage('Verify Dockerfiles') {
+
                 sh '''
                     set -eu
 
@@ -242,7 +249,9 @@ timestamps {
                 // ==========================================
 
                 stage('SonarQube Analysis') {
+
                     withSonarQubeEnv('SonarQube') {
+
                         sh '''
                             set -eu
 
@@ -260,6 +269,7 @@ timestamps {
                 // ==========================================
 
                 stage('Docker Login') {
+
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'dockerhub-creds',
@@ -267,8 +277,10 @@ timestamps {
                             passwordVariable: 'DOCKER_PASSWORD'
                         )
                     ]) {
+
                         sh '''
                             set -eu
+
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
 
                             login_attempt=1
@@ -309,6 +321,7 @@ timestamps {
                 // ==========================================
 
                 stage('Build Docker Images') {
+
                     sh '''
                         set -eu
 
@@ -347,8 +360,6 @@ timestamps {
 
                             trap 'docker logout >/dev/null 2>&1 || true' EXIT
 
-                            # Docker Hub login with retry
-
                             login_attempt=1
                             max_login_attempts=4
                             delay=10
@@ -378,10 +389,6 @@ timestamps {
                                 login_attempt=$((login_attempt + 1))
                                 delay=$((delay * 2))
                             done
-
-                            # ======================================
-                            # DOCKER PUSH RETRY FUNCTION
-                            # ======================================
 
                             retry_docker_push() {
 
@@ -416,10 +423,6 @@ timestamps {
                                 return 1
                             }
 
-                            # ======================================
-                            # PARALLEL BATCH MANAGEMENT
-                            # ======================================
-
                             MAX_PARALLEL_PUSHES=3
 
                             PUSH_PIDS=""
@@ -453,10 +456,6 @@ timestamps {
                                 PUSH_COUNT=0
                             }
 
-                            # ======================================
-                            # PUSH IMAGES IN GROUPS OF THREE
-                            # ======================================
-
                             for service in $SERVICE_LIST; do
 
                                 image="${DOCKER_ORG}/${PROJECT_NAME}-${service}:${IMAGE_TAG}"
@@ -473,8 +472,6 @@ timestamps {
                                 fi
 
                             done
-
-                            # Wait for remaining images
 
                             if [ "$PUSH_COUNT" -gt 0 ]; then
                                 wait_for_push_batch
@@ -627,8 +624,6 @@ if [ ! -f "$COMPOSE_FILE" ]; then
     exit 1
 fi
 
-# Update only IMAGE_TAG and preserve other settings.
-
 if grep -q '^IMAGE_TAG=' .env; then
     sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
 else
@@ -647,10 +642,6 @@ if ! docker compose --env-file .env -f "$COMPOSE_FILE" config --services |
 fi
 
 echo "API Gateway found."
-
-# ==========================================
-# DOCKER PULL WITH AUTOMATIC RETRY
-# ==========================================
 
 retry_docker_pull() {
 
@@ -701,7 +692,6 @@ REMOTE_SCRIPT
 
                 // ==========================================
                 // DEPLOYMENT VERIFICATION
-                // SSH PRIVATE KEY AUTHENTICATION
                 // ==========================================
 
                 stage('Deployment Verification') {
@@ -983,7 +973,6 @@ REMOTE
             // ==========================================
             // TEAMS RECOVERY NOTIFICATION
             // DEV BRANCH ONLY
-            // ONLY AFTER PREVIOUS FAILURE / UNSTABLE
             // ==========================================
 
             if (branchName == 'dev') {
