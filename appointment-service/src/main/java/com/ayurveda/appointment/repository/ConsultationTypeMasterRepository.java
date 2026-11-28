@@ -39,9 +39,9 @@ public interface ConsultationTypeMasterRepository extends JpaRepository<Consulta
             SELECT c FROM ConsultationTypeMaster c
             WHERE c.status = :status
               AND COALESCE(c.deleted, false) = false
-            ORDER BY c.createdAt DESC
+            ORDER BY c.name ASC
             """)
-    List<ConsultationTypeMaster> findAllByStatusAndDeletedFalseOrderByCreatedAtDesc(
+    List<ConsultationTypeMaster> findAllByStatusAndDeletedFalseOrderByNameAsc(
             @Param("status") ConsultationTypeMasterStatus status);
 
     @Query("""
