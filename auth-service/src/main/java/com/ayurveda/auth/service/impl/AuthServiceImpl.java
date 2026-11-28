@@ -29,6 +29,7 @@ import com.ayurveda.auth.dto.request.LoginRequest;
 import com.ayurveda.auth.dto.request.RegisterUserRequest;
 import com.ayurveda.auth.dto.request.ResetPasswordRequest;
 import com.ayurveda.auth.dto.request.UpdateProfileRequest;
+import com.ayurveda.auth.dto.request.UpdateTenantLogoRequest;
 import com.ayurveda.auth.dto.request.UpdateUserRequest;
 import com.ayurveda.auth.dto.request.UpdateUserStatusRequest;
 import com.ayurveda.auth.dto.response.AuthTokenResponse;
@@ -75,6 +76,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Transactional
 public class AuthServiceImpl implements AuthService {
+
+    private static final String PNG_DATA_URL_PREFIX = "data:image/png;base64,";
+    /** 5MB file encodes to about 6.7MB as base64, so allow 7MB of text. */
+    private static final int MAX_TENANT_LOGO_DATA_URL_LENGTH = 7 * 1024 * 1024;
 
     private final TenantRepository tenantRepository;
     private final AuthUserRepository authUserRepository;
@@ -572,6 +577,33 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return ApiResponse.success(authMapper.toTenantResponse(tenant));
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<TenantResponse> updateCurrentTenantLogo(UpdateTenantLogoRequest request) {
+        AuthPrincipal principal = currentPrincipal();
+        requireTenantAdmin(principal);
+
+        Tenant tenant = tenantRepository.findById(principal.getTenantId())
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.TENANT_NOT_FOUND));
+        if (Boolean.TRUE.equals(tenant.getDeleted())) {
+            throw new ResourceNotFoundException(AuthMessages.TENANT_NOT_FOUND);
+        }
+
+        String logo = request.getLogoUrl().trim();
+        if (!logo.startsWith(PNG_DATA_URL_PREFIX)) {
+            throw new BadRequestException(AuthMessages.TENANT_LOGO_MUST_BE_PNG);
+        }
+        if (logo.length() > MAX_TENANT_LOGO_DATA_URL_LENGTH) {
+            throw new BadRequestException(AuthMessages.TENANT_LOGO_TOO_LARGE);
+        }
+
+        tenant.setLogoUrl(logo);
+        Tenant saved = tenantRepository.save(tenant);
+        return ApiResponse.success(
+                AuthMessages.TENANT_LOGO_UPDATED_SUCCESSFULLY,
+                authMapper.toTenantResponse(saved));
     }
 
     @Override

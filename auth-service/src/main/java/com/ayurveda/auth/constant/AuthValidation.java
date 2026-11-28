@@ -8,12 +8,12 @@ public final class AuthValidation {
     private AuthValidation() {
     }
 
-    /** Username must be a Gmail address. */
+    /** Username must be a valid email address (any domain). */
     public static final String GMAIL =
-            "^[A-Za-z0-9._%+-]+@gmail\\.com$";
+            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
 
     public static final String GMAIL_MESSAGE =
-            "Username must be a valid Gmail address (example@gmail.com)";
+            "Username must be a valid email address (example@domain.com)";
 
     /** Hospital outbound mailbox (Gmail or Microsoft / Outlook). */
     public static final String EMAIL =
