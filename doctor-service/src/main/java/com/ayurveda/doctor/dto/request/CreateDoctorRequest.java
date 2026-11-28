@@ -24,6 +24,8 @@ public class CreateDoctorRequest {
     @Size(max = 150, message = "Specialization must not exceed 150 characters")
     private String specialization;
 
+    private String qualification;
+
     private DoctorStatus status;
 
     @NotNull(message = "Consultation fees is required")

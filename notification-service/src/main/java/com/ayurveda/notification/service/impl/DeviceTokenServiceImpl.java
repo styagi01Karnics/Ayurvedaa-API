@@ -2,6 +2,7 @@ package com.ayurveda.notification.service.impl;
 
 import java.util.Optional;
 
+import com.ayurveda.common.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,10 +47,9 @@ public class DeviceTokenServiceImpl implements DeviceTokenService {
 
     @Override
     public ApiResponse<Void> removeDeviceToken(String token) {
-        deviceTokenRepository.findByToken(token).ifPresent(device -> {
+        DeviceToken device = deviceTokenRepository.findByToken(token).orElseThrow(() -> new ResourceNotFoundException(NotificationMessages.TOKEN_NOT_FOUND));
             device.setDeleted(true);
             deviceTokenRepository.save(device);
-        });
         log.info("Device token removal requested");
         return ApiResponse.success(NotificationMessages.DEVICE_TOKEN_REMOVED, null);
     }

@@ -194,4 +194,10 @@ public final class Constants {
 	        "Treatment category not found";
 	public static final String APPOINTMENT_NOT_FOUND_FOR_PATIENT =
 	        "Appointment not found for patient id: ";
+
+    // ==========================
+    // Time Zone
+    // ==========================
+
+    public static final String INDIA = "Asia/Kolkata";
 }

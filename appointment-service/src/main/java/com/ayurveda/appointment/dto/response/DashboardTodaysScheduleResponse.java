@@ -2,6 +2,7 @@ package com.ayurveda.appointment.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import com.ayurveda.appointment.enums.BookingStatus;
@@ -21,6 +22,7 @@ public class DashboardTodaysScheduleResponse {
 
     private LocalDate date;
     private LocalDateTime currentDateTime;
+    private ZoneOffset indianTimezoneOffset;
     private ScheduleItemResponse ongoingAppointment;
     private ScheduleItemResponse nextAppointment;
     private long remainingToday;

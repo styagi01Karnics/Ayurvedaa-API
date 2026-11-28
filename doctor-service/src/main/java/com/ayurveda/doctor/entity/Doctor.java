@@ -1,6 +1,7 @@
 package com.ayurveda.doctor.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.ayurveda.common.AuditedEntity;
 import com.ayurveda.doctor.enums.DoctorStatus;
@@ -63,5 +64,7 @@ public class Doctor extends AuditedEntity {
 
     @Column(length = 20)
     private String userCode;
+
+    private LocalDateTime createdAt;
 
 }
