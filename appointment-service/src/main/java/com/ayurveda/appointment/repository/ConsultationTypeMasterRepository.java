@@ -31,17 +31,17 @@ public interface ConsultationTypeMasterRepository extends JpaRepository<Consulta
     @Query("""
             SELECT c FROM ConsultationTypeMaster c
             WHERE COALESCE(c.deleted, false) = false
-            ORDER BY c.name ASC
+            ORDER BY c.createdAt DESC
             """)
-    List<ConsultationTypeMaster> findAllByDeletedFalseOrderByNameAsc();
+    List<ConsultationTypeMaster> findAllByDeletedFalseOrderByCreatedAtDesc();
 
     @Query("""
             SELECT c FROM ConsultationTypeMaster c
             WHERE c.status = :status
               AND COALESCE(c.deleted, false) = false
-            ORDER BY c.name ASC
+            ORDER BY c.createdAt DESC
             """)
-    List<ConsultationTypeMaster> findAllByStatusAndDeletedFalseOrderByNameAsc(
+    List<ConsultationTypeMaster> findAllByStatusAndDeletedFalseOrderByCreatedAtDesc(
             @Param("status") ConsultationTypeMasterStatus status);
 
     @Query("""

@@ -16,9 +16,9 @@ public interface TherapyRepository
 
     Optional<TherapyMaster> findByIdAndDeletedFalse(UUID id);
 
-    List<TherapyMaster> findAllByDeletedFalse();
+    List<TherapyMaster> findAllByDeletedFalseOrderByCreatedAtDesc();
 
-    List<TherapyMaster> findAllByDeletedFalseAndStatus(TherapyMasterStatus status);
+    List<TherapyMaster> findAllByDeletedFalseAndStatusOrderByCreatedAtDesc(TherapyMasterStatus status);
 
     Optional<TherapyMaster> findByTherapyName(String therapyName);
 
