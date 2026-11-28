@@ -133,7 +133,7 @@ class TherapyServiceImplTest {
 
     @Test
     void getAllTherapies_withStatusFilter() {
-        when(therapyRepository.findAllByDeletedFalseAndStatus(TherapyMasterStatus.ACTIVE))
+        when(therapyRepository.findAllByDeletedFalseAndStatusOrderByCreatedAtDesc(TherapyMasterStatus.ACTIVE))
                 .thenReturn(List.of(therapy));
         when(treatmentCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
         when(therapyMapper.toResponse(therapy, "Massage Therapy")).thenReturn(therapyResponse);
@@ -146,7 +146,7 @@ class TherapyServiceImplTest {
 
     @Test
     void getAllTherapies_withoutStatusUsesAll() {
-        when(therapyRepository.findAllByDeletedFalse()).thenReturn(List.of(therapy));
+        when(therapyRepository.findAllByDeletedFalseOrderByCreatedAtDesc()).thenReturn(List.of(therapy));
         when(treatmentCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
         when(therapyMapper.toResponse(therapy, "Massage Therapy")).thenReturn(therapyResponse);
 
